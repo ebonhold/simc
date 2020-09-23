@@ -1,0 +1,72 @@
+deathknight="PR_Death_Knight_Frost_DW"
+source=default
+spec=frost
+level=60
+race=orc
+role=attack
+position=back
+#talents=1221212
+talents=1223213
+
+# Default consumables
+potion=potion_of_unbridled_fury
+flask=greater_flask_of_the_undertow
+food=abyssalfried_rissole
+augmentation=battle_scarred
+
+# This default action priority list is automatically created based on your character.
+# It is a attempt to provide you with a action list that is both simple and practicable,
+# while resulting in a meaningful and good simulation. It may not result in the absolutely highest possible dps.
+# Feel free to edit, adapt and improve it to your own needs.
+# SimulationCraft is always looking for updates and improvements to the default action lists.
+
+# Executed before combat begins. Accepts non-harmful actions only.
+actions.precombat=flask
+actions.precombat+=/food
+actions.precombat+=/augmentation
+# Snapshot raid buffed stats before combat begins and pre-potting is done.
+actions.precombat+=/snapshot_stats
+actions.precombat+=/potion
+actions.precombat+=/use_item,name=azsharas_font_of_power
+actions.precombat+=/variable,name=other_on_use_equipped,value=(equipped.notorious_gladiators_badge|equipped.corrupted_gladiators_badge|equipped.corrupted_gladiators_medallion|equipped.vial_of_animated_blood|equipped.first_mates_spyglass|equipped.jes_howler|equipped.notorious_gladiators_medallion|equipped.ashvanes_razor_coral)
+
+# Executed every time the actor is available.
+# Apply Frost Fever and maintain Icy Talons
+actions=remorseless_winter
+actions+=/howling_blast
+actions+=/auto_attack
+
+head=,id=178777,bonus_id=1500
+neck=,id=178827,bonus_id=1500
+shoulders=,id=178820,bonus_id=1500
+back=,id=178851,bonus_id=1500
+chest=,id=180099,bonus_id=1500
+wrists=,id=179354,bonus_id=1500
+hands=,id=178840,bonus_id=1500
+waist=,id=178842,bonus_id=1500
+legs=,id=178818,bonus_id=1500
+feet=,id=180101,bonus_id=1500
+finger1=,id=178933,bonus_id=1500
+finger2=,id=178736,bonus_id=1500
+trinket1=,id=178769,bonus_id=1500
+trinket2=,id=179342,bonus_id=1500
+#main_hand=,id=178780,bonus_id=1500,enchant=rune_of_the_fallen_crusader
+main_hand=,id=178730,bonus_id=1500,enchant=rune_of_the_fallen_crusader
+off_hand=,id=179340,bonus_id=1500,enchant=rune_of_the_fallen_crusader
+#profileset.DW_bos=talents=2223213
+scale_to_itemlevel=185
+
+#profileset.1h=main_hand=,id=178730,bonus_id=1500,enchant=rune_of_razorice
+#profileset.1h=off_hand=,id=179340,bonus_id=1500,enchant=rune_of_the_fallen_crusader
+
+#profileset.2h=main_hand=,id=178780,bonus_id=1500,enchant=rune_of_the_fallen_crusader
+
+# Gear Summary
+# gear_ilvl=342.31
+# gear_strength=2914
+# gear_stamina=4465
+# gear_crit_rating=1108
+# gear_haste_rating=319
+# gear_mastery_rating=936
+# gear_versatility_rating=122
+# gear_armor=3054
