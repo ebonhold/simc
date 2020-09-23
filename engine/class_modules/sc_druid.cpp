@@ -3433,14 +3433,14 @@ public:
     if ( data().affected_by( p->mastery.razor_claws->effectN( 1 ) ) )
     {
       auto val = p->mastery.razor_claws->effectN( 1 ).percent();
-      da_multiplier_buffeffects.push_back( buff_effect_t( nullptr, val, true ) );
+      da_multiplier_buffeffects.push_back( buff_effect_t( nullptr, val, false, true ) );
       p->sim->print_debug( "buff-effects: {} ({}) direct damage modified by {}%+mastery", name(), id, val * 100.0 );
     }
 
     if ( data().affected_by( p->mastery.razor_claws->effectN( 2 ) ) )
     {
       auto val = p->mastery.razor_claws->effectN( 2 ).percent();
-      ta_multiplier_buffeffects.push_back( buff_effect_t( nullptr, val , true ) );
+      ta_multiplier_buffeffects.push_back( buff_effect_t( nullptr, val , false, true ) );
       p->sim->print_debug( "buff-effects: {} ({}) tick damage modified by {}%+mastery", name(), id, val * 100.0 );
     }
   }
@@ -9727,6 +9727,13 @@ std::unique_ptr<expr_t> druid_t::create_expression( util::string_view name_str )
 
       action_state_t::release( state );
       return amount;
+    } );
+  }
+
+  if ( util::str_compare_ci( name_str, "active_bt_triggers" ) ) {
+    return make_fn_expr( "active_bt_triggers", [ this ]() {
+      return buff.bt_rake->check() + buff.bt_shred->check() + buff.bt_swipe->check() +
+             buff.bt_thrash->check() + buff.bt_moonfire->check() + buff.bt_brutal_slash->check();
     } );
   }
 
