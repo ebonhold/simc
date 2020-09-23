@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+
+import itertools
+
+output = """
 deathknight="PR_Death_Knight_Frost_2H"
 source=default
 spec=frost
@@ -150,100 +155,144 @@ finger2=,id=178736,bonus_id=1500
 trinket1=,id=178769,bonus_id=1500
 trinket2=,id=179342,bonus_id=1500
 main_hand=,id=178780,bonus_id=1500,enchant=rune_of_the_fallen_crusader
-scale_to_itemlevel=185
+scale_to_itemlevel=187
+"""
 
-profileset.185_2h=finger1=,id=178933,bonus_id=1500
-profileset.185_dw=main_hand=,id=178730,ilevel=185,enchant=rune_of_razorice
-profileset.185_dw+=off_hand=,id=179340,ilevel=185,enchant=rune_of_the_fallen_crusader
-profileset.185_dw+=finger1=,id=178933,bonus_id=1500
+legendary = {'6946': 'absolute_zero',
+             '6945': 'biting_cold',
+             '6944': 'koltira',
+             '7160': 'rage'}
 
-profileset.185_2h_absolute_zero=finger1=,id=178933,bonus_id=1500/6946
-profileset.185_dw_absolute_zero=main_hand=,id=178730,ilevel=185,enchant=rune_of_razorice
-profileset.185_dw_absolute_zero+=off_hand=,id=179340,ilevel=185,enchant=rune_of_the_fallen_crusader
-profileset.185_dw_absolute_zero+=finger1=,id=178933,bonus_id=1500/6946
+conduit_pot = { '79': 'accelerated_cold',
+                '91': 'biting_cold',
+                '83': 'eradicating_blow',
+                '122': 'unleashed_frenzy'}
 
-profileset.185_2h_biting_cold=finger1=,id=178933,bonus_id=1500/6945
-profileset.185_dw_biting_cold=main_hand=,id=178730,ilevel=185,enchant=rune_of_razorice
-profileset.185_dw_biting_cold+=off_hand=,id=179340,ilevel=185,enchant=rune_of_the_fallen_crusader
-profileset.185_dw_biting_cold+=finger1=,id=178933,bonus_id=1500/6945
+covenants = ["night_fae", "venthyr", "necrolord", "kyrian"]
 
-profileset.185_2h_koltira=finger1=,id=178933,bonus_id=1500/6944
-profileset.185_dw_koltira=main_hand=,id=178730,ilevel=185,enchant=rune_of_razorice
-profileset.185_dw_koltira+=off_hand=,id=179340,ilevel=185,enchant=rune_of_the_fallen_crusader
-profileset.185_dw_koltira+=finger1=,id=178933,bonus_id=1500/6944
+soulbind_data = {
+    "night_fae": {
+        "niya": [
+            "P/320659/P/322721",
+            "P/320660/P/P/322721",
+            "P/320662/P/322721"
+        ],
+        "dreamweaver": [
+            "319191/P/319210/P",
+            "319191/P/319211/P/P",
+            "319191/P/319213/P"
+        ],
+        "korayn": [
+            "P/325068/P/P/325066",
+            "P/325069/P/325066",
+            "P/325601/P/325066"
+        ]
+    },
+    "venthyr": {
+        "nadjia": [
+            "P/331580/P/331586",
+            "P/P/331582/P/331586",
+            "P/331584/P/331586"
+        ],
+        "theotar": [
+            "P/P/336243/319983",
+            "P/P/336239/319983",
+            "P/P/336245/P/319983"
+        ],
+        "draven": [
+            "319973/P/P/340159",
+            "332753/P/P/340159",
+            "332754/P/P/P/340159"
+        ]
+    },
+    "necrolord": {
+        "marileth": [
+            "323074/P/P/P",
+            "323074/323090/P/P"
+        ],
+        "emeni": [
+            "P/P/P/342156",
+            "P/P/323919/342156",
+            "P/P/323916/342156"
+        ],
+        "heirmir": [
+            "326504/P/326509",
+            "326504/P/326511/P",
+            "326504/P/326572",
+            "P/P/326509/",
+            "P/P/326511/P",
+            "P/P/326572"
+        ]
+    },
+    "kyrian": {
+        "pelagos": [
+            "328257/P/P/328266",
+            "328257/P/P/P/328266"
+        ],
+        "kleia": [
+            "P/P/P",
+            "P/P/329778"
+        ],
+        "mikanikos": [
+            "P/333935/P/333950",
+            "P/P/333950",
+            "P/P/P/333950"
+        ]
+    }
+}
 
-profileset.185_2h_rage=finger1=,id=178933,bonus_id=1500/7160
-profileset.185_dw_rage=main_hand=,id=178730,ilevel=185,enchant=rune_of_razorice
-profileset.185_dw_rage+=off_hand=,id=179340,ilevel=185,enchant=rune_of_the_fallen_crusader
-profileset.185_dw_rage+=finger1=,id=178933,bonus_id=1500/7160
+#  Venthyr
+nadjia = [
 
-profileset.185_2h=finger1=,id=178933,bonus_id=1500
-profileset.185_dw=main_hand=,id=178730,ilevel=185,enchant=rune_of_razorice
-profileset.185_dw+=off_hand=,id=179340,ilevel=185,enchant=rune_of_the_fallen_crusader
-profileset.185_dw+=finger1=,id=178933,bonus_id=1500
+]
 
-profileset.185_2h_accelerated_cold=finger1=,id=178933,bonus_id=1500
-profileset.185_2h_accelerated_cold+=soulbind=niya,79:1
-profileset.185_dw_accelerated_cold=main_hand=,id=178730,ilevel=185,enchant=rune_of_razorice
-profileset.185_dw_accelerated_cold+=off_hand=,id=179340,ilevel=185,enchant=rune_of_the_fallen_crusader
-profileset.185_dw_accelerated_cold+=finger1=,id=178933,bonus_id=1500
-profileset.185_dw_accelerated_cold+=soulbind=niya,79:1
+def generate_soulbind(covenant, soulbind, rank):
+    output = ""
+    for sb in soulbind_data[covenant][soulbind]:
+        num_conduits = sb.count("P")
+        for conduits in itertools.combinations(conduit_pot.keys(), num_conduits):
+            temp_sb = sb
+            for z in conduits:
+                temp_sb = temp_sb.replace("P", "{}:{}".format(z, rank), 1)
+            output += "soulbind={},{}\n".format(soulbind, temp_sb)
+    return output
 
-profileset.185_2h_biting_cold=finger1=,id=178933,bonus_id=1500
-profileset.185_2h_biting_cold+=soulbind=niya,91:1
-profileset.185_dw_biting_cold=main_hand=,id=178730,ilevel=185,enchant=rune_of_razorice
-profileset.185_dw_biting_cold+=off_hand=,id=179340,ilevel=185,enchant=rune_of_the_fallen_crusader
-profileset.185_dw_biting_cold+=finger1=,id=178933,bonus_id=1500
-profileset.185_dw_biting_cold+=soulbind=niya,91:1
+def output_ilvl(legendary=None, soulbind=None):
+    profile_suffix = "_{}_{}".format(legendary, soulbind)
+    output = ""
+    output += "profileset.2h{}=talents=1221212\n".format(profile_suffix)
 
-profileset.185_2h_eradicating_blow=finger1=,id=178933,bonus_id=1500
-profileset.185_2h_eradicating_blow+=soulbind=niya,83:1
-profileset.185_dw_eradicating_blow=main_hand=,id=178730,ilevel=185,enchant=rune_of_razorice
-profileset.185_dw_eradicating_blow+=off_hand=,id=179340,ilevel=185,enchant=rune_of_the_fallen_crusader
-profileset.185_dw_eradicating_blow+=finger1=,id=178933,bonus_id=1500
-profileset.185_dw_eradicating_blow+=soulbind=niya,83:1
+    output += "\n"
 
-profileset.185_2h_unleashed_frenzy=finger1=,id=178933,bonus_id=1500
-profileset.185_2h_unleashed_frenzy+=soulbind=niya,122:1
-profileset.185_dw_unleashed_frenzy=main_hand=,id=178730,ilevel=185,enchant=rune_of_razorice
-profileset.185_dw_unleashed_frenzy+=off_hand=,id=179340,ilevel=185,enchant=rune_of_the_fallen_crusader
-profileset.185_dw_unleashed_frenzy+=finger1=,id=178933,bonus_id=1500
-profileset.185_dw_unleashed_frenzy+=soulbind=niya,122:1
+    output += "profileset.2h_fsc{}=talents=1223212\n".format(profile_suffix)
+    output += "\n"
 
-profileset.185_2h_accelerated_cold_15=finger1=,id=178933,bonus_id=1500
-profileset.185_2h_accelerated_cold_15+=soulbind=niya,79:15
-profileset.185_dw_accelerated_cold_15=main_hand=,id=178730,ilevel=185,enchant=rune_of_razorice
-profileset.185_dw_accelerated_cold_15+=off_hand=,id=179340,ilevel=185,enchant=rune_of_the_fallen_crusader
-profileset.185_dw_accelerated_cold_15+=finger1=,id=178933,bonus_id=1500
-profileset.185_dw_accelerated_cold_15+=soulbind=niya,79:15
+    output += "profileset.2h_bos{}=talents=2223213\n".format(profile_suffix)
+    output += "\n"
 
-profileset.185_2h_biting_cold_15=finger1=,id=178933,bonus_id=1500
-profileset.185_2h_biting_cold_15+=soulbind=niya,91:15
-profileset.185_dw_biting_cold_15=main_hand=,id=178730,ilevel=185,enchant=rune_of_razorice
-profileset.185_dw_biting_cold_15+=off_hand=,id=179340,ilevel=185,enchant=rune_of_the_fallen_crusader
-profileset.185_dw_biting_cold_15+=finger1=,id=178933,bonus_id=1500
-profileset.185_dw_biting_cold_15+=soulbind=niya,91:15
+    output += "profileset.dw{}=talents=1221212\n".format(profile_suffix)
+    output += "profileset.dw{}+=main_hand=,id=178730,ilevel=187,enchant=rune_of_razorice\n".format(profile_suffix)
+    output += "profileset.dw{}+=off_hand=,id=179340,ilevel=187,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
+    output += "\n"
 
-profileset.185_2h_eradicating_blow_15=finger1=,id=178933,bonus_id=1500
-profileset.185_2h_eradicating_blow_15+=soulbind=niya,83:15
-profileset.185_dw_eradicating_blow_15=main_hand=,id=178730,ilevel=185,enchant=rune_of_razorice
-profileset.185_dw_eradicating_blow_15+=off_hand=,id=179340,ilevel=185,enchant=rune_of_the_fallen_crusader
-profileset.185_dw_eradicating_blow_15+=finger1=,id=178933,bonus_id=1500
-profileset.185_dw_eradicating_blow_15+=soulbind=niya,83:15
+    output += "profileset.dw_fsc{}=talents=1223212\n".format(profile_suffix)
+    output += "profileset.dw_fsc{}+=main_hand=,id=178730,ilevel=187,enchant=rune_of_razorice\n".format(profile_suffix)
+    output += "profileset.dw_fsc{}+=off_hand=,id=179340,ilevel=187,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
+    output += "\n"
 
-profileset.185_2h_unleashed_frenzy_15=finger1=,id=178933,bonus_id=1500
-profileset.185_2h_unleashed_frenzy_15+=soulbind=niya,122:15
-profileset.185_dw_unleashed_frenzy_15=main_hand=,id=178730,ilevel=185,enchant=rune_of_razorice
-profileset.185_dw_unleashed_frenzy_15+=off_hand=,id=179340,ilevel=185,enchant=rune_of_the_fallen_crusader
-profileset.185_dw_unleashed_frenzy_15+=finger1=,id=178933,bonus_id=1500
-profileset.185_dw_unleashed_frenzy_15+=soulbind=niya,122:15
+    output += "profileset.dw_bos{}=talents=2223213\n".format(profile_suffix)
+    output += "profileset.dw_bos{}+=main_hand=,id=178730,ilevel=187,enchant=rune_of_razorice\n".format(profile_suffix)
+    output += "profileset.dw_bos{}+=off_hand=,id=179340,ilevel=187,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
+    output += "\n"
 
-# Gear Summary
-# gear_ilvl=342.31
-# gear_strength=2914
-# gear_stamina=4465
-# gear_crit_rating=1108
-# gear_haste_rating=319
-# gear_mastery_rating=936
-# gear_versatility_rating=122
-# gear_armor=305
+    return output
+
+
+with open('full_profile.simc', 'w') as f:
+    f.write(output)
+
+    for x in [187]:
+        f.write(output_ilvl(x))
+
+print(generate_soulbind("night_fae", "niya", 1))
+
