@@ -158,10 +158,10 @@ main_hand=,id=178780,bonus_id=1500,enchant=rune_of_the_fallen_crusader
 scale_to_itemlevel=187
 """
 
-legendary = {'6946': 'absolute_zero',
-             '6945': 'biting_cold',
-             '6944': 'koltira',
-             '7160': 'rage'}
+legendary_data = {'6946': 'absolute_zero',
+                    '6945': 'biting_cold',
+                    '6944': 'koltira',
+                    '7160': 'rage'}
 
 conduit_pot = { '79': 'accelerated_cold',
                 '91': 'biting_cold',
@@ -246,43 +246,79 @@ nadjia = [
 
 ]
 
-def generate_soulbind(covenant, soulbind, rank):
+def generate_profileset(talent_label, talents, weapon_type, legendary_id, covenant, soulbind, rank):
     output = ""
+
     for sb in soulbind_data[covenant][soulbind]:
         num_conduits = sb.count("P")
         for conduits in itertools.combinations(conduit_pot.keys(), num_conduits):
             temp_sb = sb
+            profile_conduits = ""
             for z in conduits:
                 temp_sb = temp_sb.replace("P", "{}:{}".format(z, rank), 1)
-            output += "soulbind={},{}\n".format(soulbind, temp_sb)
+                profile_conduits += "_{}".format(conduit_pot[z])
+            profileset_name = "profileset.{}_{}_{}_{}_{}".format(weapon_type, talent_label, legendary_data[legendary_id], soulbind, profile_conduits)
+            output += "{}=talents={}\n".format(profileset_name, talents)
+            output += "{}+=finger1=,id=178933,bonus_id=1500/{}\n".format(profileset_name, legendary_id)
+            if weapon_type == "dw":
+                output += "{}+=main_hand=,id=178730,ilevel=187,enchant=rune_of_razorice\n".format(profileset_name)
+                output += "{}+=off_hand=,id=179340,ilevel=187,enchant=rune_of_the_fallen_crusader\n".format(profileset_name)
+            else:
+                output += "{}+=main_hand=,id=178780,bonus_id=1500,enchant=rune_of_the_fallen_crusader\n".format(profileset_name)
+                
+            output += "{}+=soulbind={},{}\n".format(profileset_name, soulbind, temp_sb)
     return output
 
-def output_ilvl(legendary=None, soulbind=None):
-    profile_suffix = "_{}_{}".format(legendary, soulbind)
+def output_ilvl(ilvl):
+    profile_suffix = "test"
     output = ""
-    output += "profileset.2h{}=talents=1221212\n".format(profile_suffix)
+    output += "profileset.2h_baseline=talents=1221212\n"
+    for covenant in covenants:
+        for soulbind in soulbind_data[covenant]:
+            for legendary_id in legendary_data:
+                output += generate_profileset("oblit", "1221212", "2h", legendary_id, covenant, soulbind, 1)
 
     output += "\n"
 
-    output += "profileset.2h_fsc{}=talents=1223212\n".format(profile_suffix)
+    output += "profileset.2h_fsc_baseline=talents=1223212\n".format(profile_suffix)
+    for covenant in covenants:
+        for soulbind in soulbind_data[covenant]:
+            for legendary_id in legendary_data:
+                output += generate_profileset("fsc", "1223212", "2h", legendary_id, covenant, soulbind, 1)
     output += "\n"
 
-    output += "profileset.2h_bos{}=talents=2223213\n".format(profile_suffix)
+    output += "profileset.2h_bos_baseline=talents=2223213\n".format(profile_suffix)
+    for covenant in covenants:
+        for soulbind in soulbind_data[covenant]:
+            for legendary_id in legendary_data:
+                output += generate_profileset("bos", "2223213", "2h", legendary_id, covenant, soulbind, 1)
     output += "\n"
 
-    output += "profileset.dw{}=talents=1221212\n".format(profile_suffix)
-    output += "profileset.dw{}+=main_hand=,id=178730,ilevel=187,enchant=rune_of_razorice\n".format(profile_suffix)
-    output += "profileset.dw{}+=off_hand=,id=179340,ilevel=187,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
+    output += "profileset.dw_baseline=talents=1221212\n".format(profile_suffix)
+    output += "profileset.dw_baseline+=main_hand=,id=178730,ilevel=187,enchant=rune_of_razorice\n".format(profile_suffix)
+    output += "profileset.dw_baseline+=off_hand=,id=179340,ilevel=187,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
+    for covenant in covenants:
+        for soulbind in soulbind_data[covenant]:
+            for legendary_id in legendary_data:
+                output += generate_profileset("oblit", "1221212", "dw", legendary_id, covenant, soulbind, 1)
     output += "\n"
 
-    output += "profileset.dw_fsc{}=talents=1223212\n".format(profile_suffix)
-    output += "profileset.dw_fsc{}+=main_hand=,id=178730,ilevel=187,enchant=rune_of_razorice\n".format(profile_suffix)
-    output += "profileset.dw_fsc{}+=off_hand=,id=179340,ilevel=187,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
+    output += "profileset.dw_fsc_baseline=talents=1223212\n".format(profile_suffix)
+    output += "profileset.dw_fsc_baseline+=main_hand=,id=178730,ilevel=187,enchant=rune_of_razorice\n".format(profile_suffix)
+    output += "profileset.dw_fsc_baseline+=off_hand=,id=179340,ilevel=187,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
+    for covenant in covenants:
+        for soulbind in soulbind_data[covenant]:
+            for legendary_id in legendary_data:
+                output += generate_profileset("fsc", "1223212", "dw", legendary_id, covenant, soulbind, 1)
     output += "\n"
 
-    output += "profileset.dw_bos{}=talents=2223213\n".format(profile_suffix)
-    output += "profileset.dw_bos{}+=main_hand=,id=178730,ilevel=187,enchant=rune_of_razorice\n".format(profile_suffix)
-    output += "profileset.dw_bos{}+=off_hand=,id=179340,ilevel=187,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
+    output += "profileset.dw_bos_baseline=talents=2223213\n".format(profile_suffix)
+    output += "profileset.dw_bos_baseline+=main_hand=,id=178730,ilevel=187,enchant=rune_of_razorice\n".format(profile_suffix)
+    output += "profileset.dw_bos_baseline+=off_hand=,id=179340,ilevel=187,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
+    for covenant in covenants:
+        for soulbind in soulbind_data[covenant]:
+            for legendary_id in legendary_data:
+                output += generate_profileset("bos", "2223213", "dw", legendary_id, covenant, soulbind, 1)
     output += "\n"
 
     return output
@@ -294,5 +330,5 @@ with open('full_profile.simc', 'w') as f:
     for x in [187]:
         f.write(output_ilvl(x))
 
-print(generate_soulbind("night_fae", "niya", 1))
+#print(generate_soulbind("profileset.2h", "night_fae", "niya", 1))
 
