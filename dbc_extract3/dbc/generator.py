@@ -1369,6 +1369,7 @@ class SpellDataGenerator(DataGenerator):
             ( 340431, 0 ),          # Doomblade legendary debuff
             ( 343173, 0 ),          # Premeditation buff
             ( 319190, 0 ),          # Shadow Vault shadow damage spell
+            ( 345316, 0 ), ( 345390, 0 ), # Flagellation damage spells
         ),
 
         # Priest:
@@ -1649,7 +1650,9 @@ class SpellDataGenerator(DataGenerator):
           ( 325217, 0 ), # Necrolord Bonedust Brew damage
           ( 325218, 0 ), # Necrolord Bonedust Brew heal
           ( 328296, 0 ), # Necrolord Bonedust Chi Refund
+          ( 327257, 0 ), # Ardenweald Faeline Stomp debuff
           ( 327264, 0 ), # Ardenweald Faeline Stomp damage
+          ( 345727, 0 ), # Ardenweald Faeline Stomp damage 2
           ( 328283, 0 ), # Venthyr Fallen Monk Soothing Mist Heal
           ( 330898, 0 ), # Venthyr Fallen Monk Fists of Fury
           ( 330901, 0 ), # Venthyr Fallen Monk Spinning Crane Kick
@@ -1660,6 +1663,7 @@ class SpellDataGenerator(DataGenerator):
           ( 344008, 0 ), # Venthyr Fallen Monk Enveloping Mist Heal
           ( 344239, 0 ), # Venthyr Fallen Monk Soothing Mist
           ( 344240, 0 ), # Venthyr Fallen Monk Enveloping Mist
+          ( 345714, 0 ), # Venthyr Fallen Monk Fists of Fury damage
 
           # Conduits
           ( 336874, 0 ), # Fortifying Ingredients
