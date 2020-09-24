@@ -3518,6 +3518,7 @@ public:
       {
         p()->resource_gain( RESOURCE_COMBO_POINT, p()->buff.eye_of_fearful_symmetry->check_value(),
                             p()->gain.eye_of_fearful_symmetry );
+        p()->buff.eye_of_fearful_symmetry->expire();
       }
 
       if ( p()->conduit.sudden_ambush->ok() && rng().roll( p()->conduit.sudden_ambush.percent() * consumed ) )
@@ -3903,6 +3904,7 @@ struct feral_frenzy_driver_t : public cat_attack_t
 
   double tick_ap_ratio;
 
+  // use hardcoded spell id so feral frenzy can be used as a secondary action
   feral_frenzy_driver_t( druid_t* p, const std::string& options_str )
     : cat_attack_t( "feral_frenzy", p, p->find_spell( 274837 ) )
   {
@@ -4928,8 +4930,9 @@ struct pulverize_t : public bear_attack_t
 {
   int consume;
 
-  pulverize_t( druid_t* player, const std::string& options_str )
-    : bear_attack_t( "pulverize", player, player->talent.pulverize, options_str )
+  // use hardcoded spell id so pulverize can be used as a secondary action
+  pulverize_t( druid_t* p, const std::string& options_str )
+    : bear_attack_t( "pulverize", p, p->find_spell( 80313 ), options_str )
   {
     consume = as<int>( data().effectN( 3 ).base_value() );
   }
@@ -4946,6 +4949,14 @@ struct pulverize_t : public bear_attack_t
       // and reduce damage taken by x% for y sec.
       p()->buff.pulverize->trigger();
     }
+  }
+
+  bool ready() override
+  {
+    if ( !p()->talent.pulverize->ok() )
+      return false;
+
+    return bear_attack_t::ready();
   }
 
   bool target_ready( player_t* t ) override
