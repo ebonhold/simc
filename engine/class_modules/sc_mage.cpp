@@ -5738,7 +5738,8 @@ mage_td_t::mage_td_t( player_t* target, mage_t* mage ) :
   debuffs.mirrors_of_torment          = make_buff<buffs::mirrors_of_torment_t>( this );
   debuffs.radiant_spark_vulnerability = make_buff( *this, "radiant_spark_vulnerability", mage->find_spell( 307454 ) )
                                           ->set_default_value_from_effect( 1 )
-                                          ->modify_default_value( mage->conduits.ire_of_the_ascended.percent() );
+                                          ->modify_default_value( mage->conduits.ire_of_the_ascended.percent() )
+                                          ->set_refresh_behavior( buff_refresh_behavior::DISABLED );
 
   // Azerite
   debuffs.packed_ice = make_buff( *this, "packed_ice", mage->find_spell( 272970 ) )
@@ -7299,6 +7300,7 @@ double mage_t::resource_regen_per_second( resource_e rt ) const
 
   if ( specialization() == MAGE_ARCANE && rt == RESOURCE_MANA )
   {
+    reg *= 1.0 + 0.01 * dbc->effect_average( &spec.arcane_mage->effectN( 4 ), level() );
     reg *= 1.0 + cache.mastery() * spec.savant->effectN( 1 ).mastery_value();
     reg *= 1.0 + buffs.enlightened_mana->check_value();
 
