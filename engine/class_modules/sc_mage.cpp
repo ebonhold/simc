@@ -66,6 +66,13 @@ enum ground_aoe_type_e
   AOE_MAX
 };
 
+enum target_trigger_type_e
+{
+  TT_NONE,
+  TT_MAIN_TARGET,
+  TT_ALL_TARGETS
+};
+
 struct state_switch_t
 {
 private:
@@ -1439,6 +1446,9 @@ struct mage_spell_state_t : public action_state_t
 
 struct mage_spell_t : public spell_t
 {
+  static const snapshot_state_e STATE_FROZEN     = STATE_TGT_USER_1;
+  static const snapshot_state_e STATE_FROZEN_MUL = STATE_TGT_USER_2;
+
   struct affected_by_t
   {
     // Permanent damage increase
@@ -1466,32 +1476,30 @@ struct mage_spell_t : public spell_t
     bool shifting_power = true;
   } affected_by;
 
-  static const snapshot_state_e STATE_FROZEN     = STATE_TGT_USER_1;
-  static const snapshot_state_e STATE_FROZEN_MUL = STATE_TGT_USER_2;
-
-  bool track_cd_waste;
-  cooldown_waste_data_t* cd_waste;
-
   struct triggers_t
   {
     bool bone_chilling = false;
     bool from_the_ashes = false;
-    bool hot_streak = false;
     bool ignite = false;
-    bool kindling = false;
+
+    target_trigger_type_e hot_streak = TT_NONE;
+    target_trigger_type_e kindling = TT_NONE;
 
     bool fevered_incantation = true; // TODO: Need to verify what exactly triggers Fevered Incantation.
     bool icy_propulsion = true;
     bool radiant_spark = false;
   } triggers;
 
+  bool track_cd_waste;
+  cooldown_waste_data_t* cd_waste;
+
 public:
   mage_spell_t( util::string_view n, mage_t* p, const spell_data_t* s = spell_data_t::nil() ) :
     spell_t( n, p, s ),
     affected_by(),
+    triggers(),
     track_cd_waste(),
-    cd_waste(),
-    triggers()
+    cd_waste()
   {
     may_crit = tick_may_crit = true;
     weapon_multiplier = 0.0;
@@ -1517,6 +1525,20 @@ public:
 
   action_state_t* new_state() override
   { return new mage_spell_state_t( this, target ); }
+
+  static bool tt_applicable( const action_state_t* s, target_trigger_type_e t )
+  {
+    switch ( t )
+    {
+      case TT_NONE:
+        return false;
+      case TT_MAIN_TARGET:
+        return s->chain_target == 0;
+      case TT_ALL_TARGETS:
+        return true;
+    }
+    return false;
+  }
 
   void init() override
   {
@@ -1904,13 +1926,15 @@ struct fire_mage_spell_t : public mage_spell_t
       if ( triggers.ignite )
         trigger_ignite( s );
 
-      if ( triggers.hot_streak && s->chain_target == 0 )
+      if ( tt_applicable( s, triggers.hot_streak ) )
         handle_hot_streak( s );
 
-      // TODO: Double check how this works with Pheonix Flames and Deathborne Fireball
-      // closer to release.
-      if ( triggers.kindling && s->result == RESULT_CRIT && p()->talents.kindling->ok() )
+      if ( tt_applicable( s, triggers.kindling )
+        && s->result == RESULT_CRIT
+        && p()->talents.kindling->ok() )
+      {
         p()->cooldowns.combustion->adjust( -p()->talents.kindling->effectN( 1 ).time_value() );
+      }
 
       if ( triggers.from_the_ashes
         && s->result == RESULT_CRIT
@@ -3308,7 +3332,7 @@ struct dragons_breath_t : public fire_mage_spell_t
     if ( p->talents.alexstraszas_fury->ok() )
     {
       base_crit = 1.0;
-      triggers.hot_streak = true;
+      triggers.hot_streak = TT_MAIN_TARGET;
     }
   }
 
@@ -3425,7 +3449,8 @@ struct fireball_t : public fire_mage_spell_t
     fire_mage_spell_t( n, p, p->find_specialization_spell( "Fireball" ) )
   {
     parse_options( options_str );
-    triggers.hot_streak = triggers.ignite = triggers.kindling = triggers.from_the_ashes = triggers.radiant_spark = true;
+    triggers.hot_streak = triggers.kindling = TT_ALL_TARGETS;
+    triggers.ignite = triggers.from_the_ashes = triggers.radiant_spark = true;
     affected_by.deathborne_cleave = true;
     base_multiplier *= 1.0 + p->spec.fireball_3->effectN( 1 ).percent();
     base_dd_adder += p->azerite.duplicative_incineration.value( 2 );
@@ -4363,7 +4388,8 @@ struct fire_blast_t : public fire_mage_spell_t
   {
     parse_options( options_str );
     usable_while_casting = p->spec.fire_blast_3->ok();
-    triggers.hot_streak = triggers.ignite = triggers.kindling = triggers.from_the_ashes = triggers.radiant_spark = true;
+    triggers.hot_streak = triggers.kindling = TT_MAIN_TARGET;
+    triggers.ignite = triggers.from_the_ashes = triggers.radiant_spark = true;
 
     cooldown->charges += as<int>( p->spec.fire_blast_4->effectN( 1 ).base_value() );
     cooldown->charges += as<int>( p->talents.flame_on->effectN( 1 ).base_value() );
@@ -4713,11 +4739,12 @@ struct phoenix_flames_splash_t : public fire_mage_spell_t
   {
     aoe = -1;
     background = reduced_aoe_damage = true;
-    triggers.hot_streak = triggers.ignite = triggers.radiant_spark = true;
+    triggers.hot_streak = triggers.kindling = TT_MAIN_TARGET;
+    triggers.ignite = triggers.radiant_spark = true;
     max_spread_targets = as<int>( p->spec.ignite->effectN( 4 ).base_value() );
-    // TODO: Phoenix Flames currently does not trigger fevered incantation or Kindling
+    // TODO: Phoenix Flames currently does not trigger fevered incantation
     // on the beta. Verify whether this is fixed closer to shadowlands release.
-    triggers.kindling = triggers.fevered_incantation = !p->bugs;
+    triggers.fevered_incantation = !p->bugs;
   }
 
   static double ignite_bank( dot_t* ignite )
@@ -4836,7 +4863,8 @@ struct pyroblast_t : public hot_streak_spell_t
     pyroblast_dot()
   {
     parse_options( options_str );
-    triggers.hot_streak = triggers.ignite = triggers.kindling = triggers.from_the_ashes = triggers.radiant_spark = true;
+    triggers.hot_streak = triggers.kindling = TT_MAIN_TARGET;
+    triggers.ignite = triggers.from_the_ashes = triggers.radiant_spark = true;
     base_dd_adder += p->azerite.wildfire.value( 2 );
     base_multiplier *= 1.0 + p->conduits.controlled_destruction.percent();
 
@@ -5012,7 +5040,8 @@ struct scorch_t : public fire_mage_spell_t
     fire_mage_spell_t( n, p, p->find_specialization_spell( "Scorch" ) )
   {
     parse_options( options_str );
-    triggers.hot_streak = triggers.ignite = triggers.from_the_ashes = triggers.radiant_spark = true;
+    triggers.hot_streak = TT_MAIN_TARGET;
+    triggers.ignite = triggers.from_the_ashes = triggers.radiant_spark = true;
   }
 
   double composite_da_multiplier( const action_state_t* s ) const override
@@ -6442,7 +6471,6 @@ void mage_t::create_buffs()
   buffs.incanters_flow    = make_buff<buffs::incanters_flow_t>( this );
   buffs.rune_of_power     = make_buff( this, "rune_of_power", find_spell( 116014 ) )
                               ->set_default_value_from_effect( 1 )
-                              ->set_refresh_behavior( buff_refresh_behavior::DISABLED )
                               ->set_chance( talents.rune_of_power->ok() );
   buffs.focus_magic_crit  = make_buff( this, "focus_magic_crit", find_spell( 321363 ) )
                               ->set_default_value_from_effect( 1 )
@@ -7300,7 +7328,7 @@ double mage_t::resource_regen_per_second( resource_e rt ) const
 
   if ( specialization() == MAGE_ARCANE && rt == RESOURCE_MANA )
   {
-    reg *= 1.0 + 0.01 * dbc->effect_average( &spec.arcane_mage->effectN( 4 ), level() );
+    reg *= 1.0 + 0.01 * spec.arcane_mage->effectN( 4 ).average( this );
     reg *= 1.0 + cache.mastery() * spec.savant->effectN( 1 ).mastery_value();
     reg *= 1.0 + buffs.enlightened_mana->check_value();
 
@@ -7678,7 +7706,7 @@ std::unique_ptr<expr_t> mage_t::create_expression( util::string_view name )
     auto is_hss = [] ( action_t* a )
     {
       if ( auto m = dynamic_cast<actions::mage_spell_t*>( a ) )
-        return m->triggers.hot_streak;
+        return m->triggers.hot_streak != TT_NONE;
       else
         return false;
     };
