@@ -200,9 +200,14 @@ soulbind_data = {
             "P/P/336245/P/319983"
         ],
         "draven": [
-            "319973/P/P/340159",
-            "332753/P/P/340159",
-            "332754/P/P/P/340159"
+            #  Draven is all sorts of busted atm
+            #"319973/P/P/340159",
+            #  Superior Tactics currently causes an assert issue
+            #"332753/P/P/340159",
+            #  Hold your ground gets auto created, but is missing an invalidate for the cache
+            #"332754/P/P/P/340159",
+            #  This one below should be 332754, but we have the path commented out for now
+            #"P/P/P/340159"
         ]
     },
     "necrolord": {
@@ -257,8 +262,9 @@ def generate_profileset(talent_label, talents, weapon_type, legendary_id, covena
             for z in conduits:
                 temp_sb = temp_sb.replace("P", "{}:{}".format(z, rank), 1)
                 profile_conduits += "_{}".format(conduit_pot[z])
-            profileset_name = "profileset.{}_{}_{}_{}_{}".format(weapon_type, talent_label, legendary_data[legendary_id], soulbind, profile_conduits)
+            profileset_name = "profileset.{}_{}_{}_{}{}_{}".format(weapon_type, talent_label, legendary_data[legendary_id], soulbind, profile_conduits, temp_sb)
             output += "{}=talents={}\n".format(profileset_name, talents)
+            output += "{}+=covenant={}\n".format(profileset_name,  covenant)
             output += "{}+=finger1=,id=178933,bonus_id=1500/{}\n".format(profileset_name, legendary_id)
             if weapon_type == "dw":
                 output += "{}+=main_hand=,id=178730,ilevel=187,enchant=rune_of_razorice\n".format(profileset_name)
