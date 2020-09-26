@@ -228,8 +228,13 @@ struct eclipse_handler_t
   unsigned wrath_counter;
   unsigned starfire_counter;
   eclipse_state_e state;
+  bool enabled_;
 
-  eclipse_handler_t( druid_t* player ) : p( player ), wrath_counter( 2 ), starfire_counter( 2 ), state( ANY_NEXT ) {}
+  eclipse_handler_t( druid_t* player )
+    : p( player ), wrath_counter( 2 ), starfire_counter( 2 ), state( ANY_NEXT ), enabled_( false )
+  {}
+
+  bool enabled() { return enabled_; }
 
   void cast_wrath();
   void cast_starfire();
@@ -285,7 +290,7 @@ public:
   int lively_spirit_stacks;  // to set how many spells a healer will cast during Innervate
   bool catweave_bear;
   bool affinity_resources;  // activate resources tied to affinities
-  double kindred_empowerment_ratio;
+  double kindred_spirits_partner_dps;
   double convoke_the_spirits_heals;
   double convoke_the_spirits_ultimate;
   double adaptive_swarm_jump_distance;
@@ -312,6 +317,7 @@ public:
     action_t* frenzied_assault;
     action_t* lycaras_fleeting_glimpse;  // fake holder action for reporting
     action_t* oneths_clear_vision;       // fake holder action for reporting
+    action_t* the_natural_orders_will;   // fake holder action for reporting
   } active;
 
   // Pets
@@ -383,6 +389,7 @@ public:
     buff_t* heart_of_the_wild;
     // General Legendaries
     buff_t* oath_of_the_elder_druid;
+    buff_t* lycaras_fleeting_glimpse;  // lycara's '5s warning' buff
     // Conduits
     buff_t* ursine_vigor;
 
@@ -854,7 +861,7 @@ public:
       lively_spirit_stacks( 9 ),  // set a usually fitting default value
       catweave_bear( false ),
       affinity_resources( false ),
-      kindred_empowerment_ratio( 1.0 ),
+      kindred_spirits_partner_dps( 1.0 ),
       convoke_the_spirits_heals( 3.5 ),
       convoke_the_spirits_ultimate( 0.2 ),
       adaptive_swarm_jump_distance( 5.0 ),
@@ -1026,6 +1033,8 @@ druid_t::~druid_t()
 // eclipse handler function definitions
 void eclipse_handler_t::cast_wrath()
 {
+  if ( !enabled() ) return;
+
   if ( state == ANY_NEXT || state == LUNAR_NEXT )
   {
     wrath_counter--;
@@ -1035,11 +1044,24 @@ void eclipse_handler_t::cast_wrath()
 
 void eclipse_handler_t::cast_starfire()
 {
+  if ( !enabled() ) return;
+
   if ( state == ANY_NEXT || state == SOLAR_NEXT )
   {
     starfire_counter--;
     advance_eclipse();
   }
+}
+
+void eclipse_handler_t::cast_starsurge()
+{
+  if ( !enabled() ) return;
+
+  if ( state == IN_SOLAR || state == IN_LUNAR || state == IN_BOTH )
+  p->buff.starsurge->trigger();
+
+  if ( p->conduit.stellar_inspiration->ok() && p->rng().roll( p->conduit.stellar_inspiration.percent() ) )
+    p->buff.starsurge->trigger();
 }
 
 void eclipse_handler_t::advance_eclipse()
@@ -1091,15 +1113,6 @@ void eclipse_handler_t::advance_eclipse()
 
   if ( state == IN_BOTH )
     state = ANY_NEXT;
-}
-
-void eclipse_handler_t::cast_starsurge()
-{
-  if ( state == IN_SOLAR || state == IN_LUNAR || state == IN_BOTH )
-  p->buff.starsurge->trigger();
-
-  if ( p->conduit.stellar_inspiration->ok() && p->rng().roll( p->conduit.stellar_inspiration.percent() ) )
-    p->buff.starsurge->trigger();
 }
 
 void eclipse_handler_t::trigger_both( timespan_t d = 0_ms )
@@ -1756,7 +1769,7 @@ struct kindred_empowerment_buff_t : public druid_buff_t<buff_t>
   double partner_pool;
 
   kindred_empowerment_buff_t( druid_t& p )
-    : base_t( p, "kindred_empowerment", p.covenant.kindred_empowerment ), pool( 1.0 ), partner_pool( 0.0 )
+    : base_t( p, "kindred_empowerment", p.covenant.kindred_empowerment ), pool( 1.0 ), partner_pool( 1.0 )
   {
     set_refresh_behavior( buff_refresh_behavior::DURATION );
   }
@@ -1773,16 +1786,18 @@ struct kindred_empowerment_buff_t : public druid_buff_t<buff_t>
   {
     trigger();
 
+    // since kindred_spirits_partner_dps is meant to apply to the pool you RECEIVE and not to the pool you send, don't
+    // apply it to partner_pool, which is meant to represent the damage the other person does.
     double partner_amount = s->result_amount * p().covenant.kindred_empowerment_energize->effectN( 1 ).percent();
-    double amount         = partner_amount * p().kindred_empowerment_ratio;
+    double amount         = partner_amount * p().kindred_spirits_partner_dps;
 
     sim->print_debug( "Kindred Empowerment: Adding {} from {} to pool of {}", amount, s->action->name(), pool );
 
-    // since kindred_empowerment_ratio is meant to apply to the pool you RECEIVE and not to the pool you send, don't
-    // apply it to partner_pool, which is meant to represent the damage the other person does.
     pool += amount;
-    partner_pool += partner_amount;
 
+    // only dps specs give a pool to the partner
+    if ( p().specialization() == DRUID_BALANCE || p().specialization() == DRUID_FERAL )
+      partner_pool += partner_amount;
   }
 
   void use_pool( const action_state_t* s )
@@ -7154,7 +7169,7 @@ struct convoke_the_spirits_t : public druid_spell_t
     int heals_int = as<int>( util::ceil( p->convoke_the_spirits_heals ) );
     heal_chance = heals_int - p->convoke_the_spirits_heals;
 
-    max_ticks = as<int>( util::ceil( dot_duration / base_tick_time ) );
+    max_ticks = as<int>( util::floor( dot_duration / base_tick_time ) );
     deck = p->get_shuffled_rng( "convoke_the_spirits", heals_int, max_ticks );
 
     // Balance
@@ -7175,6 +7190,19 @@ struct convoke_the_spirits_t : public druid_spell_t
     auto a = p()->get_secondary_action<T>( n, std::forward<Ts>( args )... );
     stats->add_child( a->init_free_cast_stats( free_cast_e::CONVOKE ) );
     return a;
+  }
+
+  void execute_convoke_action( action_t* action, player_t* target )
+  {
+    if ( auto a = dynamic_cast<druid_action_t<spell_t>*>( action ) )
+      a->free_cast = free_cast_e::CONVOKE;
+    else if ( auto a = dynamic_cast<druid_action_t<melee_attack_t>*>( action ) )
+      a->free_cast = free_cast_e::CONVOKE;
+    else if ( auto a = dynamic_cast<druid_action_t<heal_t>*>( action ) )
+      a->free_cast = free_cast_e::CONVOKE;
+
+    action->set_target( target );
+    action->execute();
   }
 
   double composite_haste() const override { return 1.0; }
@@ -7213,6 +7241,9 @@ struct convoke_the_spirits_t : public druid_spell_t
     player_t* conv_tar  = nullptr;
 
     druid_spell_t::tick( d );
+
+    if ( d->time_to_tick < base_tick_time )
+      return;
 
     if ( d->current_tick == ultimate_tick )
     {
@@ -7294,15 +7325,12 @@ struct convoke_the_spirits_t : public druid_spell_t
         if ( conv_cast == conv_mf )
           conv_tar = mf_tar;
       }
-
-      debug_cast<druid_action_t<spell_t>*>( conv_cast )->free_cast = free_cast_e::CONVOKE;
     }
 
     if ( !conv_cast || !conv_tar )
       return;
 
-    conv_cast->set_target( conv_tar );
-    conv_cast->execute();
+    execute_convoke_action( conv_cast, conv_tar );
   }
 
   void last_tick( dot_t* d ) override
@@ -7405,7 +7433,7 @@ struct adaptive_swarm_t : public druid_spell_t
 
     player_t* new_swarm_target()
     {
-      auto tl = other->target_list();
+      const auto &tl = other->target_list();
       if ( !tl.size() )
         return nullptr;
 
@@ -7720,22 +7748,29 @@ struct lycaras_fleeting_glimpse_t : public action_t
       a->set_target( d->target );
       a->execute();
     }
+
+    make_event( *sim, timespan_t::from_seconds( d->buff.lycaras_fleeting_glimpse->default_value ), [ this ]() {
+      d->buff.lycaras_fleeting_glimpse->trigger();
+    } );
   }
 };
 
-struct lycaras_fleeting_glimpse_event_t : public event_t
+struct the_natural_orders_will_t : public action_t
 {
-  druid_t* d;
-  timespan_t interval;
+  action_t* ironfur;
+  action_t* frenzied;
 
-  lycaras_fleeting_glimpse_event_t( druid_t* p, timespan_t tm ) : event_t( *p, tm ), d( p ), interval( tm ) {}
-
-  const char* name() const override { return "lycaras_fleeting_glimpse"; }
+  the_natural_orders_will_t( druid_t* p )
+    : action_t( action_e::ACTION_OTHER, "the_natural_orders_will", p, p->legendary.the_natural_orders_will )
+  {
+    ironfur  = p->get_secondary_action<spells::ironfur_t>( "Ironfur", "" );
+    frenzied = p->get_secondary_action<heals::frenzied_regeneration_t>( "Frenzied Regeneration", "" );
+  }
 
   void execute() override
   {
-    d->active.lycaras_fleeting_glimpse->execute();
-    make_event<lycaras_fleeting_glimpse_event_t>( sim(), d, interval );
+    ironfur->execute();
+    frenzied->execute();
   }
 };
 
@@ -8349,6 +8384,16 @@ void druid_t::create_buffs()
   buff.oath_of_the_elder_druid = make_buff( this, "oath_of_the_elder_druid", find_spell( 338643 ) )
     ->set_quiet( true );
 
+  buff.lycaras_fleeting_glimpse = make_buff( this, "lycaras_fleeting_glimpse", find_spell( 340060 ) )
+    ->set_period( 0_ms )
+    ->set_stack_change_callback( [ this ]( buff_t*, int, int new_ ) {
+      if ( !new_ )
+        active.lycaras_fleeting_glimpse->execute();
+    } );
+  // default value used as interval for event
+  buff.lycaras_fleeting_glimpse->set_default_value( legendary.lycaras_fleeting_glimpse->effectN( 1 ).base_value() -
+                                                    buff.lycaras_fleeting_glimpse->buff_duration().total_seconds() );
+
   // Endurance conduits
   buff.ursine_vigor = make_buff<ursine_vigor_buff_t>( *this );
 
@@ -8475,12 +8520,18 @@ void druid_t::create_buffs()
   buff.barkskin = make_buff( this, "barkskin", spec.barkskin )
     ->set_cooldown( 0_ms )
     ->set_default_value_from_effect_type( A_MOD_DAMAGE_PERCENT_TAKEN )
-    ->set_tick_behavior( talent.brambles->ok() ? buff_tick_behavior::REFRESH : buff_tick_behavior::NONE )
-    ->apply_affecting_aura( find_rank_spell( "Barkskin", "Rank 2") )
-    ->set_tick_callback( [this]( buff_t*, int, timespan_t ) {
-      if ( talent.brambles->ok() )
-        active.brambles_pulse->execute();
-      } );
+    ->set_tick_behavior( buff_tick_behavior::NONE )
+    ->apply_affecting_aura( find_rank_spell( "Barkskin", "Rank 2" ) );
+  if ( talent.brambles->ok() )
+  {
+    buff.barkskin->set_tick_behavior( buff_tick_behavior::REFRESH )
+      ->set_tick_callback( [ this ]( buff_t*, int, timespan_t ) { active.brambles_pulse->execute(); } );
+  }
+  if ( legendary.the_natural_orders_will->ok() )
+  {
+    buff.barkskin->apply_affecting_aura( legendary.the_natural_orders_will )
+      ->set_stack_change_callback( [ this ]( buff_t*, int, int ) { active.the_natural_orders_will->execute(); } );
+  }
 
   buff.bristling_fur = make_buff( this, "bristling_fur", talent.bristling_fur )
     ->set_cooldown( 0_ms );
@@ -8660,6 +8711,9 @@ void druid_t::create_actions()
     instant_absorb_list.insert( std::make_pair<unsigned, instant_absorb_t>(
         talent.brambles->id(), instant_absorb_t( this, talent.brambles, "brambles", &brambles_handler ) ) );
   }
+
+  if ( legendary.the_natural_orders_will->ok() )
+    active.the_natural_orders_will = new the_natural_orders_will_t( this );
 
   if ( talent.galactic_guardian->ok() )
     active.galactic_guardian = new galactic_guardian_t( this );
@@ -9188,6 +9242,9 @@ void druid_t::arise()
 {
   player_t::arise();
 
+  if ( specialization() == DRUID_BALANCE || talent.balance_affinity->ok() )
+    eclipse_handler.enabled_ = true;
+
   if ( talent.earthwarden->ok() )
     buff.earthwarden->trigger( buff.earthwarden->max_stack() );
 
@@ -9212,8 +9269,9 @@ void druid_t::combat_begin()
 
   if ( legendary.lycaras_fleeting_glimpse->ok() )
   {
-    make_event<lycaras_fleeting_glimpse_event_t>(
-        *sim, this, timespan_t::from_seconds( legendary.lycaras_fleeting_glimpse->effectN( 1 ).base_value() ) );
+    make_event( *sim, timespan_t::from_seconds( buff.lycaras_fleeting_glimpse->default_value ), [ this ]() {
+      buff.lycaras_fleeting_glimpse->trigger();
+    } );
   }
 }
 
@@ -9915,7 +9973,7 @@ void druid_t::create_options()
   add_option( opt_bool( "affinity_resources", affinity_resources ) );
   add_option( opt_float( "thorns_attack_period", thorns_attack_period ) );
   add_option( opt_float( "thorns_hit_chance", thorns_hit_chance ) );
-  add_option( opt_float( "kindred_empowerment_ratio", kindred_empowerment_ratio ) );
+  add_option( opt_float( "kindred_spirits_partner_dps", kindred_spirits_partner_dps ) );
   add_option( opt_float( "convoke_the_spirits_heals", convoke_the_spirits_heals ) );
   add_option( opt_float( "convoke_the_spirits_ultimate", convoke_the_spirits_ultimate ) );
   add_option( opt_float( "adaptive_swarm_jump_distance", adaptive_swarm_jump_distance ) );
@@ -10391,7 +10449,7 @@ void druid_t::copy_from( player_t* source )
   initial_moon_stage           = p->initial_moon_stage;
   lively_spirit_stacks         = p->lively_spirit_stacks;
   affinity_resources           = p->affinity_resources;
-  kindred_empowerment_ratio    = p->kindred_empowerment_ratio;
+  kindred_spirits_partner_dps  = p->kindred_spirits_partner_dps;
   convoke_the_spirits_heals    = p->convoke_the_spirits_heals;
   convoke_the_spirits_ultimate = p->convoke_the_spirits_ultimate;
   adaptive_swarm_jump_distance = p->adaptive_swarm_jump_distance;
