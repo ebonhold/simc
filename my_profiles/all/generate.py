@@ -98,6 +98,7 @@ actions.cold_heart=chains_of_ice,if=target.1.time_to_die<gcd|buff.pillar_of_fros
 
 # Frost cooldowns
 actions.cooldowns=pillar_of_frost,if=talent.breath_of_sindragosa.enabled&cooldown.breath_of_sindragosa.remains|!talent.breath_of_sindragosa.enabled
+actions.cooldowns+=/use_items
 actions.cooldowns+=/breath_of_sindragosa,use_off_gcd=1,if=cooldown.pillar_of_frost.ready&runic_power.deficit<60
 actions.cooldowns+=/empower_rune_weapon,if=cooldown.pillar_of_frost.ready&talent.obliteration.enabled&rune.time_to_5>gcd&runic_power.deficit>=10|target.1.time_to_die<20
 actions.cooldowns+=/empower_rune_weapon,if=(buff.breath_of_sindragosa.up|target.1.time_to_die<20)&talent.breath_of_sindragosa.enabled&runic_power>60
@@ -133,22 +134,96 @@ actions.standard+=/frost_strike
 actions.standard+=/horn_of_winter
 actions.standard+=/arcane_torrent
 
-head=,id=178777,bonus_id=1500
-neck=,id=178827,bonus_id=1500
-shoulders=,id=178820,bonus_id=1500
-back=,id=178851,bonus_id=1500
-chest=,id=180099,bonus_id=1500
-wrists=,id=179354,bonus_id=1500
-hands=,id=178840,bonus_id=1500
-waist=,id=178842,bonus_id=1500
-legs=,id=178818,bonus_id=1500
-feet=,id=180101,bonus_id=1500
-finger1=,id=178933,bonus_id=1500/6946
-finger2=,id=178736,bonus_id=1500
-trinket1=,id=178769,bonus_id=1500
-trinket2=,id=179342,bonus_id=1500
-main_hand=,id=178780,bonus_id=1500,enchant=rune_of_the_fallen_crusader
-scale_to_itemlevel=187
+#  1 Helm drop
+head=diadem_of_imperious_desire,id=182997,ilevel=233,gems=16crit,enchant=shadowcore_oil
+
+# C/M - Nik
+neck=nobles_birthstone_pendant,id=183039,ilevel=226,gems=16crit
+# H/M - Hunts
+# neck=charm_of_eternal_winter,id=183040,ilevel=226
+
+#  1 Shoulder drop
+shoulder=epaulettes_of_overwhelming_force,id=182994,ilevel=226
+
+# C/H Chest - Sludge
+chest=rampaging_giants_chestplate,id=182999,ilevel=226,enchant=eternal_stats
+# C/M Chest - Xy
+# chest=breatplate_of_cautious_calculation,id=182987,ilevel=226,enchant=eternal_stats
+
+# H/V - Kaal
+back=crest_of_the_legionnaire_general,id=183032,ilevel=226,enchant=soul_vitality
+# V/M - Shriek
+# back=cowled_batwing_cloak,id=183034,ilevel=226,enchant=soul_vitality
+# C/M - Kael
+# back=mantle_of_mantifest_sins,id=183033,ilevel=226,enchant=soul_vitality
+
+#  1 Wrist drop
+wrists=hellhound_cuffs,id=183018,ilevel=226,gems=16crit
+
+#  1 Hands drop
+hands=colossal_plate_gauntlets,id=182984,ilevel=226,enchant=eternal_strength
+
+#  C/H - Inerva
+waist=binding_of_warped_desires,id=183015,ilevel=226,gems=16crit
+#  H/M - Kael
+# waist=stoic_guardsmans_belt,id=183025,ilevel=226
+
+#  V/M - Kaal
+legs=ceremonial_parade_legguards,id=183002,ilevel=233
+#  C/M - Hungering
+# legs=endlessly_gluttonous_greaves,id=182992,ilevel=226
+
+#  H/M - Shriek
+feet=errant_crusaders_greaves,id=183027,ilevel=226
+#  C/M - Niklaus
+# feet=stoneguard_attendants_boots,id=182983,ilevel=226
+
+#  H/M - Sire
+finger1=most_regal_signet_of_sire_denathrius,id=183036,ilevel=233,gems=16crit,enchant=tenet_of_critical_strike
+#  C/H - Inerva
+finger2=ritualists_treasured_ring,id=183037,ilevel=226,gems=16crit,enchant=tenet_of_critical_strike
+#  V/M - Xy
+# finger2=hyperlight_band,id=183038,ilevel=226,enchant=tenet_of_critical_strike
+
+#  Trinket section is huge, sorry
+
+#  Sire
+trinket1=sanguine_vintage,id=184031,ilevel=233
+#  Sire
+trinket2=dreadfire_vessel,id=184030,ilevel=233
+#  Kaal
+# trinket1=stone_legion_heraldry,id=184027,ilevel=233
+#  Niklaus
+# trinket1=macabre_sheet_music,id=184024,ilevel=233
+# Inerva
+# trinket1=memory_of_past_sins,id=184025,ilevel=226
+# Shriek
+# trinket1=skulkers_wing,id=184016,ilevel=226
+# Hungering
+# trinket1=gluttonous_spike,id=184023,ilevel=226
+# Huntsman
+# trinket1=bargasts_leash,id=184017,ilevel=226
+# Kael
+# trinket1=splintered_heart_of_alar,id=184018,ilevel=226
+
+# 2H
+#  H/M
+main_hand=nathrian_crusaders_bastard_sword,id=182389,ilevel=233,enchant=rune_of_the_fallen_crusader
+#  C/V 
+# main_hand=nathrian_crusaders_blade,id=182415,ilevel=233,enchant=rune_of_the_fallen_crusader
+
+# DW
+# C/M for both
+# main_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_razorice
+# off_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_the_fallen_crusader
+# H/V Alternate
+# main_hand=stoneborn_terrorblade,id=182395,ilevel=233,enchant=rune_of_razorice
+
+tabard=,id=31405
+
+flask=spectral_flask_of_power
+food=feast_of_gluttonous_hedonism
+potion=spectral_strength
 """
 
 legendary_data = {'6946': 'absolute_zero',
@@ -258,12 +333,12 @@ def generate_profileset(talent_label, talents, weapon_type, legendary_id, covena
             profileset_name = "profileset.{}_{}_{}_{}{}_{}".format(weapon_type, talent_label, legendary_data[legendary_id], soulbind, profile_conduits, temp_sb)
             output += "{}=talents={}\n".format(profileset_name, talents)
             output += "{}+=covenant={}\n".format(profileset_name,  covenant)
-            output += "{}+=finger1=,id=178933,bonus_id=1500/{}\n".format(profileset_name, legendary_id)
+            output += "{}+=tabard=,id=31405,bonus_id={}\n".format(profileset_name, legendary_id)
             if weapon_type == "dw":
-                output += "{}+=main_hand=,id=178730,ilevel=187,enchant=rune_of_razorice\n".format(profileset_name)
-                output += "{}+=off_hand=,id=179340,ilevel=187,enchant=rune_of_the_fallen_crusader\n".format(profileset_name)
+                output += "{}+=main_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_razorice\n".format(profileset_name)
+                output += "{}+=off_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_the_fallen_crusader\n".format(profileset_name)
             else:
-                output += "{}+=main_hand=,id=178780,bonus_id=1500,enchant=rune_of_the_fallen_crusader\n".format(profileset_name)
+                output += "{}+=main_hand=nathrian_crusaders_bastard_sword,id=182389,ilevel=233,enchant=rune_of_the_fallen_crusader\n".format(profileset_name)
                 
             output += "{}+=soulbind={},{}\n".format(profileset_name, soulbind, temp_sb)
     return output
@@ -294,8 +369,8 @@ def output_ilvl(ilvl):
     output += "\n"
 
     output += "profileset.dw_baseline=talents=1221212\n".format(profile_suffix)
-    output += "profileset.dw_baseline+=main_hand=,id=178730,ilevel=187,enchant=rune_of_razorice\n".format(profile_suffix)
-    output += "profileset.dw_baseline+=off_hand=,id=179340,ilevel=187,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
+    output += "profileset.dw_baseline+=main_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_razorice\n".format(profile_suffix)
+    output += "profileset.dw_baseline+=off_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
     for covenant in covenants:
         for soulbind in soulbind_data[covenant]:
             for legendary_id in legendary_data:
@@ -303,8 +378,8 @@ def output_ilvl(ilvl):
     output += "\n"
 
     output += "profileset.dw_fsc_baseline=talents=1223212\n".format(profile_suffix)
-    output += "profileset.dw_fsc_baseline+=main_hand=,id=178730,ilevel=187,enchant=rune_of_razorice\n".format(profile_suffix)
-    output += "profileset.dw_fsc_baseline+=off_hand=,id=179340,ilevel=187,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
+    output += "profileset.dw_fsc_baseline+=main_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_razorice\n".format(profile_suffix)
+    output += "profileset.dw_fsc_baseline+=off_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
     for covenant in covenants:
         for soulbind in soulbind_data[covenant]:
             for legendary_id in legendary_data:
@@ -312,8 +387,8 @@ def output_ilvl(ilvl):
     output += "\n"
 
     output += "profileset.dw_bos_baseline=talents=2223213\n".format(profile_suffix)
-    output += "profileset.dw_bos_baseline+=main_hand=,id=178730,ilevel=187,enchant=rune_of_razorice\n".format(profile_suffix)
-    output += "profileset.dw_bos_baseline+=off_hand=,id=179340,ilevel=187,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
+    output += "profileset.dw_bos_baseline+=main_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_razorice\n".format(profile_suffix)
+    output += "profileset.dw_bos_baseline+=off_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
     for covenant in covenants:
         for soulbind in soulbind_data[covenant]:
             for legendary_id in legendary_data:
