@@ -12,6 +12,12 @@ role=attack
 position=back
 talents=1221212
 
+# This default action priority list is automatically created based on your character.
+# It is a attempt to provide you with a action list that is both simple and practicable,
+# while resulting in a meaningful and good simulation. It may not result in the absolutely highest possible dps.
+# Feel free to edit, adapt and improve it to your own needs.
+# SimulationCraft is always looking for updates and improvements to the default action lists.
+
 # Executed before combat begins. Accepts non-harmful actions only.
 actions.precombat=flask
 actions.precombat+=/food
@@ -97,15 +103,16 @@ actions.bos_ticking+=/arcane_torrent,if=runic_power.deficit>50
 actions.cold_heart=chains_of_ice,if=target.1.time_to_die<gcd|buff.pillar_of_frost.remains<3&buff.cold_heart.stack=20
 
 # Frost cooldowns
-actions.cooldowns=pillar_of_frost,if=talent.breath_of_sindragosa.enabled&cooldown.breath_of_sindragosa.remains|!talent.breath_of_sindragosa.enabled
-actions.cooldowns+=/use_items
+actions.cooldowns=pillar_of_frost,use_off_gcd=1,if=talent.breath_of_sindragosa.enabled&cooldown.breath_of_sindragosa.remains|!talent.breath_of_sindragosa.enabled
 actions.cooldowns+=/breath_of_sindragosa,use_off_gcd=1,if=cooldown.pillar_of_frost.ready&runic_power.deficit<60
 actions.cooldowns+=/empower_rune_weapon,if=cooldown.pillar_of_frost.ready&talent.obliteration.enabled&rune.time_to_5>gcd&runic_power.deficit>=10|target.1.time_to_die<20
-actions.cooldowns+=/empower_rune_weapon,if=(buff.breath_of_sindragosa.up|target.1.time_to_die<20)&talent.breath_of_sindragosa.enabled&runic_power>60
+actions.cooldowns+=/empower_rune_weapon,if=(buff.breath_of_sindragosa.up|target.1.time_to_die<20)&talent.breath_of_sindragosa.enabled&runic_power.deficit>30
 actions.cooldowns+=/empower_rune_weapon,if=talent.icecap.enabled&rune<3
 actions.cooldowns+=/frostwyrms_fury,if=buff.pillar_of_frost.remains<(3+talent.cold_heart.enabled*1)
 actions.cooldowns+=/frostwyrms_fury,if=active_enemies>=2&cooldown.pillar_of_frost.remains+15>target.time_to_die|target.1.time_to_die<gcd
-actions.cooldowns+=/hypothermic_presence,if=talent.breath_of_sindragosa.enabled&runic_power.defecit>40&rune>=3|!talent.breath_of_sindragosa.enabled&runic_power.deficit>=25
+actions.cooldowns+=/hypothermic_presence,if=talent.breath_of_sindragosa.enabled&runic_power.defecit>40&rune>=3&cooldown.pillar_of_frost.up|!talent.breath_of_sindragosa.enabled&runic_power.deficit>=25
+actions.cooldowns+=/raise_dead,if=cooldown.pillar_of_frost.remains<3
+actions.cooldowns+=/sacrificial_pact,if=active_enemies>=2&!buff.dark_transformation.up&!cooldown.dark_transformation.ready&cooldown.dark_transformation.remains>cooldown.raise_dead.remains
 
 # Obliteration rotation
 actions.obliteration=remorseless_winter,if=talent.gathering_storm.enabled
@@ -114,7 +121,8 @@ actions.obliteration+=/obliterate,if=!talent.frostscythe.enabled&!buff.rime.up&s
 actions.obliteration+=/frostscythe,if=(buff.killing_machine.react|(buff.killing_machine.up&(prev_gcd.1.frost_strike|prev_gcd.1.howling_blast|prev_gcd.1.glacial_advance)))&spell_targets.frostscythe>=2
 actions.obliteration+=/obliterate,target_if=(death_knight.runeforge.razorice&(debuff.razorice.stack<5|debuff.razorice.remains<10))&buff.killing_machine.react|(buff.killing_machine.up&(prev_gcd.1.frost_strike|prev_gcd.1.howling_blast|prev_gcd.1.glacial_advance))
 actions.obliteration+=/obliterate,if=buff.killing_machine.react|(buff.killing_machine.up&(prev_gcd.1.frost_strike|prev_gcd.1.howling_blast|prev_gcd.1.glacial_advance))
-actions.obliteration+=/glacial_advance,if=(!buff.rime.up|runic_power.deficit<10|rune.time_to_2>gcd)&spell_targets.glacial_advance>=2
+actions.obliteration+=/glacial_advance,if=(!buff.rime.up|runic_power.deficit<10|rune.time_to_2>gcd)&spell_targets.glacial_advance>=2|!death_knight.runeforge.razorice&(debuff.razorice.stack<5|debuff.razorice.remains<15)
+actions.obliteration+=/frost_strike,if=talent.icy_talons.enabled&buff.icy_talons.remains<gcd|conduit.eradicating_blow.enabled&buff.eradicating_blow.stack=2
 actions.obliteration+=/howling_blast,if=buff.rime.up&spell_targets.howling_blast>=2
 actions.obliteration+=/frost_strike,target_if=(death_knight.runeforge.razorice&(debuff.razorice.stack<5|debuff.razorice.remains<10))&!buff.rime.up|runic_power.deficit<10|rune.time_to_2>gcd&!talent.frostscythe.enabled
 actions.obliteration+=/frost_strike,if=!buff.rime.up|runic_power.deficit<10|rune.time_to_2>gcd
@@ -124,7 +132,8 @@ actions.obliteration+=/obliterate
 
 # Standard single-target rotation
 actions.standard=remorseless_winter
-actions.standard+=/frost_strike,if=cooldown.remorseless_winter.remains<=2*gcd&talent.gathering_storm.enabled
+actions.standard+=/frost_strike,if=cooldown.remorseless_winter.remains<=2*gcd&talent.gathering_storm.enabled|conduit.unleashed_frenzy.enabled&buff.unleashed_frenzy.remains<3
+actions.standard+=/glacial_advance,if=!death_knight.runeforge.razorice
 actions.standard+=/howling_blast,if=buff.rime.up
 actions.standard+=/obliterate,if=!buff.frozen_pulse.up&talent.frozen_pulse.enabled
 actions.standard+=/frost_strike,if=runic_power.deficit<(15+talent.runic_attenuation.enabled*3)
@@ -208,14 +217,14 @@ trinket2=dreadfire_vessel,id=184030,ilevel=233
 
 # 2H
 #  H/M
-main_hand=nathrian_crusaders_bastard_sword,id=182389,ilevel=233,enchant=rune_of_the_fallen_crusader
+main_hand=nathrian_crusaders_bastard_sword,id=182389,ilevel=233,enchant=rune_of_razorice
 #  C/V 
-# main_hand=nathrian_crusaders_blade,id=182415,ilevel=233,enchant=rune_of_the_fallen_crusader
+# main_hand=nathrian_crusaders_blade,id=182415,ilevel=233,enchant=rune_of_razorice
 
 # DW
 # C/M for both
-# main_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_razorice
-# off_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_the_fallen_crusader
+# main_hand=barbededge_of_the_stone_legion,id=182421,ilevel=233,enchant=rune_of_razorice
+# off_hand=barbededge_of_the_stone_legion,id=182421,ilevel=233,enchant=rune_of_the_fallen_crusader
 # H/V Alternate
 # main_hand=stoneborn_terrorblade,id=182395,ilevel=233,enchant=rune_of_razorice
 
@@ -335,10 +344,10 @@ def generate_profileset(talent_label, talents, weapon_type, legendary_id, covena
             output += "{}+=covenant={}\n".format(profileset_name,  covenant)
             output += "{}+=tabard=,id=31405,bonus_id={}\n".format(profileset_name, legendary_id)
             if weapon_type == "dw":
-                output += "{}+=main_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_razorice\n".format(profileset_name)
-                output += "{}+=off_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_the_fallen_crusader\n".format(profileset_name)
+                output += "{}+=main_hand=barbededge_of_the_stone_legion,id=182421,ilevel=233,enchant=rune_of_razorice\n".format(profileset_name)
+                output += "{}+=off_hand=barbededge_of_the_stone_legion,id=182421,ilevel=233,enchant=rune_of_the_fallen_crusader\n".format(profileset_name)
             else:
-                output += "{}+=main_hand=nathrian_crusaders_bastard_sword,id=182389,ilevel=233,enchant=rune_of_the_fallen_crusader\n".format(profileset_name)
+                output += "{}+=main_hand=nathrian_crusaders_bastard_sword,id=182389,ilevel=233,enchant=rune_of_razorice\n".format(profileset_name)
                 
             output += "{}+=soulbind={},{}\n".format(profileset_name, soulbind, temp_sb)
     return output
@@ -350,7 +359,7 @@ def output_ilvl(ilvl):
     for covenant in covenants:
         for soulbind in soulbind_data[covenant]:
             for legendary_id in legendary_data:
-                output += generate_profileset("oblit", "1221212", "2h", legendary_id, covenant, soulbind, 1)
+                output += generate_profileset("oblit", "1221212", "2h", legendary_id, covenant, soulbind, 6)
 
     output += "\n"
 
@@ -358,41 +367,41 @@ def output_ilvl(ilvl):
     for covenant in covenants:
         for soulbind in soulbind_data[covenant]:
             for legendary_id in legendary_data:
-                output += generate_profileset("fsc", "1223212", "2h", legendary_id, covenant, soulbind, 1)
+                output += generate_profileset("fsc", "1223212", "2h", legendary_id, covenant, soulbind, 6)
     output += "\n"
 
     output += "profileset.2h_bos_baseline=talents=2223213\n".format(profile_suffix)
     for covenant in covenants:
         for soulbind in soulbind_data[covenant]:
             for legendary_id in legendary_data:
-                output += generate_profileset("bos", "2223213", "2h", legendary_id, covenant, soulbind, 1)
+                output += generate_profileset("bos", "2223213", "2h", legendary_id, covenant, soulbind, 6)
     output += "\n"
 
     output += "profileset.dw_baseline=talents=1221212\n".format(profile_suffix)
-    output += "profileset.dw_baseline+=main_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_razorice\n".format(profile_suffix)
-    output += "profileset.dw_baseline+=off_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
+    output += "profileset.dw_baseline+=main_hand=barbededge_of_the_stone_legion,id=182421,ilevel=233,enchant=rune_of_razorice\n".format(profile_suffix)
+    output += "profileset.dw_baseline+=off_hand=barbededge_of_the_stone_legion,id=182421,ilevel=233,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
     for covenant in covenants:
         for soulbind in soulbind_data[covenant]:
             for legendary_id in legendary_data:
-                output += generate_profileset("oblit", "1221212", "dw", legendary_id, covenant, soulbind, 1)
+                output += generate_profileset("oblit", "1221212", "dw", legendary_id, covenant, soulbind, 6)
     output += "\n"
 
     output += "profileset.dw_fsc_baseline=talents=1223212\n".format(profile_suffix)
-    output += "profileset.dw_fsc_baseline+=main_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_razorice\n".format(profile_suffix)
-    output += "profileset.dw_fsc_baseline+=off_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
+    output += "profileset.dw_fsc_baseline+=main_hand=barbededge_of_the_stone_legion,id=182421,ilevel=233,enchant=rune_of_razorice\n".format(profile_suffix)
+    output += "profileset.dw_fsc_baseline+=off_hand=barbededge_of_the_stone_legion,id=182421,ilevel=233,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
     for covenant in covenants:
         for soulbind in soulbind_data[covenant]:
             for legendary_id in legendary_data:
-                output += generate_profileset("fsc", "1223212", "dw", legendary_id, covenant, soulbind, 1)
+                output += generate_profileset("fsc", "1223212", "dw", legendary_id, covenant, soulbind, 6)
     output += "\n"
 
     output += "profileset.dw_bos_baseline=talents=2223213\n".format(profile_suffix)
-    output += "profileset.dw_bos_baseline+=main_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_razorice\n".format(profile_suffix)
-    output += "profileset.dw_bos_baseline+=off_hand=stoneborn_terroredge,id=182421,ilevel=233,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
+    output += "profileset.dw_bos_baseline+=main_hand=barbededge_of_the_stone_legion,id=182421,ilevel=233,enchant=rune_of_razorice\n".format(profile_suffix)
+    output += "profileset.dw_bos_baseline+=off_hand=barbededge_of_the_stone_legion,id=182421,ilevel=233,enchant=rune_of_the_fallen_crusader\n".format(profile_suffix)
     for covenant in covenants:
         for soulbind in soulbind_data[covenant]:
             for legendary_id in legendary_data:
-                output += generate_profileset("bos", "2223213", "dw", legendary_id, covenant, soulbind, 1)
+                output += generate_profileset("bos", "2223213", "dw", legendary_id, covenant, soulbind, 6)
     output += "\n"
 
     return output
