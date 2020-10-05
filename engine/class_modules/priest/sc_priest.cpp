@@ -468,6 +468,8 @@ struct mindgames_t final : public priest_spell_t
   {
     parse_options( options_str );
 
+    affected_by_shadow_weaving = true;
+
     if ( priest().conduits.shattered_perceptions->ok() )
     {
       base_dd_multiplier *= ( 1.0 + priest().conduits.shattered_perceptions.percent() );
@@ -862,7 +864,7 @@ struct boon_of_the_ascended_t final : public priest_buff_t<buff_t>
 
     if ( priest().options.priest_use_ascended_eruption )
     {
-      priest().action.ascended_eruption->trigger_eruption( expiration_stacks );
+      priest().background_actions.ascended_eruption->trigger_eruption( expiration_stacks );
     }
   }
 };
@@ -1108,8 +1110,13 @@ struct void_lasher_mind_sear_tick_t final : public priest_pet_spell_t
   {
     priest_pet_spell_t::impact( s );
 
-    p().o().generate_insanity( void_lasher_insanity, p().o().gains.insanity_eternal_call_to_the_void_mind_sear,
-                               s->action );
+    // Currently bugged to only give insanity on the main target
+    // https://github.com/SimCMinMax/WoW-BugTracker/issues/687
+    if ( s->target == parent_dot->target || !p().o().bugs )
+    {
+      p().o().generate_insanity( void_lasher_insanity, p().o().gains.insanity_eternal_call_to_the_void_mind_sear,
+                                 s->action );
+    }
   }
 };
 
@@ -1174,9 +1181,14 @@ priest_td_t::priest_td_t( player_t* target, priest_t& p ) : actor_target_data_t(
   buffs.surrender_to_madness_debuff = make_buff<buffs::surrender_to_madness_debuff_t>( *this );
   buffs.shadow_crash_debuff = make_buff( *this, "shadow_crash_debuff", p.talents.shadow_crash->effectN( 1 ).trigger() );
   buffs.wrathful_faerie     = make_buff( *this, "wrathful_faerie", p.find_spell( 327703 ) );
-  buffs.wrathful_faerie_fermata = make_buff( *this, "wrathful_faerie_fermata", p.find_spell( 345452 ) );
+  buffs.wrathful_faerie_fermata = make_buff( *this, "wrathful_faerie_fermata", p.find_spell( 345452 ) )
+                                      ->set_cooldown( timespan_t::zero() )
+                                      ->set_duration( priest().conduits.fae_fermata.time_value() );
+  buffs.hungering_void_tracking =
+      make_buff( *this, "hungering_void_tracking", p.talents.hungering_void )->set_quiet( true )->set_duration( 0_ms );
+  buffs.hungering_void = make_buff( *this, "hungering_void", p.find_spell( 345219 ) );
 
-  target->callbacks_on_demise.emplace_back( [ this ]( player_t* ) { target_demise(); } );
+  target->register_on_demise_callback( &p, [ this ]( player_t* ) { target_demise(); } );
 }
 
 void priest_td_t::reset()
@@ -1212,17 +1224,15 @@ priest_t::priest_t( sim_t* sim, util::string_view name, race_e r )
     gains(),
     benefits(),
     procs(),
-    active_spells(),
+    background_actions(),
     active_items(),
     pets( *this ),
     options(),
-    action(),
     azerite(),
     azerite_essence(),
     legendary(),
     conduits(),
-    covenant(),
-    insanity( *this )
+    covenant()
 {
   create_cooldowns();
   create_gains();
@@ -1250,8 +1260,6 @@ void priest_t::create_gains()
   gains.mindbender                      = get_gain( "Mana Gained from Mindbender" );
   gains.power_word_solace               = get_gain( "Mana Gained from Power Word: Solace" );
   gains.insanity_auspicious_spirits     = get_gain( "Insanity Gained from Auspicious Spirits" );
-  gains.insanity_dispersion             = get_gain( "Insanity Saved by Dispersion" );
-  gains.insanity_drain                  = get_gain( "Insanity Drained by Voidform" );
   gains.insanity_pet                    = get_gain( "Insanity Gained from Shadowfiend" );
   gains.insanity_surrender_to_madness   = get_gain( "Insanity Gained from Surrender to Madness" );
   gains.vampiric_touch_health           = get_gain( "Health from Vampiric Touch" );
@@ -1416,22 +1424,12 @@ double priest_t::composite_spell_haste() const
 {
   double h = player_t::composite_spell_haste();
 
-  if ( buffs.dark_passion->check() )
-  {
-    h /= 1.0 + buffs.dark_passion->data().effectN( 1 ).percent();
-  }
-
   return h;
 }
 
 double priest_t::composite_melee_haste() const
 {
   double h = player_t::composite_melee_haste();
-
-  if ( buffs.dark_passion->check() )
-  {
-    h /= 1.0 + buffs.dark_passion->data().effectN( 1 ).percent();
-  }
 
   return h;
 }
@@ -1654,12 +1652,11 @@ void priest_t::trigger_lucid_dreams( double cost )
 
   if ( rng().roll( proc_chance ) )
   {
-    double current_drain;
     switch ( specialization() )
     {
       case PRIEST_SHADOW:
-        current_drain = insanity.insanity_drain_per_second();
-        generate_insanity( current_drain * multiplier, gains.insanity_lucid_dreams, nullptr );
+        // TODO: Figure this out for prepatch?
+        // generate_insanity( current_drain * multiplier, gains.insanity_lucid_dreams, nullptr );
         break;
       case PRIEST_HOLY:
       case PRIEST_DISCIPLINE:
@@ -1675,12 +1672,12 @@ void priest_t::trigger_lucid_dreams( double cost )
 
 void priest_t::trigger_wrathful_faerie()
 {
-  active_spells.wrathful_faerie->trigger();
+  background_actions.wrathful_faerie->trigger();
 }
 
 void priest_t::trigger_wrathful_faerie_fermata()
 {
-  active_spells.wrathful_faerie_fermata->trigger();
+  background_actions.wrathful_faerie_fermata->trigger();
 }
 
 void priest_t::init_base_stats()
@@ -1733,12 +1730,6 @@ void priest_t::init_resources( bool force )
 void priest_t::init_scaling()
 {
   base_t::init_scaling();
-
-  if ( specialization() == PRIEST_SHADOW )
-  {
-    // Just hook insanity init in here when actor set bonuses are ready
-    insanity.init();
-  }
 }
 
 void priest_t::init_spells()
@@ -1748,6 +1739,10 @@ void priest_t::init_spells()
   init_spells_shadow();
   init_spells_discipline();
   init_spells_holy();
+
+  // Generic Spells
+  specs.mind_flay = find_specialization_spell( "Mind Flay" );
+  specs.mind_sear = find_class_spell( "Mind Sear" );
 
   // Class passives
   specs.priest     = dbc::get_class_passive( *this, SPEC_NONE );
@@ -1851,11 +1846,11 @@ void priest_t::init_rng()
 
 void priest_t::init_background_actions()
 {
-  action.ascended_eruption = new actions::spells::ascended_eruption_t( *this );
+  background_actions.ascended_eruption = new actions::spells::ascended_eruption_t( *this );
 
-  active_spells.wrathful_faerie = new actions::spells::wrathful_faerie_t( *this );
+  background_actions.wrathful_faerie = new actions::spells::wrathful_faerie_t( *this );
 
-  active_spells.wrathful_faerie_fermata = new actions::spells::wrathful_faerie_fermata_t( *this );
+  background_actions.wrathful_faerie_fermata = new actions::spells::wrathful_faerie_fermata_t( *this );
 
   init_background_actions_shadow();
 }
@@ -1920,10 +1915,6 @@ pets::fiend::base_fiend_pet_t* priest_t::get_current_main_pet()
 void priest_t::do_dynamic_regen()
 {
   player_t::do_dynamic_regen();
-
-  // Drain insanity, and adjust the time when all insanity is depleted from the actor
-  insanity.drain();
-  insanity.adjust_end_event();
 }
 
 void priest_t::apply_affecting_auras( action_t& action )
@@ -2121,8 +2112,6 @@ void priest_t::reset()
       td->reset();
     }
   }
-
-  insanity.reset();
 }
 
 void priest_t::target_mitigation( school_e school, result_amount_type dt, action_state_t* s )
@@ -2206,8 +2195,8 @@ void priest_t::trigger_shadowflame_prism( player_t* target )
 // Legendary Eternal Call to the Void trigger
 void priest_t::trigger_eternal_call_to_the_void( action_state_t* s )
 {
-  auto mind_sear_id = find_class_spell( "Mind Sear" )->effectN( 1 ).trigger()->id();
-  auto mind_flay_id = find_specialization_spell( "Mind Flay" )->id();
+  auto mind_sear_id = specs.mind_sear->effectN( 1 ).trigger()->id();
+  auto mind_flay_id = specs.mind_flay->id();
   auto action_id    = s->action->id;
   if ( !legendary.eternal_call_to_the_void->ok() )
     return;
@@ -2237,9 +2226,8 @@ void priest_t::remove_wrathful_faerie()
       priest_td->buffs.wrathful_faerie->expire();
 
       // If you have the conduit enabled, clear out the conduit buff and trigger it on the old Wrathful Faerie target
-      if ( conduits.fae_fermata && buffs.fae_guardians->check() )
+      if ( conduits.fae_fermata->ok() && buffs.fae_guardians->check() )
       {
-        remove_wrathful_faerie_fermata();
         priest_td->buffs.wrathful_faerie_fermata->trigger();
       }
     }
@@ -2247,9 +2235,10 @@ void priest_t::remove_wrathful_faerie()
 }
 
 // Fae Guardian Wrathful Faerie conduit buff helper
+// TODO: this might not be needed anymore
 void priest_t::remove_wrathful_faerie_fermata()
 {
-  if ( !conduits.fae_fermata )
+  if ( !conduits.fae_fermata->ok() )
   {
     return;
   }
@@ -2321,14 +2310,9 @@ priest_t::priest_pets_t::priest_pets_t( priest_t& p )
   void_lasher.set_default_duration( p.find_spell( 336216 )->duration() + timespan_t::from_millis( 1 ) );
 }
 
-buffs::dispersion_t::dispersion_t( priest_t& p )
-  : base_t( p, "dispersion", p.find_class_spell( "Dispersion" ) ), no_insanity_drain()
+buffs::dispersion_t::dispersion_t( priest_t& p ) : base_t( p, "dispersion", p.find_class_spell( "Dispersion" ) )
 {
   auto rank2 = p.find_specialization_spell( 322108, PRIEST_SHADOW );
-  if ( rank2->ok() )
-  {
-    no_insanity_drain = true;
-  }
 }
 
 }  // namespace priestspace

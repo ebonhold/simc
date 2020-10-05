@@ -289,8 +289,12 @@ public:
   int initial_moon_stage;
   int lively_spirit_stacks;  // to set how many spells a healer will cast during Innervate
   bool catweave_bear;
+  bool owlweave_bear;
+
   bool affinity_resources;  // activate resources tied to affinities
   double kindred_spirits_partner_dps;
+  bool kindred_spirits_hide_partner;
+  double kindred_spirits_absorbed;
   double convoke_the_spirits_heals;
   double convoke_the_spirits_ultimate;
   double adaptive_swarm_jump_distance;
@@ -840,7 +844,7 @@ public:
     // Guardian
     item_runeforge_t luffainfused_embrace;     // 7092
     item_runeforge_t the_natural_orders_will;  // 7093
-    item_runeforge_t ursocs_lingering_spirit;  // 7094
+    item_runeforge_t ursocs_fury_remembered;   // 7094
     item_runeforge_t legacy_of_the_sleeper;    // 7095
   } legendary;
 
@@ -859,8 +863,11 @@ public:
       initial_moon_stage( NEW_MOON ),
       lively_spirit_stacks( 9 ),  // set a usually fitting default value
       catweave_bear( false ),
+      owlweave_bear( false ),
       affinity_resources( false ),
       kindred_spirits_partner_dps( 1.0 ),
+      kindred_spirits_hide_partner( false ),
+      kindred_spirits_absorbed( 0.15 ),
       convoke_the_spirits_heals( 3.5 ),
       convoke_the_spirits_ultimate( 0.2 ),
       adaptive_swarm_jump_distance( 5.0 ),
@@ -944,20 +951,20 @@ public:
   double composite_attribute_multiplier( attribute_e attr ) const override;
   double composite_block() const override { return 0; }
   double composite_crit_avoidance() const override;
-  double composite_dodge() const override;
+  //double composite_dodge() const override;
   double composite_dodge_rating() const override;
-  double composite_damage_versatility_rating() const override;
-  double composite_heal_versatility_rating() const override;
-  double composite_mitigation_versatility_rating() const override;
+  //double composite_damage_versatility_rating() const override;
+  //double composite_heal_versatility_rating() const override;
+  //double composite_mitigation_versatility_rating() const override;
   double composite_leech() const override;
   double composite_melee_crit_chance() const override;
-  double composite_melee_haste() const override;
+  //double composite_melee_haste() const override;
   double composite_melee_expertise( const weapon_t* ) const override;
   double composite_parry() const override { return 0; }
-  double composite_player_multiplier( school_e school ) const override;
-  double composite_rating_multiplier( rating_e ) const override;
+  //double composite_player_multiplier( school_e school ) const override;
+  //double composite_rating_multiplier( rating_e ) const override;
   double composite_spell_crit_chance() const override;
-  double composite_spell_haste() const override;
+  //double composite_spell_haste() const override;
   double composite_spell_power( school_e school ) const override;
   double composite_spell_power_multiplier() const override;
   double temporary_movement_modifier() const override;
@@ -1513,7 +1520,7 @@ struct celestial_alignment_buff_t : public druid_buff_t<buff_t>
     set_cooldown( 0_ms );
     set_default_value_from_effect_type( A_HASTE_ALL );
     modify_duration( p.conduit.precise_alignment.time_value() );
-    add_invalidate( CACHE_HASTE );
+    set_pct_buff_type( STAT_PCT_BUFF_HASTE );
 
     if ( inc )
     {
@@ -1712,7 +1719,11 @@ struct berserk_bear_buff_t : public druid_buff_t<buff_t>
     set_cooldown( 0_ms );
 
     if ( p.conduit.unchecked_aggression->ok() )
-      add_invalidate( CACHE_HASTE );
+    {
+      set_default_value_from_effect_type( A_HASTE_ALL );
+      apply_affecting_conduit( p.conduit.unchecked_aggression );
+      set_pct_buff_type( STAT_PCT_BUFF_HASTE );
+    }
 
     if ( p.legendary.legacy_of_the_sleeper->ok() )
       add_invalidate( CACHE_LEECH );
@@ -1789,9 +1800,10 @@ struct kindred_empowerment_buff_t : public druid_buff_t<buff_t>
   {
     trigger();
 
+    double initial = s->result_amount * ( 1.0 - p().kindred_spirits_absorbed );
     // since kindred_spirits_partner_dps is meant to apply to the pool you RECEIVE and not to the pool you send, don't
     // apply it to partner_pool, which is meant to represent the damage the other person does.
-    double partner_amount = s->result_amount * p().covenant.kindred_empowerment_energize->effectN( 1 ).percent();
+    double partner_amount = initial * p().covenant.kindred_empowerment_energize->effectN( 1 ).percent();
     double amount         = partner_amount * p().kindred_spirits_partner_dps;
 
     sim->print_debug( "Kindred Empowerment: Adding {} from {} to pool of {}", amount, s->action->name(), pool );
@@ -1799,7 +1811,8 @@ struct kindred_empowerment_buff_t : public druid_buff_t<buff_t>
     pool += amount;
 
     // only dps specs give a pool to the partner
-    if ( p().specialization() == DRUID_BALANCE || p().specialization() == DRUID_FERAL )
+    if ( !p().kindred_spirits_hide_partner &&
+         ( p().specialization() == DRUID_BALANCE || p().specialization() == DRUID_FERAL ) )
       partner_pool += partner_amount;
   }
 
@@ -2032,7 +2045,7 @@ public:
       if ( eff.type() != E_APPLY_AURA )
         continue;
 
-      if ( ( base->affected_by_all( *ab::player->dbc, eff ) &&
+      if ( ( base->affected_by_all( eff ) &&
              ( ( eff.misc_value1() == P_EFFECT_1 && idx == 1 ) || ( eff.misc_value1() == P_EFFECT_2 && idx == 2 ) ||
                ( eff.misc_value1() == P_EFFECT_3 && idx == 3 ) || ( eff.misc_value1() == P_EFFECT_4 && idx == 4 ) ||
                ( eff.misc_value1() == P_EFFECT_5 && idx == 5 ) ) ) ||
@@ -2091,7 +2104,7 @@ public:
       return;
     }
 
-    if ( !ab::data().affected_by_all( *ab::player->dbc, eff ) )
+    if ( !ab::data().affected_by_all( eff ) )
       return;
 
     if ( !mastery && !val )
@@ -2287,7 +2300,7 @@ public:
       if ( !val )
         continue;
 
-      if ( !( eff.subtype() == A_MOD_DAMAGE_FROM_CASTER_SPELLS && ab::data().affected_by_all( *ab::player->dbc, eff ) ) &&
+      if ( !( eff.subtype() == A_MOD_DAMAGE_FROM_CASTER_SPELLS && ab::data().affected_by_all( eff ) ) &&
            !( eff.subtype() == A_MOD_AUTO_ATTACK_FROM_CASTER && is_auto_attack ) )
         continue;
 
@@ -4013,7 +4026,7 @@ struct ferocious_bite_t : public cat_attack_t
     {
       auto ext = timespan_t::from_seconds( p()->talent.sabertooth->effectN( 2 ).base_value() * combo_points );
 
-      td( s->target )->dots.rip->extend_duration( ext, max_sabertooth_refresh, 0 );
+      td( s->target )->dots.rip->adjust_duration( ext, max_sabertooth_refresh, 0 );
     }
   }
 
@@ -4950,8 +4963,8 @@ struct pulverize_t : public bear_attack_t
 
     if ( result_is_hit( s->result ) )
     {
-      // consumes x stacks of Thrash on the target
-      td( s->target )->dots.thrash_bear->decrement( consume );
+      if ( !free_cast )
+        td( s->target )->dots.thrash_bear->decrement( consume );
 
       // and reduce damage taken by x% for y sec.
       p()->buff.pulverize->trigger();
@@ -4962,7 +4975,7 @@ struct pulverize_t : public bear_attack_t
   {
     // Call bear_attack_t::ready() first for proper targeting support.
     // Hardcode stack max since it may not be set if this code runs before Thrash is cast.
-    return bear_attack_t::target_ready( t ) && td( t )->dots.thrash_bear->current_stack() >= consume;
+    return bear_attack_t::target_ready( t ) && ( free_cast || td( t )->dots.thrash_bear->current_stack() >= consume );
   }
 };
 
@@ -5059,8 +5072,8 @@ struct thrash_bear_t : public bear_attack_t
     dot->target = execute_state->target;
     dot->schedule_execute();
 
-    if ( p()->legendary.ursocs_lingering_spirit->ok() &&
-         rng().roll( p()->legendary.ursocs_lingering_spirit->effectN( 1 ).percent() ) )
+    if ( p()->legendary.ursocs_fury_remembered->ok() &&
+         rng().roll( p()->legendary.ursocs_fury_remembered->effectN( 1 ).percent() ) )
     {
       execute();
     }
@@ -5480,10 +5493,8 @@ struct auto_attack_t : public melee_attack_t
 
 struct barkskin_t : public druid_spell_t
 {
-  cooldown_t* orig_cd;
-
-  barkskin_t( druid_t* p, util::string_view options_str )
-    : druid_spell_t( "barkskin", p, p->find_class_spell( "Barkskin" ), options_str ), orig_cd( cooldown )
+  barkskin_t( druid_t* p, util::string_view opt )
+    : druid_spell_t( "barkskin", p, p->find_class_spell( "Barkskin" ), opt )
   {
     harmful      = false;
     use_off_gcd  = true;
@@ -5493,18 +5504,14 @@ struct barkskin_t : public druid_spell_t
       add_child( p->active.brambles_pulse );
   }
 
+  timespan_t cooldown_duration() const override
+  {
+    return free_cast ? 0_ms : druid_spell_t::cooldown_duration();
+  }
+
   void execute() override
   {
-    if ( free_cast )
-    {
-      cooldown = nullptr;
-      druid_spell_t::execute();
-      cooldown = orig_cd;
-    }
-    else
-    {
-      druid_spell_t::execute();
-    }
+    druid_spell_t::execute();
 
     p()->buff.barkskin->trigger();
   }
@@ -5785,15 +5792,13 @@ struct tiger_dash_t : public druid_spell_t
 
 struct full_moon_t : public druid_spell_t
 {
-  cooldown_t* orig_cd;
-
   full_moon_t( druid_t* p, util::string_view opt ) : full_moon_t( p, p->spec.full_moon, opt ) {}
 
   full_moon_t( druid_t* p, const spell_data_t* s, util::string_view opt ) : druid_spell_t( "full_moon", p, s, opt )
   {
     aoe                = -1;
     reduced_aoe_damage = true;
-    cooldown = orig_cd = p->cooldown.moon_cd;
+    cooldown           = p->cooldown.moon_cd;
 
     if ( !p->spec.astral_power->ok() )
       energize_type = action_energize::NONE;
@@ -5806,19 +5811,17 @@ struct full_moon_t : public druid_spell_t
     streaking_stars_trigger( SS_FULL_MOON, s );  // proc munching shenanigans, munch tracking NYI
   }
 
+  timespan_t cooldown_duration() const override
+  {
+    return free_cast ? 0_ms : druid_spell_t::cooldown_duration();
+  }
+
   void execute() override
   {
-    if ( free_cast )
-    {
-      cooldown = nullptr;
-      druid_spell_t::execute();
-      cooldown = orig_cd;
-    }
-    else
-    {
-      druid_spell_t::execute();
+    druid_spell_t::execute();
+
+    if ( !free_cast)
       p()->moon_stage = moon_stage_e::NEW_MOON;
-    }
   }
 
   timespan_t travel_time() const override
@@ -6700,8 +6703,8 @@ struct starfall_t : public druid_spell_t
       {
         player_t* t = tl[ i ];
 
-        td( t )->dots.moonfire->extend_duration( timespan_t::from_seconds( ext ), 0_ms, -1, false );
-        td( t )->dots.sunfire->extend_duration( timespan_t::from_seconds( ext ), 0_ms, -1, false );
+        td( t )->dots.moonfire->adjust_duration( timespan_t::from_seconds( ext ), 0_ms, -1, false );
+        td( t )->dots.sunfire->adjust_duration( timespan_t::from_seconds( ext ), 0_ms, -1, false );
       }
     }
 
@@ -7242,7 +7245,7 @@ struct convoke_the_spirits_t : public druid_spell_t
 
     druid_spell_t::tick( d );
 
-    if ( d->time_to_tick < base_tick_time )
+    if ( d->time_to_tick() < base_tick_time )
       return;
 
     if ( d->current_tick == ultimate_tick )
@@ -7796,7 +7799,7 @@ void druid_t::activate()
       if ( !target->is_enemy() )
         return;
 
-      target->callbacks_on_demise.emplace_back( [this]( player_t* target ) -> void {
+      target->register_on_demise_callback( this, [this]( player_t* target ) -> void {
         auto p = this;
         if ( p->specialization() != DRUID_FERAL )
           return;
@@ -7812,24 +7815,6 @@ void druid_t::activate()
           p->proc.predator->occur();
         }
       } );
-    } );
-
-    callbacks_on_demise.emplace_back( [this]( player_t* target ) -> void {
-      if ( sim->active_player->specialization() != DRUID_FERAL )
-        return;
-
-      if ( get_target_data( target )->dots.thrash_cat->is_ticking() ||
-           get_target_data( target )->dots.rip->is_ticking() ||
-           get_target_data( target )->dots.rake->is_ticking() )
-      {
-        auto p = ( (druid_t*)sim->active_player );
-
-        if ( !p->cooldown.tigers_fury->down() )
-          p->proc.predator_wasted->occur();
-
-        p->cooldown.tigers_fury->reset( true );
-        p->proc.predator->occur();
-      }
     } );
   }
 
@@ -8138,7 +8123,7 @@ void druid_t::init_spells()
   // Guardian
   legendary.luffainfused_embrace      = find_runeforge_legendary( "Luffa-Infused Embrace" );
   legendary.the_natural_orders_will   = find_runeforge_legendary( "The Natural Order's Will" );
-  legendary.ursocs_lingering_spirit   = find_runeforge_legendary( "Ursoc's Lingering Spirit" );
+  legendary.ursocs_fury_remembered    = find_runeforge_legendary( "Ursoc's Fury Remembered" );
   legendary.legacy_of_the_sleeper     = find_runeforge_legendary( "Legacy of the Sleeper" );
 
   // Restoration
@@ -8169,7 +8154,7 @@ void druid_t::init_spells()
   spec.moonfire_dmg            = find_spell( 164812 );  // dot for moonfire
   spec.starsurge               = find_affinity_spell( "Starsurge" );
   spec.starsurge_2             = find_rank_spell( "Starsurge", "Rank 2" );  // Adds bigger eclipse buff
-  spec.starfall                = find_specialization_spell( "Starfall" );
+  spec.starfall                = find_affinity_spell( "Starfall" );
   spec.starfall_2              = find_rank_spell( "Starfall", "Rank 2" );
   spec.starfall_dmg            = find_spell( 191037 );
   spec.stellar_drift           = check_id( talent.stellar_drift->ok(), 202461 );  // stellar drift mobility buff
@@ -8303,6 +8288,7 @@ void druid_t::init_base_stats()
   resources.active_resource[ RESOURCE_RAGE ]         = specialization() == DRUID_GUARDIAN ||
                                                      ( talent.guardian_affinity->ok() && affinity_resources );
   resources.active_resource[ RESOURCE_MANA ]         = specialization() == DRUID_RESTORATION ||
+                                                     ( talent.balance_affinity->ok() && (affinity_resources || owlweave_bear ) );
                                                      ( talent.restoration_affinity->ok() && affinity_resources );
   resources.active_resource[ RESOURCE_COMBO_POINT ]  = specialization() == DRUID_FERAL || specialization() == DRUID_RESTORATION ||
                                                      ( talent.feral_affinity->ok() && ( affinity_resources || catweave_bear ) );
@@ -8325,7 +8311,7 @@ void druid_t::init_assessors()
 {
   player_t::init_assessors();
 
-  if ( covenant.kyrian->ok() )
+  if ( active.kindred_empowerment )
   {
     assessor_out_damage.add( assessor::TARGET_DAMAGE + 1, [this]( result_amount_type, action_state_t* s ) {
       auto pool = debug_cast<buffs::kindred_empowerment_buff_t*>( buff.kindred_empowerment );
@@ -8459,7 +8445,7 @@ void druid_t::create_buffs()
   buff.starlord = make_buff( this, "starlord", find_spell( 279709 ) )
     ->set_default_value_from_effect_type( A_HASTE_ALL )
     ->set_refresh_behavior( buff_refresh_behavior::DISABLED )
-    ->add_invalidate( CACHE_HASTE );
+    ->set_pct_buff_type( STAT_PCT_BUFF_HASTE );
 
   buff.starsurge = make_buff( this, "starsurge_empowerment", find_affinity_spell( "Starsurge" ) )
     ->set_cooldown( 0_ms )
@@ -8629,8 +8615,8 @@ void druid_t::create_buffs()
     ->set_default_value_from_effect_type( A_HASTE_ALL )
     ->set_period( 0_ms )
     ->set_refresh_behavior( buff_refresh_behavior::DISABLED )
-    ->add_invalidate( CACHE_HASTE )
-    ->add_invalidate( CACHE_PLAYER_DAMAGE_MULTIPLIER );
+    ->add_invalidate( CACHE_PLAYER_DAMAGE_MULTIPLIER )
+    ->set_pct_buff_type( STAT_PCT_BUFF_HASTE );
   if ( conduit.endless_thirst->ok() )
     buff.ravenous_frenzy->add_invalidate( CACHE_CRIT_CHANCE );
 
@@ -8678,7 +8664,7 @@ void druid_t::create_actions()
   using namespace bear_attacks;
   using namespace spells;
 
-  // Generic
+  // Melee Attacks
   caster_melee_attack = new caster_attacks::druid_melee_t( this );
 
   if ( !cat_melee_attack )
@@ -8692,9 +8678,6 @@ void druid_t::create_actions()
     init_beast_weapon( bear_weapon, 2.5 );
     bear_melee_attack = new bear_melee_t( this );
   }
-
-  if ( legendary.lycaras_fleeting_glimpse->ok() )
-    active.lycaras_fleeting_glimpse = new lycaras_fleeting_glimpse_t( this );
 
   // Balance
   if ( azerite.lunar_shrapnel.ok() )
@@ -8736,6 +8719,10 @@ void druid_t::create_actions()
 
   if ( spec.yseras_gift->ok() )
     active.yseras_gift = new heals::yseras_gift_t( this );
+
+  // Generic
+  if ( legendary.lycaras_fleeting_glimpse->ok() )
+    active.lycaras_fleeting_glimpse = new lycaras_fleeting_glimpse_t( this );
 
   player_t::create_actions();
 }
@@ -8810,14 +8797,10 @@ void druid_t::apl_precombat()
 
   if ( specialization() == DRUID_GUARDIAN )
   {
-    if ( catweave_bear && talent.feral_affinity->ok() )
-    {
-      precombat->add_action( this, "Cat Form" );
-    }
-    else
-    {
-      precombat->add_action( this, "Bear Form" );
-    }
+    precombat->add_action(this, "Cat Form", "if=druid.catweave_bear&talent.feral_affinity.enabled");
+    precombat->add_action(this, "prowl", "if=druid.catweave_bear&talent.feral_affinity.enabled");
+    precombat->add_action( this, "Moonkin Form", "if=druid.owlweave_bear&talent.balance_affinity.enabled" );
+    precombat->add_action( this, "Bear Form", "if=!druid.catweave_bear&!druid.owlweave_bear" );
   }
 
   if ( specialization() == DRUID_RESTORATION )
@@ -8887,26 +8870,88 @@ void druid_t::apl_guardian()
 {
   action_priority_list_t* def = get_action_priority_list( "default" );
 
+  action_priority_list_t* bear     = get_action_priority_list( "bear" );
+  action_priority_list_t* catweave = get_action_priority_list( "catweave" );
+  action_priority_list_t* owlweave = get_action_priority_list( "owlweave" );
+
+  action_priority_list_t* lycara_owl = get_action_priority_list( "lycarao" );
+  action_priority_list_t* lycara_cat = get_action_priority_list( "lycarac" );
+
   def->add_action( "auto_attack" );
-  //def->add_action( this, "Ironfur", "if=buff.ironfur.remains<1.5" );
-  def->add_action( "ravenous_frenzy" );
-  def->add_action( "empower_bond" );
-  def->add_action( "adaptive_swarm" );
-  //def->add_action( "convoke_the_spirits" );
-  def->add_action( "potion,if=buff.berserk_bear.up|buff.incarnation_guardian_of_ursoc.up" );
-  def->add_action( "use_items" );
-  def->add_action( "berserk_bear,if=buff.ravenous_frenzy.up|!covenant.venthyr" );
-  def->add_action( "incarnation,if=buff.ravenous_frenzy.up|!covenant.venthyr" );
-  def->add_talent( this, "Pulverize", "target_if=dot.thrash_bear.stack>2" );
-  def->add_action( "thrash_bear,if=spell_targets>3" );
-  def->add_action( this, "Moonfire", "target_if=refreshable" );
-  def->add_action( this, "Moonfire", "if=buff.galactic_guardian.up&buff.galactic_guardian.remains<1.5" );
-  def->add_action( "thrash_bear,target_if=refreshable|dot.thrash_bear.stack<3|dot.thrash_bear.stack<4&runeforge.luffainfused_embrace.equipped" );
-  def->add_action( this, "Mangle", "if=talent.soul_of_the_forest.enabled|rage<80|!buff.berserk_bear.up&!buff.incarnation_guardian_of_ursoc.up" );
-  def->add_action( "thrash_bear" );
-  def->add_action( this, "Maul", "if=buff.tooth_and_claw.up&buff.tooth_and_claw.remains<1.5" );
-  def->add_action( this, "Maul", "if=rage>=80" );
-  def->add_action( "swipe_bear" );
+
+  lycara_owl->add_action( this, "Moonkin Form" );
+  lycara_cat->add_action( this, "Cat Form" );
+
+  def->add_action(
+      "run_action_list,name=catweave,if=druid.catweave_bear&((cooldown.thrash_bear.remains>0&cooldown.mangle.remains>0&"
+      "dot.moonfire.remains>=gcd+0.5&rage<40&buff.incarnation_guardian_of_ursoc.down&buff.berserk_bear.down&buff."
+      "galactic_guardian.down)|(buff.cat_form.up&energy>25)|(runeforge.oath_of_the_elder_druid.equipped&!buff.oath_of_"
+      "the_elder_druid.up&(buff.cat_form.up&energy>20))|(runeforge.oath_of_the_elder_druid.equipped&buff.heart_of_the_"
+      "wild.remains<10)&(buff.cat_form.up&energy>20))" );
+  def->add_action(
+      "run_action_list,name=owlweave,if=druid.owlweave_bear&((cooldown.thrash_bear.remains>0&cooldown.mangle.remains>0&"
+      "dot.moonfire.remains>=gcd+0.5&rage<20&buff.incarnation.down&buff.berserk_bear.down&buff.galactic_guardian.down)|"
+      "(buff.moonkin_form.up&buff.heart_of_the_wild.up)|(buff.moonkin_form.up&(buff.eclipse_lunar.up|buff.eclipse_"
+      "solar.up)&!runeforge.oath_of_the_elder_druid.equipped)|(runeforge.oath_of_the_elder_druid.equipped&!buff.oath_"
+      "of_the_elder_druid.up&(buff.moonkin_form.up&buff.heart_of_the_wild.up)))" );
+  def->add_action(
+      "run_action_list,name=lycarao,if=((runeforge.lycaras_fleeting_glimpse.equipped)&(talent.balance_affinity.enabled)"
+      "&(buff.lycaras_fleeting_glimpse.up)&(buff.lycaras_fleeting_glimpse.remains<=2))" );
+  def->add_action(
+      "run_action_list,name=lycarac,if=((runeforge.lycaras_fleeting_glimpse.equipped)&(talent.feral_affinity.enabled)&("
+      "buff.lycaras_fleeting_glimpse.up)&(buff.lycaras_fleeting_glimpse.remains<=2))" );
+  def->add_action( "run_action_list,name=bear" );
+
+  bear->add_action( this, "Bear Form" );
+  bear->add_action( "ravenous_frenzy" );
+  bear->add_action( "potion,if=buff.berserk_bear.up|buff.incarnation_guardian_of_ursoc.up" );
+  bear->add_action( "use_items" );
+  bear->add_action( "convoke_the_spirits,if=!druid.catweave_bear&!druid.owlweave_bear" );
+  bear->add_action( "berserk_bear,if=buff.ravenous_frenzy.up|!covenant.venthyr" );
+  bear->add_action( "incarnation,if=buff.ravenous_frenzy.up|!covenant.venthyr" );
+  bear->add_action( "empower_bond,if=!druid.catweave_bear&!druid.owlweave_bear" );
+  bear->add_action( "barkskin,if=(talent.brambles.enabled)&(buff.bear_form.up)" );
+  bear->add_action( this, "Maul", "if=(rage.deficit<10)&active_enemies<4" );
+  bear->add_action( "ironfur,if=buff.ironfur.remains<0.5" );
+  bear->add_action(
+      "thrash_bear,target_if=refreshable|dot.thrash_bear.stack<3|dot.thrash_bear.stack<4&runeforge.luffainfused_"
+      "embrace.equipped" );
+  bear->add_action( this, "Thrash",
+                    "if=(buff.incarnation.down&buff.berserk_bear.down&active_enemies>1)|(buff.incarnation.up&buff."
+                    "berserk_bear.down&active_enemies>4)" );
+  bear->add_action( "adaptive_swarm,target_if=!ticking" );
+  bear->add_action( this, "Moonfire", "target_if=refreshable&active_enemies<=2" );
+  bear->add_action( this, "Moonfire", "if=buff.galactic_guardian.up&buff.galactic_guardian.remains<1.5" );
+  bear->add_action( "swipe,if=buff.incarnation_guardian_of_ursoc.down&buff.berserk_bear.down&active_enemies>4" );
+  bear->add_action( this, "Maul", "if=(buff.tooth_and_claw.stack>=2)&active_enemies<4" );
+  bear->add_action( this, "Maul", "if=(buff.tooth_and_claw.up&buff.tooth_and_claw.remains<1.5)&active_enemies<4" );
+  bear->add_action( this, "Maul", "if=(buff.savage_combatant.stack>=3)&active_enemies<4" );
+  bear->add_action( this, "Mangle", "if=rage<80|!buff.berserk_bear.up&!buff.incarnation_guardian_of_ursoc.up" );
+  bear->add_action( "pulverize,target_if=dot.thrash_bear.stack>2" );
+  bear->add_action( "thrash_bear" );
+  bear->add_action( this, "Maul" );
+  bear->add_action( "swipe_bear" );
+
+  catweave->add_action( this, "Cat form" );
+  catweave->add_action( this, "Rake", "if=buff.prowl.up" );
+  catweave->add_action( "heart_of_the_wild,if=talent.heart_of_the_wild.enabled&!buff.heart_of_the_wild.up" );
+  catweave->add_action( "empower_bond,if=druid.catweave_bear" );
+  catweave->add_action( "convoke_the_spirits,if=druid.catweave_bear" );
+  catweave->add_action( this, "Rip", "if=dot.rip.refreshable&combo_points=5" );
+  catweave->add_action( "ferocious_bite,if=combo_points=5" );
+  catweave->add_action( this, "Rake", "if=dot.rake.refreshable&combo_points<5" );
+  catweave->add_action( this, "Shred" );
+
+  owlweave->add_action( this, "Moonkin Form" );
+  owlweave->add_action( "heart_of_the_wild,if=talent.heart_of_the_wild.enabled&!buff.heart_of_the_wild.up" );
+  owlweave->add_action( "empower_bond,if=druid.owlweave_bear" );
+  owlweave->add_action( "convoke_the_spirits,if=druid.owlweave_bear" );
+  owlweave->add_action( "moonfire,target_if=refreshable" );
+  owlweave->add_action( "sunfire,target_if=refreshable" );
+  owlweave->add_action( this, "Starsurge", "if=(buff.eclipse_lunar.up|buff.eclipse_solar.up)" );
+  owlweave->add_action( this, "Starfire",
+                        "if=(eclipse.in_lunar|eclipse.solar_next)|(eclipse.in_lunar&buff.starsurge_empowerment.up)" );
+  owlweave->add_action( this, "Wrath" );
 }
 
 // Restoration Combat Action Priority List ==================================
@@ -9461,23 +9506,23 @@ double druid_t::passive_movement_modifier() const
 }
 
 // druid_t::composite_player_multiplier =====================================
-
+/*
 double druid_t::composite_player_multiplier( school_e school ) const
 {
   double m = player_t::composite_player_multiplier( school );
 
   return m;
 }
-
+*/
 // druid_t::composite_rating_multiplier ====================================
-
+/*
 double druid_t::composite_rating_multiplier( rating_e rating ) const
 {
   double rm = player_t::composite_rating_multiplier( rating );
 
   return rm;
 }
-
+*/
 // druid_t::composite_melee_expertise( weapon_t* ) ==========================
 
 double druid_t::composite_melee_expertise( const weapon_t* ) const
@@ -9513,45 +9558,23 @@ double druid_t::composite_spell_crit_chance() const
 }
 
 // druid_t::composite_spell_haste ===========================================
-
+/*
 double druid_t::composite_spell_haste() const
 {
   double sh = player_t::composite_spell_haste();
 
-  sh *= 1.0 / ( 1.0 + buff.starlord->stack_value() );
-
-  sh *= 1.0 / ( 1.0 + buff.ravenous_frenzy->stack_value() );
-
-  sh *= 1.0 / ( 1.0 + buff.celestial_alignment->stack_value() );
-
-  sh *= 1.0 / ( 1.0 + buff.incarnation_moonkin->stack_value() );
-
-  if ( conduit.unchecked_aggression->ok() && buff.berserk_bear->check() )
-    sh *= 1.0 / ( 1.0 + conduit.unchecked_aggression.percent() );
-
   return sh;
 }
-
+*/
 // druid_t::composite_meele_haste ===========================================
-
+/*
 double druid_t::composite_melee_haste() const
 {
   double mh = player_t::composite_melee_haste();
 
-  mh *= 1.0 / ( 1.0 + buff.starlord->stack_value() );
-
-  mh *= 1.0 / ( 1.0 + buff.ravenous_frenzy->stack_value() );
-
-  mh *= 1.0 / ( 1.0 + buff.celestial_alignment->stack_value() );
-
-  mh *= 1.0 / ( 1.0 + buff.incarnation_moonkin->stack_value() );
-
-  if ( conduit.unchecked_aggression->ok() && buff.berserk_bear->check() )
-    mh *= 1.0 / ( 1.0 + conduit.unchecked_aggression.percent() );
-
   return mh;
 }
-
+*/
 // druid_t::composite_spell_power ===========================================
 
 double druid_t::composite_spell_power( school_e school ) const
@@ -9659,14 +9682,14 @@ double druid_t::composite_crit_avoidance() const
 }
 
 // druid_t::composite_dodge =================================================
-
+/*
 double druid_t::composite_dodge() const
 {
   double d = player_t::composite_dodge();
 
   return d;
 }
-
+*/
 // druid_t::composite_dodge_rating ==========================================
 
 double druid_t::composite_dodge_rating() const
@@ -9681,32 +9704,32 @@ double druid_t::composite_dodge_rating() const
 }
 
 // druid_t::composite_damage_versatility_rating ==========================================
-
+/*
 double druid_t::composite_damage_versatility_rating() const
 {
   double cdvr = player_t::composite_damage_versatility_rating();
 
   return cdvr;
 }
-
+*/
 // druid_t::composite_heal_versatility_rating ==========================================
-
+/*
 double druid_t::composite_heal_versatility_rating() const
 {
   double chvr = player_t::composite_heal_versatility_rating();
 
   return chvr;
 }
-
+*/
 // druid_t::composite_mitigation_versatility_rating ==========================================
-
+/*
 double druid_t::composite_mitigation_versatility_rating() const
 {
   double cmvr = player_t::composite_mitigation_versatility_rating();
 
   return cmvr;
 }
-
+*/
 // druid_t::composite_leech =================================================
 
 double druid_t::composite_leech() const
@@ -9725,6 +9748,13 @@ std::unique_ptr<expr_t> druid_t::create_expression( util::string_view name_str )
 {
   auto splits = util::string_split<util::string_view>( name_str, "." );
 
+  if ( util::str_compare_ci( splits[ 0 ], "druid" ) && splits.size() > 1 )
+  {
+    if ( util::str_compare_ci( splits[ 1 ], "catweave_bear" ) && splits.size() == 2 )
+      return make_fn_expr( "catweave_bear", [ this ]() { return catweave_bear && talent.feral_affinity->ok(); } );
+    if ( util::str_compare_ci( splits[ 1 ], "owlweave_bear" ) && splits.size() == 2 )
+      return make_fn_expr( "owlweave_bear", [ this ]() { return owlweave_bear && talent.balance_affinity->ok(); } );
+  }
   if ( splits[ 0 ] == "druid" &&
        ( splits[ 2 ] == "ticks_gained_on_refresh" || splits[ 2 ] == "ticks_gained_on_refresh_pmultiplier" ) )
   {
@@ -9777,6 +9807,7 @@ std::unique_ptr<expr_t> druid_t::create_expression( util::string_view name_str )
       } );
     throw std::invalid_argument( "invalid action" );
   }
+
 
   if ( splits[ 0 ] == "action" && splits[ 1 ] == "ferocious_bite_max" && splits[ 2 ] == "damage" )
   {
@@ -9934,7 +9965,7 @@ std::unique_ptr<expr_t> druid_t::create_expression( util::string_view name_str )
   if ( util::str_compare_ci( name_str, "buff.starfall.refreshable" ) )
   {
     return make_fn_expr( name_str, [ this ]() {
-      return !buff.starfall->check() || buff.starfall->remains() <= spec.starfall->duration() * 0.3;
+      return !buff.starfall->check() || buff.starfall->remains() <= buff.starfall->buff_duration() * 0.3;
     } );
   }
 
@@ -9981,10 +10012,13 @@ void druid_t::create_options()
   add_option( opt_int( "initial_moon_stage", initial_moon_stage ) );
   add_option( opt_int( "lively_spirit_stacks", lively_spirit_stacks ) );
   add_option( opt_bool( "catweave_bear", catweave_bear ) );
+  add_option( opt_bool( "owlweave_bear", owlweave_bear ) );
   add_option( opt_bool( "affinity_resources", affinity_resources ) );
   add_option( opt_float( "thorns_attack_period", thorns_attack_period ) );
   add_option( opt_float( "thorns_hit_chance", thorns_hit_chance ) );
   add_option( opt_float( "kindred_spirits_partner_dps", kindred_spirits_partner_dps ) );
+  add_option( opt_bool( "kindred_spirits_hide_partner", kindred_spirits_hide_partner ) );
+  add_option( opt_float( "kindred_spirits_absorbed", kindred_spirits_absorbed ) );
   add_option( opt_float( "convoke_the_spirits_heals", convoke_the_spirits_heals ) );
   add_option( opt_float( "convoke_the_spirits_ultimate", convoke_the_spirits_ultimate ) );
   add_option( opt_float( "adaptive_swarm_jump_distance", adaptive_swarm_jump_distance ) );
@@ -10345,7 +10379,7 @@ const spelleffect_data_t* druid_t::query_aura_effect( const spell_data_t* aura_s
   {
     const spelleffect_data_t& effect = aura_spell->effectN( i );
 
-    if ( affected_spell != spell_data_t::nil() && !affected_spell->affected_by_all( *dbc, effect ) )
+    if ( affected_spell != spell_data_t::nil() && !affected_spell->affected_by_all( effect ) )
       continue;
 
     if ( effect.type() == type && effect.subtype() == subtype )
@@ -10460,7 +10494,11 @@ void druid_t::copy_from( player_t* source )
   initial_moon_stage           = p->initial_moon_stage;
   lively_spirit_stacks         = p->lively_spirit_stacks;
   affinity_resources           = p->affinity_resources;
+  owlweave_bear                = p->owlweave_bear;
+  catweave_bear                = p->catweave_bear;
   kindred_spirits_partner_dps  = p->kindred_spirits_partner_dps;
+  kindred_spirits_hide_partner = p->kindred_spirits_hide_partner;
+  kindred_spirits_absorbed     = p->kindred_spirits_absorbed;
   convoke_the_spirits_heals    = p->convoke_the_spirits_heals;
   convoke_the_spirits_ultimate = p->convoke_the_spirits_ultimate;
   adaptive_swarm_jump_distance = p->adaptive_swarm_jump_distance;

@@ -49,13 +49,6 @@ enum frozen_flag_e
   FF_ROOT             = 1 << FROZEN_ROOT
 };
 
-enum rotation_type_e
-{
-  ROTATION_STANDARD,
-  ROTATION_NO_ICE_LANCE,
-  ROTATION_FROZEN_ORB
-};
-
 enum ground_aoe_type_e
 {
   AOE_BLIZZARD = 0,
@@ -520,7 +513,6 @@ public:
     timespan_t firestarter_time = 0_ms;
     timespan_t frozen_duration = 1.0_s;
     timespan_t scorch_delay = 15_ms;
-    rotation_type_e rotation = ROTATION_STANDARD;
     double lucid_dreams_proc_chance_arcane = 0.075;
     double lucid_dreams_proc_chance_fire = 0.1;
     double lucid_dreams_proc_chance_frost = 0.075;
@@ -836,7 +828,6 @@ public:
   role_e primary_role() const override { return ROLE_SPELL; }
   stat_e convert_hybrid_stat( stat_e ) const override;
   double resource_regen_per_second( resource_e ) const override;
-  double composite_attribute_multiplier( attribute_e ) const override;
   double composite_mastery() const override;
   double composite_player_critical_damage_multiplier( const action_state_t* ) const override;
   double composite_player_multiplier( school_e ) const override;
@@ -844,7 +835,6 @@ public:
   double composite_player_target_multiplier( player_t*, school_e ) const override;
   double composite_spell_crit_chance() const override;
   double composite_rating_multiplier( rating_e ) const override;
-  double composite_spell_haste() const override;
   double matching_gear_multiplier( attribute_e ) const override;
   void update_movement( timespan_t ) override;
   void teleport( double, timespan_t ) override;
@@ -1210,7 +1200,7 @@ struct icy_veins_buff_t : public buff_t
   {
     set_default_value_from_effect( 1 );
     set_cooldown( 0_ms );
-    add_invalidate( CACHE_SPELL_HASTE );
+    set_pct_buff_type( STAT_PCT_BUFF_HASTE );
     modify_duration( p->spec.icy_veins_2->effectN( 1 ).time_value() );
     modify_duration( p->talents.thermal_void->effectN( 2 ).time_value() );
   }
@@ -4738,8 +4728,8 @@ struct nether_tempest_t : public arcane_mage_spell_t
     nether_tempest_aoe->snapshot_state( aoe_state, nether_tempest_aoe->amount_type( aoe_state ) );
 
     aoe_state->persistent_multiplier *= d->state->persistent_multiplier;
-    aoe_state->da_multiplier *= d->get_last_tick_factor();
-    aoe_state->ta_multiplier *= d->get_last_tick_factor();
+    aoe_state->da_multiplier *= d->get_tick_factor();
+    aoe_state->ta_multiplier *= d->get_tick_factor();
 
     nether_tempest_aoe->schedule_execute( aoe_state );
   }
@@ -5250,9 +5240,19 @@ struct touch_of_the_magi_explosion_t : public arcane_mage_spell_t
   {
     arcane_mage_spell_t::init();
 
-    // TODO: Touch of the Magi explosion seems to completely ignore taraget
-    // multipliers, which is most likely a bug. Double check later.
     snapshot_flags &= STATE_NO_MULTIPLIER;
+    snapshot_flags |= STATE_TGT_MUL_DA;
+  }
+
+  double composite_target_multiplier( player_t* target ) const override
+  {
+    double m = arcane_mage_spell_t::composite_target_multiplier( target );
+
+    // It seems that TotM explosion only double dips on target based damage reductions
+    // and not target based damage increases.
+    m = std::min( m, 1.0 );
+
+    return m;
   }
 };
 
@@ -5990,18 +5990,6 @@ void mage_t::create_options()
   add_option( opt_timespan( "firestarter_time", options.firestarter_time ) );
   add_option( opt_timespan( "frozen_duration", options.frozen_duration ) );
   add_option( opt_timespan( "scorch_delay", options.scorch_delay ) );
-  add_option( opt_func( "rotation", [ this ] ( sim_t*, util::string_view, util::string_view val )
-  {
-    if ( util::str_compare_ci( val, "standard" ) )
-      options.rotation = ROTATION_STANDARD;
-    else if ( util::str_compare_ci( val, "no_ice_lance" ) )
-      options.rotation = ROTATION_NO_ICE_LANCE;
-    else if ( util::str_compare_ci( val, "frozen_orb" ) )
-      options.rotation = ROTATION_FROZEN_ORB;
-    else
-      return false;
-    return true;
-  } ) );
   add_option( opt_float( "lucid_dreams_proc_chance_arcane", options.lucid_dreams_proc_chance_arcane ) );
   add_option( opt_float( "lucid_dreams_proc_chance_fire", options.lucid_dreams_proc_chance_fire ) );
   add_option( opt_float( "lucid_dreams_proc_chance_frost", options.lucid_dreams_proc_chance_frost ) );
@@ -6023,10 +6011,6 @@ std::string mage_t::create_profile( save_e save_type )
   {
     if ( options.firestarter_time > 0_ms )
       profile += "firestarter_time=" + util::to_string( options.firestarter_time.total_seconds() ) + "\n";
-    if ( options.rotation == ROTATION_NO_ICE_LANCE )
-      profile += "rotation=no_ice_lance\n";
-    if ( options.rotation == ROTATION_FROZEN_ORB )
-      profile += "rotation=frozen_orb\n";
   }
 
   return profile;
@@ -6421,7 +6405,7 @@ void mage_t::create_buffs()
                                  ->set_chance( talents.rule_of_threes->ok() );
   buffs.time_warp            = make_buff( this, "time_warp", find_spell( 342242 ) )
                                  ->set_default_value_from_effect( 1 )
-                                 ->add_invalidate( CACHE_SPELL_HASTE );
+                                 ->set_pct_buff_type( STAT_PCT_BUFF_HASTE );
 
 
   // Fire
@@ -6489,7 +6473,7 @@ void mage_t::create_buffs()
                              ->add_invalidate( CACHE_SPELL_CRIT_CHANCE );
   buffs.focus_magic_int  = make_buff( this, "focus_magic_int", find_spell( 334180 ) )
                              ->set_default_value_from_effect( 1 )
-                             ->add_invalidate( CACHE_INTELLECT );
+                             ->set_pct_buff_type( STAT_PCT_BUFF_INTELLECT );
 
   // Azerite
   buffs.arcane_pummeling   = make_buff( this, "arcane_pummeling", find_spell( 270670 ) )
@@ -6528,11 +6512,11 @@ void mage_t::create_buffs()
                            ->set_chance( runeforge.arcane_harmony.ok() );
   buffs.siphon_storm   = make_buff( this, "siphon_storm", find_spell( 332934 ) )
                            ->set_default_value_from_effect( 1 )
-                           ->add_invalidate( CACHE_INTELLECT )
+                           ->set_pct_buff_type( STAT_PCT_BUFF_INTELLECT )
                            ->set_chance( runeforge.siphon_storm.ok() );
   buffs.temporal_warp  = make_buff( this, "temporal_warp", find_spell( 327355 ) )
                            ->set_default_value_from_effect( 1 )
-                           ->add_invalidate( CACHE_SPELL_HASTE )
+                           ->set_pct_buff_type( STAT_PCT_BUFF_HASTE )
                            ->set_chance( runeforge.temporal_warp.ok() );
 
   buffs.fevered_incantation      = make_buff( this, "fevered_incantation", find_spell( 333049 ) )
@@ -6588,7 +6572,7 @@ void mage_t::create_buffs()
   buffs.flame_accretion  = make_buff( this, "flame_accretion", find_spell( 157644 ) )
                              ->set_default_value( conduits.flame_accretion.value() )
                              ->set_chance( conduits.flame_accretion.ok() )
-                             ->add_invalidate( CACHE_MASTERY );
+                             ->set_pct_buff_type( STAT_PCT_BUFF_MASTERY );
   buffs.infernal_cascade = make_buff( this, "infernal_cascade", find_spell( 336832 ) )
                              ->set_default_value( conduits.infernal_cascade.percent() )
                              ->set_chance( conduits.infernal_cascade.ok() )
@@ -7249,24 +7233,10 @@ void mage_t::recalculate_resource_max( resource_e rt, gain_t* source )
   }
 }
 
-double mage_t::composite_attribute_multiplier( attribute_e attr ) const
-{
-  double m = player_t::composite_attribute_multiplier( attr );
-
-  if ( attr == ATTR_INTELLECT )
-  {
-    m *= 1.0 + buffs.focus_magic_int->check_stack_value();
-    m *= 1.0 + buffs.siphon_storm->check_stack_value();
-  }
-
-  return m;
-}
-
 double mage_t::composite_mastery() const
 {
   double m = player_t::composite_mastery();
 
-  m += buffs.flame_accretion->check_stack_value();
   m += state.from_the_ashes_mastery;
 
   return m;
@@ -7349,17 +7319,6 @@ double mage_t::composite_spell_crit_chance() const
   c += buffs.focus_magic_crit->check_value();
 
   return c;
-}
-
-double mage_t::composite_spell_haste() const
-{
-  double h = player_t::composite_spell_haste();
-
-  h /= 1.0 + buffs.icy_veins->check_value();
-  h /= 1.0 + buffs.time_warp->check_value();
-  h /= 1.0 + buffs.temporal_warp->check_value();
-
-  return h;
 }
 
 double mage_t::matching_gear_multiplier( attribute_e attr ) const

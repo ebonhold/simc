@@ -133,7 +133,7 @@ struct internal_combustion_t : public destruction_spell_t
     this->base_dd_min = this->base_dd_max = total_damage;
 
     destruction_spell_t::execute();
-    td->dots_immolate->reduce_duration( remaining );
+    td->dots_immolate->adjust_duration( -remaining );
   }
 };
 
@@ -497,6 +497,7 @@ struct incinerate_t : public destruction_spell_t
       fnb_action->set_target( target );
       fnb_action->execute();
     }
+    p()->buffs.decimating_bolt->decrement();
   }
 
   void impact( action_state_t* s ) override
@@ -525,7 +526,19 @@ struct incinerate_t : public destruction_spell_t
 
     return m;
   }
+
+  double action_multiplier() const override
+  {
+    double m = destruction_spell_t::action_multiplier();
+
+    m *= 1 + p()->buffs.decimating_bolt->check_value();
+
+    return m;
+  }
+
 };
+
+
 
 struct chaos_bolt_t : public destruction_spell_t
 {
@@ -678,6 +691,17 @@ struct chaos_bolt_t : public destruction_spell_t
     state->result_total *= 1.0 + player->cache.spell_crit_chance();  //+ state->target_crit_chance;
 
     return state->result_total;
+  }
+
+  void consume_resource() override
+  {
+    destruction_spell_t::consume_resource();
+
+    if ( p()->legendary.mark_of_borrowed_power->ok() )
+    {
+      double chance = p()->legendary.mark_of_borrowed_power->effectN( 3 ).percent();
+      make_event<borrowed_power_event_t>( *p()->sim, p(), as<int>( last_resource_cost ), chance );
+    }
   }
 };
 

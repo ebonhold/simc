@@ -3439,6 +3439,14 @@ public:
       }
     }
 
+    // Initial damage does Square Root damage
+    double composite_aoe_multiplier( const action_state_t* state ) const override
+    {
+      double cam = melee_attack_t::composite_aoe_multiplier( state );
+
+      return cam / std::sqrt( state->n_targets );
+    }
+
     double action_multiplier() const override
     {
       double am = melee_attack_t::action_multiplier();
@@ -3490,6 +3498,14 @@ public:
             this->stats = ( *it )->get_stats( this->name(), this );
           }
         }
+      }
+
+      // Initial damage does Square Root damage
+      double composite_aoe_multiplier( const action_state_t* state ) const override
+      {
+        double cam = spell_t::composite_aoe_multiplier( state );
+
+        return cam / std::sqrt( state->n_targets );
       }
     };
 
@@ -5088,7 +5104,7 @@ struct rising_sun_kick_dmg_t : public monk_melee_attack_t
         if ( p()->buff.thunder_focus_tea->up() )
         {
           if ( p()->spec.thunder_focus_tea_2->ok() )
-            p()->cooldown.rising_sun_kick->adjust( p()->spec.thunder_focus_tea_2->effectN( 1 ).time_value() );
+            p()->cooldown.rising_sun_kick->adjust( p()->spec.thunder_focus_tea_2->effectN( 1 ).time_value(), true );
 
           if ( p()->azerite.secret_infusion.ok() )
             p()->buff.secret_infusion_vers->trigger();
@@ -5478,6 +5494,10 @@ struct blackout_kick_t : public monk_melee_attack_t
           timespan_t cd_reduction = -1 * p()->spec.blackout_kick->effectN( 3 ).time_value();
           if ( p()->buff.weapons_of_order->up() )
             cd_reduction += ( -1 * p()->covenant.kyrian->effectN( 8 ).time_value() );
+
+          // Reduction is getting halved during Serenity
+          if ( p()->buff.serenity->up() )
+            cd_reduction *= 1.0 / ( 1 + p()->talent.serenity->effectN( 4 ).percent() );
 
           p()->cooldown.rising_sun_kick->adjust( cd_reduction, true );
           p()->cooldown.fists_of_fury->adjust( cd_reduction, true );
@@ -6334,6 +6354,14 @@ struct keg_smash_t : public monk_melee_attack_t
     trigger_gcd = timespan_t::from_seconds( 1 );
   }
 
+  // Initial damage does Square Root damage
+  double composite_aoe_multiplier( const action_state_t* state ) const override
+  {
+    double cam = monk_melee_attack_t::composite_aoe_multiplier( state );
+
+    return cam / std::sqrt( state->n_targets );
+  }
+
   double action_multiplier() const override
   {
     double am = monk_melee_attack_t::action_multiplier();
@@ -7028,6 +7056,14 @@ struct breath_of_fire_t : public monk_spell_t
     }
 
     monk_spell_t::update_ready( cd );
+  }
+
+  // Initial damage does Square Root damage
+  double composite_aoe_multiplier( const action_state_t* state ) const override
+  {
+    double cam  = monk_spell_t::composite_aoe_multiplier( state );
+
+    return cam / std::sqrt( state->n_targets );
   }
 
   void execute() override
@@ -9238,7 +9274,7 @@ monk_td_t::monk_td_t( player_t* target, monk_t* p )
   debuff.fallen_monk_keg_smash = make_buff( *this, "fallen_monk_keg_smash", p->passives.fallen_monk_keg_smash )
                                      ->set_default_value_from_effect( 3 );
 
-  debuff.weapons_of_order = make_buff( *this, "weapons_of_order", p->find_spell( 312106 ) )
+  debuff.weapons_of_order = make_buff( *this, "weapons_of_order_debuff", p->find_spell( 312106 ) )
                                 ->set_default_value_from_effect( 1 );
 
   // Shadowland Legendary
@@ -9734,7 +9770,7 @@ void monk_t::init_spells()
   spec.purifying_brew_2    = find_rank_spell( "Purifying Brew", "Rank 2" );
   spec.shuffle             = find_specialization_spell( "Shuffle" );
   spec.stagger             = find_specialization_spell( "Stagger" );
-  spec.stagger             = find_rank_spell( "Stagger", "Rank 2" );
+  spec.stagger_2           = find_rank_spell( "Stagger", "Rank 2" );
   spec.zen_meditation      = find_specialization_spell( "Zen Meditation" );
 
   // Mistweaver Specialization
@@ -10228,7 +10264,8 @@ void monk_t::create_buffs()
                        ->add_invalidate( CACHE_PLAYER_DAMAGE_MULTIPLIER );
 
   buff.inner_stength = make_buff( this, "inner_strength", find_spell( 261769 ) )
-                           ->set_default_value_from_effect( 1 );
+                           ->set_default_value_from_effect( 1 )
+                           ->set_stack_behavior( buff_stack_behavior::ASYNCHRONOUS );
 
   buff.serenity = new buffs::serenity_buff_t( *this, "serenity", talent.serenity );
 
@@ -10270,11 +10307,11 @@ void monk_t::create_buffs()
   // Mistweaver
   buff.secret_infusion_crit = make_buff<stat_buff_t>( this, "secret_infusion_crit", find_spell( 287835 ) )
                                   ->add_stat( STAT_CRIT_RATING, azerite.secret_infusion.value() );
-  buff.secret_infusion_haste = make_buff<stat_buff_t>( this, "secret_infusion_crit", find_spell( 287831 ) )
+  buff.secret_infusion_haste = make_buff<stat_buff_t>( this, "secret_infusion_haste", find_spell( 287831 ) )
                                   ->add_stat( STAT_HASTE_RATING, azerite.secret_infusion.value() );
-  buff.secret_infusion_mastery = make_buff<stat_buff_t>( this, "secret_infusion_crit", find_spell( 287836 ) )
+  buff.secret_infusion_mastery = make_buff<stat_buff_t>( this, "secret_infusion_mastery", find_spell( 287836 ) )
                                   ->add_stat( STAT_MASTERY_RATING, azerite.secret_infusion.value() );
-  buff.secret_infusion_vers = make_buff<stat_buff_t>( this, "secret_infusion_crit", find_spell( 287837 ) )
+  buff.secret_infusion_vers = make_buff<stat_buff_t>( this, "secret_infusion_vers", find_spell( 287837 ) )
                                   ->add_stat( STAT_VERSATILITY_RATING, azerite.secret_infusion.value() );
 
   // Windwalker
@@ -11305,7 +11342,13 @@ void monk_t::target_mitigation( school_e school, result_amount_type dt, action_s
 
   // Damage Reduction Cooldowns
   if ( buff.fortifying_brew->up() )
-    s->result_amount *= 1.0 - spec.fortifying_brew_brm->effectN( 2 ).percent();
+  {
+    double reduction = spec.fortifying_brew_mw_ww->effectN( 2 ).percent(); // Saved as -15%
+    if ( spec.fortifying_brew_2_brm->ok() )
+      reduction -= 0.05;
+
+    s->result_amount *= ( 1.0 + reduction );
+  }
 
   // Touch of Karma Absorbtion
   if ( buff.touch_of_karma->up() )
@@ -11525,12 +11568,6 @@ void monk_t::apl_pre_windwalker()
   pre->add_action( "snapshot_stats", "Snapshot raid buffed stats before combat begins and pre-potting is done." );
 
   pre->add_action( "potion" );
-  pre->add_action(
-      "variable,name=hold_xuen,op=set,value=cooldown.invoke_xuen_the_white_tiger.remains>fight_remains|"
-      "fight_remains<120&fight_remains>cooldown.serenity.remains&cooldown.serenity.remains>10",
-      "Variable that will tell you if you will need to wait to cast ToD/do not want to cast it at all anymore" );
-  pre->add_action(
-      "variable,name=serenity_burst,op=set,value=cooldown.serenity.remains<1|pet.xuen_the_white_tiger.active&cooldown.serenity.remains>30|fight_remains<20" );
   pre->add_action( "use_item,name=azsharas_font_of_power" );
   pre->add_talent( this, "Chi Wave", "if=!talent.energizing_elixer.enabled" );
 }
@@ -11582,27 +11619,16 @@ void monk_t::apl_combat_brewmaster()
     if ( racial_actions[ i ] != "arcane_torrent" )
       def->add_action( racial_actions[ i ] );
   }
-  // Ironskin Brew
   def->add_action( this, spec.invoke_niuzao, "invoke_niuzao_the_black_ox", "if=target.time_to_die>25" );
-/*  def->add_action(
-      this, "Ironskin Brew",
-      "if=buff.blackout_combo.down&incoming_damage_1999ms>(health.max*0.1+stagger.last_tick_damage_4)&buff.elusive_"
-      "brawler.stack<2&!buff.ironskin_brew.up",
-      "Ironskin Brew priority whenever it took significant damage and ironskin brew buff is missing (adjust the "
-      "health.max coefficient according to intensity of damage taken), and to dump excess charges before BoB." );
-  def->add_action(
-      this, "Ironskin Brew",
-      "if=cooldown.brews.charges_fractional>1&cooldown.black_ox_brew.remains<3&buff.ironskin_brew.remains<15" );
-      */
   // Purifying Brew
   def->add_action( this, "Purifying Brew",
-                   "if=stagger.pct>(6*(3-(cooldown.brews.charges_fractional)))&(stagger.last_tick_damage_1>((0.02+0."
-                   "001*(3-cooldown.brews.charges_fractional))*stagger.last_tick_damage_30))",
+                   "if=stagger.pct>(6*(1-(cooldown.purifying_brew.charges_fractional)))&(stagger.last_tick_damage_1>((0.02+0."
+                   "001*(1-cooldown.purifying_brew.charges_fractional))*stagger.last_tick_damage_30))",
                    "Purifying behaviour is based on normalization (iE the late expression triggers if stagger size "
                    "increased over the last 30 ticks or 15 seconds)." );
 
   // Black Ox Brew
-  def->add_talent( this, "Black Ox Brew", "if=cooldown.brews.charges_fractional<0.5",
+  def->add_talent( this, "Black Ox Brew", "if=cooldown.purifying_brew.charges_fractional<0.5",
                    "Black Ox Brew is currently used to either replenish brews based on less than half a brew charge "
                    "available, or low energy to enable Keg Smash" );
   def->add_talent(
@@ -11612,6 +11638,15 @@ void monk_t::apl_combat_brewmaster()
   def->add_action(
       this, "Keg Smash", "if=spell_targets>=2",
       "Offensively, the APL prioritizes KS on cleave, BoS else, with energy spenders and cds sorted below" );
+
+  // Celestial Brew
+  def->add_action(
+      this, "Celestial Brew",
+      "if=buff.blackout_combo.down&incoming_damage_1999ms>(health.max*0.1+stagger.last_tick_damage_4)&buff.elusive_"
+      "brawler.stack<2",
+      "Celestial Brew priority whenever it took significant damage and ironskin brew buff is missing (adjust the "
+      "health.max coefficient according to intensity of damage taken), and to dump excess charges before BoB." );
+
   def->add_action( this, "Tiger Palm",
                    "if=talent.rushing_jade_wind.enabled&buff.blackout_combo.up&buff.rushing_jade_wind.up" );
   def->add_action(
@@ -11657,6 +11692,10 @@ void monk_t::apl_combat_windwalker()
 
   def->add_action( "auto_attack", "Executed every time the actor is available." );
   def->add_action( this, "Spear Hand Strike", "if=target.debuff.casting.react" );
+  def->add_action(
+      "variable,name=hold_xuen,op=set,value=cooldown.invoke_xuen_the_white_tiger.remains>fight_remains|"
+      "fight_remains<120&fight_remains>cooldown.serenity.remains&cooldown.serenity.remains>10",
+      "Variable that will tell you if you will need to wait to cast ToD/do not want to cast it at all anymore" );
   if ( sim->allow_potions )
   {
       def->add_action(
@@ -11719,7 +11758,11 @@ void monk_t::apl_combat_windwalker()
       "prev_gcd.1.tiger_palm&chi<4))" );
 
   // Serenity Cooldowns
-  cd_serenity->add_action( this, "Invoke Xuen, the White Tiger", "if=!variable.hold_xuen|fight_remains<25", "Serenity Cooldowns" );
+  cd_serenity->add_action(
+      "variable,name=serenity_burst,op=set,value=cooldown.serenity.remains<1|pet.xuen_the_white_tiger.active&cooldown."
+      "serenity.remains>30|fight_remains<20",
+      "Serenity Cooldowns" );
+  cd_serenity->add_action( this, "Invoke Xuen, the White Tiger", "if=!variable.hold_xuen|fight_remains<25" );
 
   // Serenity On-use w/ Azshara's Font of Power
   // TODO: Remove come 9.0.2
@@ -11993,6 +12036,7 @@ void monk_t::apl_combat_mistweaver()
   def->add_action( "run_action_list,name=aoe,if=active_enemies>=4" );
   def->add_action( "call_action_list,name=st,if=active_enemies<4" );
 
+  st->add_action( this, "Thunder Focus Tea" );
   st->add_action( this, "Rising Sun Kick" );
   st->add_action( this, "Blackout Kick",
                   "if=buff.teachings_of_the_monastery.stack=1&cooldown.rising_sun_kick.remains<12" );

@@ -25,6 +25,7 @@ struct warlock_td_t : public actor_target_data_t
   //TODO: SL Beta - Should Leyshocks triggers be removed from the modules?
 
   propagate_const<dot_t*> dots_drain_life;
+  propagate_const<dot_t*> dots_scouring_tithe;
 
   // Aff
   propagate_const<dot_t*> dots_agony;
@@ -56,7 +57,7 @@ struct warlock_td_t : public actor_target_data_t
   propagate_const<dot_t*> dots_doom;
   propagate_const<dot_t*> dots_umbral_blaze;  // BFA - Azerite
 
-  propagate_const<buff_t*> debuffs_from_the_shadows; //TODO: Refactor handling for this - see PR 5294
+  propagate_const<buff_t*> debuffs_from_the_shadows;
   propagate_const<buff_t*> debuffs_jaws_of_shadow;  // BFA - Azerite
 
   double soc_threshold; //Aff - Seed of Corruption counts damage from cross-spec spells such as Drain Life
@@ -80,6 +81,7 @@ public:
   std::vector<action_t*> havoc_spells;  // Used for smarter target cache invalidation.
   bool wracking_brilliance;             // BFA - Azerite
   double agony_accumulator;
+  double corruption_accumulator;
   double memory_of_lucid_dreams_accumulator;  // BFA - Essences
   double strive_for_perfection_multiplier;    // BFA - Essences
   double vision_of_perfection_multiplier;     // BFA - Essences
@@ -204,7 +206,7 @@ public:
     const spell_data_t* doom; //TODO: SL Beta - Doom is now working in the sim and seems to match some tests against beta client, but haste/refresh behavior needs checking still
 
     // tier 35
-    const spell_data_t* from_the_shadows; //TODO: Post Launch - From the Shadows requires hardcoding for HoG (similar issue with HoG and spec aura). See PR 5294.
+    const spell_data_t* from_the_shadows;
     const spell_data_t* soul_strike;  //TODO: SL Beta - double check automagic is handling damage correctly
     const spell_data_t* summon_vilefiend;
 
@@ -290,16 +292,16 @@ public:
     // Legendaries
     // Cross-spec
     item_runeforge_t claw_of_endereth;
-    item_runeforge_t mark_of_borrowed_power;
+    item_runeforge_t mark_of_borrowed_power; //TODO: SL Beta - Confirm with long dummy log that the % chances have no BLP
     item_runeforge_t wilfreds_sigil_of_superior_summoning;
     // Affliction
     item_runeforge_t malefic_wrath;
     item_runeforge_t perpetual_agony_of_azjaqir;
-    item_runeforge_t sacrolashs_dark_strike;
+    item_runeforge_t sacrolashs_dark_strike; //TODO: SL Beta - Check if slow effect (unimplemented atm) can proc anything important
     item_runeforge_t wrath_of_consumption;
     // Demonology
     item_runeforge_t balespiders_burning_core;
-    item_runeforge_t forces_of_horned_nightmare;
+    item_runeforge_t forces_of_the_horned_nightmare;
     item_runeforge_t grim_inquisitors_dread_calling;
     item_runeforge_t implosive_potential;
     // Destruction
@@ -364,6 +366,7 @@ public:
     propagate_const<cooldown_t*> phantom_singularity;
     propagate_const<cooldown_t*> darkglare;
     propagate_const<cooldown_t*> demonic_tyrant;
+    propagate_const<cooldown_t*> scouring_tithe;
   } cooldowns;
 
   //TODO: SL Beta - this struct is supposedly for passives per the comment here, but that is potentially outdated. Consider refactoring and reorganizing ALL of this.
@@ -468,9 +471,15 @@ public:
     propagate_const<buff_t*> flashpoint;
     propagate_const<buff_t*> chaos_shards;
 
+    // SL
+    propagate_const<buff_t*> decimating_bolt;
+
     // Legendaries
     propagate_const<buff_t*> madness_of_the_azjaqir;
     propagate_const<buff_t*> balespiders_burning_core;
+    propagate_const<buff_t*> malefic_wrath;
+    propagate_const<buff_t*> wrath_of_consumption;
+    propagate_const<buff_t*> implosive_potential;
   } buffs;
 
   //TODO: SL Beta - Some of these gains are unused, should they be pruned?
@@ -478,6 +487,7 @@ public:
   struct gains_t
   {
     gain_t* soul_conduit;
+    gain_t* borrowed_power; // SL - Legendary
 
     gain_t* agony;
     gain_t* drain_soul;
@@ -507,15 +517,22 @@ public:
     gain_t* baleful_invocation;  // BFA - Azerite
 
     gain_t* memory_of_lucid_dreams;  // BFA - Essence
+
+    // SL
+    gain_t* scouring_tithe;
   } gains;
 
   // Procs
   struct procs_t
   {
     proc_t* soul_conduit;
+    proc_t* mark_of_borrowed_power;
+
     // aff
     proc_t* nightfall;
     proc_t* corrupting_leer;
+    proc_t* malefic_wrath;
+
     // demo
     proc_t* demonic_calling;
     proc_t* souls_consumed;
@@ -526,6 +543,9 @@ public:
     proc_t* dreadstalker_debug;
     proc_t* summon_random_demon;
     proc_t* portal_summon;
+    proc_t* carnivorous_stalkers; // SL - Conduit
+    proc_t* horned_nightmare; // SL - Legendary
+
     // destro
     proc_t* reverse_entropy;
   } procs;
@@ -664,6 +684,77 @@ private:
 
 namespace actions
 {
+//Event for triggering delayed refunds from Soul Conduit
+//Delay prevents instant reaction time issues for rng refunds
+struct sc_event_t : public player_event_t
+{
+  gain_t* shard_gain;
+  warlock_t* pl;
+  int shards_used;
+
+  sc_event_t( warlock_t* p, int c )
+    : player_event_t( *p, 100_ms ),
+    shard_gain( p->gains.soul_conduit ),
+    pl( p ),
+    shards_used( c )
+  {
+  }
+
+  virtual const char* name() const override
+  {
+    return "soul_conduit_event";
+  }
+
+  virtual void execute() override
+  {
+    double soul_conduit_rng = pl->talents.soul_conduit->effectN( 1 ).percent();
+
+    for ( int i = 0; i < shards_used; i++ )
+    {
+      if ( rng().roll( soul_conduit_rng ) )
+      {
+        pl->sim->print_log( "Soul Conduit proc occurred for Warlock {}, refunding 1.0 soul shards.", pl->name() );
+        pl->resource_gain( RESOURCE_SOUL_SHARD, 1.0, shard_gain );
+        pl->procs.soul_conduit->occur();
+      }
+    }
+  }
+};
+
+//Event for triggering refunds from Mark of Borrowed Power legendary
+//TOCHECK: Currently, this refund can occur independently of Soul Conduit refunds, granting more shards than originally spent
+struct borrowed_power_event_t : public player_event_t
+{
+  gain_t* shard_gain;
+  warlock_t* pl;
+  int shards_used;
+  double refund_chance;
+
+  borrowed_power_event_t( warlock_t* p, int c, double chance )
+    : player_event_t( *p, 100_ms ),
+    shard_gain( p->gains.borrowed_power ),
+    pl( p ),
+    shards_used( c ),
+    refund_chance( chance )
+  {
+  }
+
+  virtual const char* name() const override
+  {
+    return "borrowed_power_event";
+  }
+
+  virtual void execute() override
+  {
+      if ( rng().roll( refund_chance ) )
+      {
+        pl->sim->print_log( "Borrowed power proc occurred for Warlock {}, refunding {} soul shards.", pl->name(), shards_used );
+        pl->resource_gain( RESOURCE_SOUL_SHARD, shards_used, shard_gain );
+        pl->procs.mark_of_borrowed_power->occur();
+      } 
+  }
+};
+
 struct warlock_heal_t : public heal_t
 {
   warlock_heal_t( const std::string& n, warlock_t* p, const uint32_t id ) : heal_t( n, p, p->find_spell( id ) )
@@ -686,6 +777,7 @@ struct warlock_spell_t : public spell_t
 public:
   gain_t* gain;
   bool can_havoc; //Needed in main module for cross-spec spells such as Covenants
+  bool affected_by_woc; // SL - Legendary (Wrath of Consumption) checker
 
   warlock_spell_t( warlock_t* p, util::string_view n ) : warlock_spell_t( n, p, p->find_class_spell( n ) )
   {
@@ -704,6 +796,9 @@ public:
     weapon_multiplier = 0.0;
     gain              = player->get_gain( name_str );
     can_havoc         = false;
+
+    //TOCHECK: Is there a way to link this to the buffs.x spell data so we don't have to remember this is hardcoded?
+    affected_by_woc   = data().affected_by( p->find_spell( 337130 )->effectN( 1 ) );
   }
 
   warlock_t* p()
@@ -763,41 +858,7 @@ public:
       // lets try making all lock specs not react instantly to shard gen
       if ( p()->talents.soul_conduit->ok() )
       {
-        struct sc_event : public player_event_t
-        {
-          gain_t* shard_gain;
-          warlock_t* pl;
-          int shards_used;
-
-          sc_event( warlock_t* p, int c )
-            : player_event_t( *p, timespan_t::from_millis( 100 ) ),
-              shard_gain( p->gains.soul_conduit ),
-              pl( p ),
-              shards_used( c )
-          {
-          }
-
-          virtual const char* name() const override
-          {
-            return "sc_event";
-          }
-
-          virtual void execute() override
-          {
-            double soul_conduit_rng = pl->talents.soul_conduit->effectN( 1 ).percent();
-
-            for ( int i = 0; i < shards_used; i++ )
-            {
-              if ( rng().roll( soul_conduit_rng ) )
-              {
-                pl->resource_gain( RESOURCE_SOUL_SHARD, 1.0, pl->gains.soul_conduit );
-                pl->procs.soul_conduit->occur();
-              }
-            }
-          }
-        };
-
-        make_event<sc_event>( *p()->sim, p(), as<int>( last_resource_cost ) );
+        make_event<sc_event_t>( *p()->sim, p(), as<int>( last_resource_cost ) );
       }
     }
   }
@@ -820,11 +881,21 @@ public:
     return pm;
   }
 
+  double composite_ta_multiplier( const action_state_t* s ) const override
+  {
+    double m = spell_t::composite_ta_multiplier( s );
+
+    if ( p()->legendary.wrath_of_consumption.ok() && p()->buffs.wrath_of_consumption->check() && affected_by_woc )
+      m *= 1.0 + p()->buffs.wrath_of_consumption->check_stack_value();
+
+    return m;
+  }
+
   void extend_dot( dot_t* dot, timespan_t extend_duration )
   {
     if ( dot->is_ticking() )
     {
-      dot->extend_duration( extend_duration, dot->current_action->dot_duration * 1.5 );
+      dot->adjust_duration( extend_duration, dot->current_action->dot_duration * 1.5 );
     }
   }
 

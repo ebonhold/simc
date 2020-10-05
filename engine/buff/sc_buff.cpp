@@ -850,6 +850,19 @@ buff_t* buff_t::add_invalidate( cache_e c )
   return this;
 }
 
+buff_t* buff_t::set_pct_buff_type( stat_pct_buff_type type )
+{
+  if ( !player || type == STAT_PCT_BUFF_MAX )
+    return this;
+
+  auto& buffs = player->buffs.stat_pct_buffs[ type ];
+  if ( range::find( buffs, this ) == buffs.end() )
+    buffs.push_back( this );
+  add_invalidate( cache_from_stat_pct_buff( type ) );
+
+  return this;
+}
+
 buff_t* buff_t::set_default_value( double value, size_t effect_idx )
 {
   // Ensure we are not errantly overwriting a value that is already set to a given effect
@@ -1083,7 +1096,7 @@ buff_t* buff_t::apply_affecting_effect( const spelleffect_data_t& effect )
   if ( !effect.ok() || effect.type() != E_APPLY_AURA )
     return this;
 
-  if ( !data().affected_by_all( *player->dbc, effect ) )
+  if ( !data().affected_by_all( effect ) )
     return this;
 
   if ( sim->debug )
@@ -1247,7 +1260,7 @@ buff_t* buff_t::apply_affecting_effect( const spelleffect_data_t& effect )
         break;
     }
   }
-  else if ( data().category() == as<unsigned>( effect.misc_value1() ) )
+  else if ( data().affected_by_category( effect ) )
   {
     switch ( effect.subtype() )
     {
