@@ -103,16 +103,16 @@ actions.bos_ticking+=/arcane_torrent,if=runic_power.deficit>50
 actions.cold_heart=chains_of_ice,if=target.1.time_to_die<gcd|buff.pillar_of_frost.remains<3&buff.cold_heart.stack=20
 
 # Frost cooldowns
-actions.cooldowns=pillar_of_frost,use_off_gcd=1,if=talent.breath_of_sindragosa.enabled&cooldown.breath_of_sindragosa.remains|!talent.breath_of_sindragosa.enabled
-actions.cooldowns+=/breath_of_sindragosa,use_off_gcd=1,if=cooldown.pillar_of_frost.ready&runic_power.deficit<60
-actions.cooldowns+=/empower_rune_weapon,if=cooldown.pillar_of_frost.ready&talent.obliteration.enabled&rune.time_to_5>gcd&runic_power.deficit>=10|target.1.time_to_die<20
+actions.cooldowns=empower_rune_weapon,if=talent.obliteration.enabled&(cooldown.pillar_of_frost.ready&rune.time_to_5>gcd&runic_power.deficit>=10|buff.pillar_of_frost.up&rune.time_to_5>gcd)|target.1.time_to_die<20
 actions.cooldowns+=/empower_rune_weapon,if=(buff.breath_of_sindragosa.up|target.1.time_to_die<20)&talent.breath_of_sindragosa.enabled&runic_power.deficit>30
 actions.cooldowns+=/empower_rune_weapon,if=talent.icecap.enabled&rune<3
+actions.cooldowns+=/pillar_of_frost,use_off_gcd=1,if=talent.breath_of_sindragosa.enabled&cooldown.breath_of_sindragosa.remains|!talent.breath_of_sindragosa.enabled
+actions.cooldowns+=/breath_of_sindragosa,use_off_gcd=1,if=cooldown.pillar_of_frost.ready&runic_power.deficit<60
 actions.cooldowns+=/frostwyrms_fury,if=buff.pillar_of_frost.remains<(3+talent.cold_heart.enabled*1)
 actions.cooldowns+=/frostwyrms_fury,if=active_enemies>=2&cooldown.pillar_of_frost.remains+15>target.time_to_die|target.1.time_to_die<gcd
 actions.cooldowns+=/hypothermic_presence,if=talent.breath_of_sindragosa.enabled&runic_power.defecit>40&rune>=3&cooldown.pillar_of_frost.up|!talent.breath_of_sindragosa.enabled&runic_power.deficit>=25
-actions.cooldowns+=/raise_dead,if=cooldown.pillar_of_frost.remains<3
-actions.cooldowns+=/sacrificial_pact,if=active_enemies>=2&!buff.dark_transformation.up&!cooldown.dark_transformation.ready&cooldown.dark_transformation.remains>cooldown.raise_dead.remains
+actions.cooldowns+=/raise_dead,if=cooldown.pillar_of_frost.remains<3|buff.pillar_of_frost.up&!talent.breath_of_sindragosa.enabled
+actions.cooldowns+=/sacrificial_pact,if=pet.ghoul.remains<gcd&active_enemies>=2
 
 # Obliteration rotation
 actions.obliteration=remorseless_winter,if=talent.gathering_storm.enabled
