@@ -1644,7 +1644,8 @@ struct bt_dummy_buff_t : public druid_buff_t<buff_t>
   bt_dummy_buff_t( druid_t& p, util::string_view n )
     : base_t( p, n ), count( as<int>( p.talent.bloodtalons->effectN( 2 ).base_value() ) )
   {
-    set_duration( timespan_t::from_seconds( p.talent.bloodtalons->effectN( 1 ).base_value() ) );
+    // The counting starts from the end of the triggering ability gcd.
+    set_duration( timespan_t::from_seconds( p.talent.bloodtalons->effectN( 1 ).base_value() ) + timespan_t::from_seconds(1.0) );
     set_max_stack( 1 );
     set_quiet( true );
     set_refresh_behavior( buff_refresh_behavior::DURATION );
@@ -4843,13 +4844,21 @@ struct growl_t : public bear_attack_t
 
 struct mangle_t : public bear_attack_t
 {
-  mangle_t( druid_t* player, util::string_view options_str )
-    : bear_attack_t( "mangle", player, player->find_class_spell( "Mangle" ), options_str )
+  int inc_targets;
+
+  mangle_t( druid_t* p, util::string_view opt )
+    : bear_attack_t( "mangle", p, p->find_class_spell( "Mangle" ), opt ), inc_targets( 0 )
   {
-    if ( p()->find_rank_spell( "Mangle", "Rank 2" )->ok() )
+    if ( p->find_rank_spell( "Mangle", "Rank 2" )->ok() )
       bleed_mul = data().effectN( 3 ).percent();
 
-    energize_amount += player->talent.soul_of_the_forest_bear->effectN( 1 ).resource( RESOURCE_RAGE );
+    energize_amount += p->talent.soul_of_the_forest_bear->effectN( 1 ).resource( RESOURCE_RAGE );
+
+    if ( p->talent.incarnation_bear->ok() )
+    {
+      inc_targets = as<int>(
+          p->query_aura_effect( p->talent.incarnation_bear, A_ADD_FLAT_MODIFIER, P_TARGET, s_data )->base_value() );
+    }
   }
 
   double composite_energize_amount( const action_state_t* s ) const override
@@ -4864,7 +4873,7 @@ struct mangle_t : public bear_attack_t
   int n_targets() const override
   {
     if ( p()->buff.incarnation_bear->check() )
-      return as<int>( p()->talent.incarnation_bear->effectN( 4 ).base_value() );
+      return inc_targets;
 
     return bear_attack_t::n_targets();
   }
@@ -5788,6 +5797,73 @@ struct tiger_dash_t : public druid_spell_t
   }
 };
 
+// New Moon Spell ===========================================================
+
+struct new_moon_t : public druid_spell_t
+{
+  new_moon_t( druid_t* player, util::string_view options_str )
+    : druid_spell_t( "new_moon", player, player->talent.new_moon, options_str )
+  {
+    cooldown           = player->cooldown.moon_cd;
+    cooldown->duration = data().charge_cooldown();
+    cooldown->charges  = data().charges();
+  }
+
+  void impact( action_state_t* s ) override
+  {
+    druid_spell_t::impact( s );
+
+    streaking_stars_trigger( SS_NEW_MOON, s );  // proc munching shenanigans, munch tracking NYI
+  }
+
+  void execute() override
+  {
+    druid_spell_t::execute();
+
+    p()->moon_stage++;
+  }
+
+  bool ready() override
+  {
+    if ( !p()->talent.new_moon || p()->moon_stage != NEW_MOON || !p()->cooldown.moon_cd->up() )
+      return false;
+
+    return druid_spell_t::ready();
+  }
+};
+
+// Half Moon Spell ==========================================================
+
+struct half_moon_t : public druid_spell_t
+{
+  half_moon_t( druid_t* player, util::string_view options_str )
+    : druid_spell_t( "half_moon", player, player->spec.half_moon, options_str )
+  {
+    cooldown = player->cooldown.moon_cd;
+  }
+
+  void impact( action_state_t* s ) override
+  {
+    druid_spell_t::impact( s );
+    streaking_stars_trigger( SS_HALF_MOON, s );  // proc munching shenanigans, munch tracking NYI
+  }
+
+  void execute() override
+  {
+    druid_spell_t::execute();
+
+    p()->moon_stage++;
+  }
+
+  bool ready() override
+  {
+    if ( !p()->talent.new_moon || p()->moon_stage != HALF_MOON || !p()->cooldown.moon_cd->up() )
+      return false;
+
+    return druid_spell_t::ready();
+  }
+};
+
 // Full Moon Spell ==========================================================
 
 struct full_moon_t : public druid_spell_t
@@ -5839,35 +5915,78 @@ struct full_moon_t : public druid_spell_t
   }
 };
 
-// Half Moon Spell ==========================================================
-
-struct half_moon_t : public druid_spell_t
+struct moon_proxy_t : public druid_spell_t
 {
-  half_moon_t( druid_t* player, util::string_view options_str )
-    : druid_spell_t( "half_moon", player, player->spec.half_moon, options_str )
+  action_t* new_moon;
+  action_t* half_moon;
+  action_t* full_moon;
+
+  moon_proxy_t( druid_t* p, util::string_view opt ) : druid_spell_t( "moons", p, spell_data_t::nil(), opt )
   {
-    cooldown = player->cooldown.moon_cd;
+    new_moon = new new_moon_t( p, opt );
+    half_moon = new half_moon_t( p, opt );
+    full_moon = new full_moon_t( p, opt );
   }
 
-  void impact( action_state_t* s ) override
+  void schedule_execute( action_state_t* s ) override
   {
-    druid_spell_t::impact( s );
-    streaking_stars_trigger( SS_HALF_MOON, s );  // proc munching shenanigans, munch tracking NYI
+    switch ( p()->moon_stage )
+    {
+      case NEW_MOON: new_moon->schedule_execute( s ); return;
+      case HALF_MOON: half_moon->schedule_execute( s ); return;
+      case FULL_MOON: full_moon->schedule_execute( s ); return;
+      default: break;
+    }
+
+    if ( s )
+      action_state_t::release( s );
   }
 
   void execute() override
   {
-    druid_spell_t::execute();
+    switch ( p()->moon_stage )
+    {
+      case NEW_MOON: new_moon->execute(); return;
+      case HALF_MOON: half_moon->execute(); return;
+      case FULL_MOON: full_moon->execute(); return;
+      default: break;
+    }
 
-    p()->moon_stage++;
+    if ( pre_execute_state )
+      action_state_t::release( pre_execute_state );
+  }
+
+  bool action_ready() override
+  {
+    switch ( p()->moon_stage )
+    {
+      case NEW_MOON: return new_moon->action_ready();
+      case HALF_MOON: return half_moon->action_ready();
+      case FULL_MOON: return full_moon->action_ready();
+      default: return false;
+    }
+  }
+
+  bool target_ready( player_t* t ) override
+  {
+    switch ( p()->moon_stage )
+    {
+      case NEW_MOON: return new_moon->target_ready( t );
+      case HALF_MOON: return half_moon->target_ready( t );
+      case FULL_MOON: return full_moon->target_ready( t );
+      default: return false;
+    }
   }
 
   bool ready() override
   {
-    if ( !p()->talent.new_moon || p()->moon_stage != HALF_MOON || !p()->cooldown.moon_cd->up() )
-      return false;
-
-    return druid_spell_t::ready();
+    switch ( p()->moon_stage )
+    {
+      case NEW_MOON: return new_moon->ready();
+      case HALF_MOON: return half_moon->ready();
+      case FULL_MOON: return full_moon->ready();
+      default: return false;
+    }
   }
 };
 
@@ -6255,41 +6374,6 @@ struct starfire_t : public druid_spell_t
   }
 };
 
-// New Moon Spell ===========================================================
-
-struct new_moon_t : public druid_spell_t
-{
-  new_moon_t( druid_t* player, util::string_view options_str )
-    : druid_spell_t( "new_moon", player, player->talent.new_moon, options_str )
-  {
-    cooldown           = player->cooldown.moon_cd;
-    cooldown->duration = data().charge_cooldown();
-    cooldown->charges  = data().charges();
-  }
-
-  void impact( action_state_t* s ) override
-  {
-    druid_spell_t::impact( s );
-
-    streaking_stars_trigger( SS_NEW_MOON, s );  // proc munching shenanigans, munch tracking NYI
-  }
-
-  void execute() override
-  {
-    druid_spell_t::execute();
-
-    p()->moon_stage++;
-  }
-
-  bool ready() override
-  {
-    if ( !p()->talent.new_moon || p()->moon_stage != NEW_MOON || !p()->cooldown.moon_cd->up() )
-      return false;
-
-    return druid_spell_t::ready();
-  }
-};
-
 // Sunfire Spell ============================================================
 
 struct sunfire_t : public druid_spell_t
@@ -6491,7 +6575,7 @@ struct wrath_t : public druid_spell_t
   {
     druid_spell_t::init_finished();
 
-    if ( p()->specialization() == DRUID_BALANCE && action_list && action_list->name_str == "precombat" )
+    if ( is_precombat )
     {
       auto apl = player->precombat_action_list;
 
@@ -6744,17 +6828,23 @@ struct starsurge_t : public druid_spell_t
       p->active.oneths_clear_vision->stats->add_child( init_free_cast_stats( free_cast_e::ONETHS ) );
   }
 
-  timespan_t travel_time() const override  // hack to allow bypassing of action_t::init() precombat check
+  void init() override
   {
-    return action_list && action_list->name_str == "precombat" ? 100_ms : druid_spell_t::travel_time();
+    // Need to set is_precombat first to bypass action_t::init() checks
+    if ( action_list && action_list->name_str == "precombat" )
+      is_precombat = true;
+
+    druid_spell_t::init();
+  }
+
+  timespan_t travel_time() const override
+  {
+    return is_precombat ? 100_ms : druid_spell_t::travel_time();
   }
 
   bool ready() override
   {
-    if ( !p()->spec.starsurge->ok() )
-      return false;
-
-    if ( p()->in_combat )
+    if ( !is_precombat )
       return druid_spell_t::ready();
 
     // in precombat, so hijack standard ready() procedure
@@ -7863,6 +7953,7 @@ action_t* druid_t::create_action( util::string_view name, const std::string& opt
   if ( name == "new_moon"               ) return new               new_moon_t( this, options_str );
   if ( name == "half_moon"              ) return new              half_moon_t( this, options_str );
   if ( name == "full_moon"              ) return new              full_moon_t( this, options_str );
+  if ( name == "moons"                  ) return new             moon_proxy_t( this, options_str );
   if ( name == "solar_beam"             ) return new             solar_beam_t( this, options_str );
   if ( name == "starfall"               ) return new               starfall_t( this, options_str );
   if ( name == "starfire"               ) return new               starfire_t( this, options_str );

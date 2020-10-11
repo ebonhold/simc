@@ -2328,9 +2328,9 @@ void sim_t::init_fight_style()
 
     raid_events_str +=
         "/invulnerable,cooldown=500,duration=500,retarget=1"
-        "/adds,name=Boss,count=1,cooldown=500,duration=140,type=add_boss,duration_stddev=2"
+        "/adds,name=Boss,count=1,cooldown=500,duration=135,type=add_boss,duration_stddev=1"
         "/adds,name=SmallAdd,count=5,count_range=1,first=140,cooldown=45,duration=15,duration_stddev=2"
-        "/adds,name=BigAdd,count=2,count_range=1,first=155,cooldown=45,duration=30,duration_stddev=2";
+        "/adds,name=BigAdd,count=2,count_range=1,first=160,cooldown=50,duration=30,duration_stddev=2";
   }
   else
   {
@@ -3244,6 +3244,11 @@ std::unique_ptr<expr_t> sim_t::create_expression( util::string_view name_str )
 
   if ( util::str_compare_ci( name_str, "fight_remains" ) )
     return make_fn_expr( name_str, [ this ] { return expected_iteration_time - event_mgr.current_time; } );
+
+  if ( util::str_compare_ci( name_str, "interpolated_fight_remains" ) )
+    return make_fn_expr( name_str, [ this ] {
+      return max_time * ( 1.0 - event_mgr.current_time / expected_iteration_time );
+    } );
 
   if ( name_str == "channel_lag" )
     return expr_t::create_constant( name_str, channel_lag );

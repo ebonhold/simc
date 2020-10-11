@@ -84,7 +84,6 @@ public:
     propagate_const<buff_t*> shadow_crash_debuff;
     propagate_const<buff_t*> wrathful_faerie;
     propagate_const<buff_t*> wrathful_faerie_fermata;
-    propagate_const<buff_t*> hungering_void_tracking;
     propagate_const<buff_t*> hungering_void;
   } buffs;
 
@@ -243,6 +242,7 @@ public:
     const spell_data_t* void_torrent;
     // T50
     const spell_data_t* hungering_void;
+    const spell_data_t* hungering_void_buff;  // not linked from hungering void talent spell
     const spell_data_t* ancient_madness;
     const spell_data_t* surrender_to_madness;
   } talents;
@@ -591,11 +591,11 @@ public:
   void trigger_shadowy_apparitions( action_state_t* );
   void trigger_psychic_link( action_state_t* );
   bool hungering_void_active( player_t* target ) const;
+  void remove_hungering_void( player_t* target );
   void trigger_wrathful_faerie();
   void trigger_wrathful_faerie_fermata();
   void remove_wrathful_faerie();
   void remove_wrathful_faerie_fermata();
-  void remove_hungering_void_tracking();
   int shadow_weaving_active_dots( const player_t* target, const unsigned int spell_id ) const;
   double shadow_weaving_multiplier( const player_t* target, const unsigned int spell_id ) const;
   pets::fiend::base_fiend_pet_t* get_current_main_pet();
@@ -692,6 +692,15 @@ struct priest_pet_melee_t : public melee_attack_t
     first_swing = true;
   }
 
+  double composite_target_multiplier( player_t* target ) const override
+  {
+    double mul = attack_t::composite_target_multiplier( target );
+
+    mul *= debug_cast<priest_t*>( debug_cast<priest_pet_t*>( player )->owner )->shadow_weaving_multiplier( target, 0 );
+
+    return mul;
+  }
+
   timespan_t execute_time() const override
   {
     // First swing comes instantly after summoning the pet
@@ -743,11 +752,6 @@ struct priest_pet_spell_t : public spell_t
       tdm *= p().o().shadow_weaving_multiplier( t, id );
     }
 
-    if ( p().o().hungering_void_active( t ) )
-    {
-      tdm *= ( 1 + p().o().talents.hungering_void->effectN( 2 ).percent() );
-    }
-
     return tdm;
   }
 
@@ -758,11 +762,6 @@ struct priest_pet_spell_t : public spell_t
     if ( affected_by_shadow_weaving )
     {
       ttm *= p().o().shadow_weaving_multiplier( t, id );
-    }
-
-    if ( p().o().hungering_void_active( t ) )
-    {
-      ttm *= ( 1 + p().o().talents.hungering_void->effectN( 2 ).percent() );
     }
 
     return ttm;
@@ -937,9 +936,6 @@ struct fiend_melee_t : public priest_pet_melee_t
     if ( base_execute_time == timespan_t::zero() )
       return timespan_t::zero();
 
-    if ( !harmful && !player->in_combat )
-      return timespan_t::zero();
-
     return base_execute_time * player->cache.spell_speed();
   }
 
@@ -982,7 +978,7 @@ struct shadowflame_rift_t final : public priest_pet_spell_t
   shadowflame_rift_t( base_fiend_pet_t& p ) : priest_pet_spell_t( "shadowflame_rift", &p, p.o().find_spell( 344748 ) )
   {
     background = true;
-    // This is hard coded in the spell, base SP is 3.0
+    // This is hard coded in the spell
     // Depending on Mindbender or Shadowfiend this hits differently
     switch ( p.pet_type )
     {
@@ -1007,8 +1003,7 @@ struct shadowflame_prism_t final : public priest_pet_spell_t
 
   shadowflame_prism_t( base_fiend_pet_t& p )
     : priest_pet_spell_t( "shadowflame_prism", &p, p.o().find_spell( 336143 ) ),
-      duration( timespan_t::from_seconds( as<double>( data().effectN( 3 ).base_value() ) +
-                                          0.5 ) )  // This 0.5 is hardcoded in spell data
+      duration( timespan_t::from_seconds( data().effectN( 3 ).base_value() ) )
   {
     background = true;
 
@@ -1347,7 +1342,7 @@ struct priest_spell_t : public priest_action_t<spell_t>
 
     base_t::consume_resource();
 
-    if ( priest().specialization() != PRIEST_SHADOW )
+    if (priest().azerite_essence.lucid_dreams )
       priest().trigger_lucid_dreams( last_resource_cost );
   }
 
@@ -1378,6 +1373,13 @@ struct priest_spell_t : public priest_action_t<spell_t>
           priest().trigger_wrathful_faerie_fermata();
         }
       }
+
+      if (priest().specialization() == PRIEST_SHADOW && priest().buffs.voidform->check() )
+      {
+        // TODO: Remove after pre-patch?
+        // Just an approximation of the value added by Lucid Minor, not accurate
+        priest().trigger_lucid_dreams( 4.0 );
+      }
     }
   }
 
@@ -1390,11 +1392,6 @@ struct priest_spell_t : public priest_action_t<spell_t>
       tdm *= priest().shadow_weaving_multiplier( t, id );
     }
 
-    if ( priest().hungering_void_active( t ) )
-    {
-      tdm *= ( 1 + priest().talents.hungering_void->effectN( 2 ).percent() );
-    }
-
     return tdm;
   }
 
@@ -1405,11 +1402,6 @@ struct priest_spell_t : public priest_action_t<spell_t>
     if ( affected_by_shadow_weaving )
     {
       ttm *= priest().shadow_weaving_multiplier( t, id );
-    }
-
-    if ( priest().hungering_void_active( t ) )
-    {
-      ttm *= ( 1 + priest().talents.hungering_void->effectN( 2 ).percent() );
     }
 
     return ttm;

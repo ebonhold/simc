@@ -1393,6 +1393,8 @@ class SpellDataGenerator(DataGenerator):
             ( 344752, 5 ),          # Void Lasher "Mind Sear"
             ( 345452, 0 ),          # Fae Fermata target Debuff
             ( 345219, 0 ),          # Hungering Void target Debuff
+            ( 346111, 0 ),          # Shadow Weaving Mastery spell
+            ( 346112, 0 ),          # Shadow Weaving Mastery Pet Proc spell
         ),
 
         # Death Knight:
@@ -1588,7 +1590,8 @@ class SpellDataGenerator(DataGenerator):
           ( 265391, 3 ),    # Roaring Blaze Debuff
           ( 266087, 3 ),    # Rain of Chaos Buff
           ( 339784, 2 ),    # Tyrant's Soul Buff
-          ( 337142, 2 )     # Grim Inquisitor's Dread Calling Buff
+          ( 337142, 2 ),    # Grim Inquisitor's Dread Calling Buff
+          ( 342997, 2 )     # Grim Inquisitor's Dread Calling Buff 2     
         ),
 
         # Monk:
