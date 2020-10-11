@@ -1,0 +1,162 @@
+# Deynda - Frost - 2020-09-30 23:28 - us/Torghast
+# SimC Addon 1.12.5
+# Requires SimulationCraft 820-01 or newer
+
+deathknight="Deynda"
+level=60
+race=blood_elf
+region=us
+server=torghast
+role=attack
+food=
+potion=
+augmentation=
+flask=
+
+talents=2212212
+spec=frost
+
+head=,id=163457,bonus_id=6938
+neck=,id=177165,bonus_id=6938
+shoulder=,id=171417,bonus_id=6716/1487/6944/6647/6649,context=63
+back=,id=163361,bonus_id=6938
+chest=,id=163281,bonus_id=6938
+wrist=,id=177099,bonus_id=6938
+hands=,id=177111,bonus_id=6938
+waist=,id=163462,bonus_id=6938
+legs=,id=177110,bonus_id=6938
+feet=,id=177112,bonus_id=6938
+finger1=,id=177164,bonus_id=6938
+finger2=,id=177167,bonus_id=6938/3405
+trinket1=,id=177156,bonus_id=6938/604
+trinket2=,id=177154,bonus_id=6938/605
+main_hand=,id=177121,enchant_id=3368,bonus_id=6938
+
+### Gear from Bags
+#
+# Shadowghast Helm (190)
+# head=,id=171415,bonus_id=6716/1487,context=63
+#
+# Shadowghast Helm (190)
+# head=,id=171415,bonus_id=6716/1487,context=63
+#
+# Shadowghast Helm (190)
+# head=,id=171415,bonus_id=6716/1487,context=63
+#
+# Vitality Sacrifice (190)
+# head=,id=171415,bonus_id=6716/1487/7106/6650/6649,context=63
+#
+# Shadowghast Necklace (190)
+# neck=,id=178927,bonus_id=6716/1487,context=63
+#
+# Shadowghast Necklace (190)
+# neck=,id=178927,bonus_id=6716/1487,context=63
+#
+# Shadowghast Necklace (190)
+# neck=,id=178927,bonus_id=6716/1487,context=63
+#
+# Shadowghast Pauldrons (190)
+# shoulder=,id=171417,bonus_id=6716/1487,context=63
+#
+# Shadowghast Pauldrons (190)
+# shoulder=,id=171417,bonus_id=6716/1487,context=63
+#
+# Shadowghast Pauldrons (190)
+# shoulder=,id=171417,bonus_id=6716/1487,context=63
+#
+# Honorbound Centurion's Pauldrons (138)
+# shoulder=,id=163454,bonus_id=6938
+#
+# Shadowghast Pauldrons (190)
+# shoulder=,id=171417,bonus_id=6716/1487,context=63
+#
+# Strain-Soaked Breastplate (190)
+# chest=,id=171412,bonus_id=6716/1487/6953/6650/6649,context=63
+#
+# Shadowghast Breastplate (190)
+# chest=,id=171412,bonus_id=6716/1487,context=63
+#
+# Shadowghast Breastplate (190)
+# chest=,id=171412,bonus_id=6716/1487,context=63
+#
+# Shadowghast Armguards (190)
+# wrist=,id=171419,bonus_id=6716/1487,context=63
+#
+# Shadowghast Armguards (190)
+# wrist=,id=171419,bonus_id=6716/1487,context=63
+#
+# Shadowghast Armguards (190)
+# wrist=,id=171419,bonus_id=6716/1487,context=63
+#
+# Shadowghast Armguards (190)
+# wrist=,id=171419,bonus_id=6716/1487,context=63
+#
+# Shadowghast Gauntlets (190)
+# hands=,id=171414,bonus_id=6716/1487,context=63
+#
+# Shadowghast Gauntlets (190)
+# hands=,id=171414,bonus_id=6716/1487,context=63
+#
+# Shadowghast Gauntlets (190)
+# hands=,id=171414,bonus_id=6716/1487,context=63
+#
+# Shadowghast Waistguard (190)
+# waist=,id=171418,bonus_id=6716/1487,context=63
+#
+# Shadowghast Waistguard (190)
+# waist=,id=171418,bonus_id=6716/1487,context=63
+#
+# Shadowghast Waistguard (190)
+# waist=,id=171418,bonus_id=6716/1487,context=63
+#
+# Shadowghast Waistguard (190)
+# waist=,id=171418,bonus_id=6716/1487,context=63
+#
+# Shadowghast Greaves (190)
+# legs=,id=171416,bonus_id=6716/1487,context=63
+#
+# Shadowghast Greaves (190)
+# legs=,id=171416,bonus_id=6716/1487,context=63
+#
+# Shadowghast Greaves (190)
+# legs=,id=171416,bonus_id=6716/1487,context=63
+#
+# Shadowghast Greaves (190)
+# legs=,id=171416,bonus_id=6716/1487,context=63
+#
+# Bryndaor's Might (190)
+# feet=,id=171413,bonus_id=6716/1487/6940/6650/6649,context=63
+#
+# Shadowghast Sabatons (190)
+# feet=,id=171413,bonus_id=6716/1487,context=63
+#
+# Shadowghast Sabatons (190)
+# feet=,id=171413,bonus_id=6716/1487,context=63
+#
+# Shadowghast Ring (190)
+# finger1=,id=178926,bonus_id=6716/1487,context=63
+#
+# Shadowghast Ring (190)
+# finger1=,id=178926,bonus_id=6716/1487,context=63
+#
+# Shadowghast Ring (190)
+# finger1=,id=178926,bonus_id=6716/1487,context=63
+#
+# Shadowghast Ring (190)
+# finger1=,id=178926,bonus_id=6716/1487,context=63
+#
+# Honorbound Decapitator (138)
+# main_hand=,id=177121,enchant_id=3847,bonus_id=6938
+#
+# Honorbound Gladius (138)
+# main_hand=,id=177127,enchant_id=3368,bonus_id=6938
+#
+# Honorbound Gladius (138)
+# main_hand=,id=177127,enchant_id=3370,bonus_id=6938
+#
+# Honorbound Gladius (138)
+# off_hand=,id=177127,enchant_id=3368,bonus_id=6938
+#
+# Honorbound Gladius (138)
+# off_hand=,id=177127,enchant_id=3370,bonus_id=6938
+
