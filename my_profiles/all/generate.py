@@ -110,7 +110,7 @@ actions.cooldowns+=/pillar_of_frost,use_off_gcd=1,if=talent.breath_of_sindragosa
 actions.cooldowns+=/breath_of_sindragosa,use_off_gcd=1,if=cooldown.pillar_of_frost.ready&runic_power.deficit<60
 actions.cooldowns+=/frostwyrms_fury,if=buff.pillar_of_frost.remains<(3+talent.cold_heart.enabled*1)
 actions.cooldowns+=/frostwyrms_fury,if=active_enemies>=2&cooldown.pillar_of_frost.remains+15>target.time_to_die|target.1.time_to_die<gcd
-actions.cooldowns+=/hypothermic_presence,if=talent.breath_of_sindragosa.enabled&runic_power.defecit>40&rune>=3&cooldown.pillar_of_frost.up|!talent.breath_of_sindragosa.enabled&runic_power.deficit>=25
+actions.cooldowns+=/hypothermic_presence,if=talent.breath_of_sindragosa.enabled&runic_power.deficit>40&rune>=3&cooldown.pillar_of_frost.up|!talent.breath_of_sindragosa.enabled&runic_power.deficit>=25
 actions.cooldowns+=/raise_dead,if=cooldown.pillar_of_frost.remains<3|buff.pillar_of_frost.up&!talent.breath_of_sindragosa.enabled
 actions.cooldowns+=/sacrificial_pact,if=pet.ghoul.remains<gcd&active_enemies>=2
 
@@ -316,7 +316,7 @@ soulbind_data = {
             "P/329778/329791B"
         ],
         "mikanikos": [
-            "P/333935333950",
+            "P/333935/333950",
             "P/P/333950"
         ]
     }

@@ -102,7 +102,7 @@ actions.cooldowns+=/empower_rune_weapon,if=(buff.breath_of_sindragosa.up|target.
 actions.cooldowns+=/empower_rune_weapon,if=talent.icecap.enabled&rune<3
 actions.cooldowns+=/frostwyrms_fury,if=buff.pillar_of_frost.remains<(3+talent.cold_heart.enabled*1)
 actions.cooldowns+=/frostwyrms_fury,if=active_enemies>=2&cooldown.pillar_of_frost.remains+15>target.time_to_die|target.1.time_to_die<gcd
-actions.cooldowns+=/hypothermic_presence,if=talent.breath_of_sindragosa.enabled&runic_power.defecit>40&rune>=3|!talent.breath_of_sindragosa.enabled&runic_power.deficit>=25
+actions.cooldowns+=/hypothermic_presence,if=talent.breath_of_sindragosa.enabled&runic_power.deficit>40&rune>=3|!talent.breath_of_sindragosa.enabled&runic_power.deficit>=25
 
 # Obliteration rotation
 actions.obliteration=remorseless_winter,if=talent.gathering_storm.enabled
