@@ -120,9 +120,6 @@ void dot_t::adjust_duration( timespan_t extra_seconds, timespan_t max_total_time
   current_duration += extra_seconds;
   extra_time += extra_seconds;
 
-  sim.print_log( "{} adjusts duration of {} on {} by {} second(s).",
-                 *source, *this, *target, extra_seconds );
-
   timespan_t new_remains = remains + extra_seconds;
   if ( new_remains > remains )
   {
@@ -136,6 +133,9 @@ void dot_t::adjust_duration( timespan_t extra_seconds, timespan_t max_total_time
 
   if ( count_as_refresh )
     current_action->stats->add_refresh( state->target );
+
+  sim.print_log( "{} adjusts duration of {} on {} by {} second(s), remains={}.",
+                 *source, *this, *target, extra_seconds, end_event->remains() );
 }
 
 // dot_t::refresh_duration ==================================================
@@ -907,6 +907,31 @@ bool dot_t::is_higher_priority_action_available() const
   return action != nullptr && action->internal_id != current_action->internal_id;
 }
 
+void dot_t::reschedule_tick()
+{
+  if ( !tick_event )
+    return;
+
+  timespan_t elapsed = tick_time - time_to_next_full_tick();
+  tick_time = std::max( elapsed, current_action->tick_time( state ) );
+
+  timespan_t new_tick_remains = tick_time - elapsed;
+  timespan_t old_tick_remains = tick_event->remains();
+
+  sim.print_debug( "{} reschedules current tick. old_tick_remains={} new_tick_remains={}",
+                   *this, old_tick_remains, new_tick_remains );
+
+  if ( new_tick_remains < old_tick_remains )
+  {
+    event_t::cancel( tick_event );
+    tick_event = make_event<dot_tick_event_t>( sim, this, new_tick_remains );
+  }
+  else if ( new_tick_remains > old_tick_remains )
+  {
+    tick_event->reschedule( new_tick_remains );
+  }
+}
+
 void dot_t::adjust( double coefficient )
 {
   if ( !ticking )
@@ -988,7 +1013,7 @@ dot_t::dot_tick_event_t::dot_tick_event_t(dot_t* d, timespan_t tick_time ) :
   event_t(*d -> source, tick_time ),
   dot(d)
 {
-  sim().print_debug( "New DoT Tick Event: {} {} tick {}-of{} tick_time={}", *d->source, *dot, dot->current_tick + 1,
+  sim().print_debug( "New DoT Tick Event: {} {} tick {}-of-{} tick_time={}", *d->source, *dot, dot->current_tick + 1,
                      dot->num_ticks(), tick_time );
 }
 

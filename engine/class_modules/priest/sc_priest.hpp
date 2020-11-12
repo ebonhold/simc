@@ -81,7 +81,6 @@ public:
     propagate_const<buff_t*> schism;
     propagate_const<buff_t*> death_and_madness_debuff;
     propagate_const<buff_t*> surrender_to_madness_debuff;
-    propagate_const<buff_t*> shadow_crash_debuff;
     propagate_const<buff_t*> wrathful_faerie;
     propagate_const<buff_t*> wrathful_faerie_fermata;
     propagate_const<buff_t*> hungering_void;
@@ -139,7 +138,7 @@ public:
     propagate_const<buff_t*> unfurling_darkness;
     propagate_const<buff_t*> unfurling_darkness_cd;  // Blizzard uses a buff to track the ICD
     propagate_const<buff_t*> ancient_madness;
-    propagate_const<buff_t*> dark_thoughts;
+    propagate_const<buff_t*> dark_thought;
 
     // Azerite Powers
     // Shadow
@@ -149,6 +148,7 @@ public:
 
     // Runeforge Legendary
     propagate_const<buff_t*> the_penitent_one;
+    propagate_const<buff_t*> sephuzs_proclamation;
 
     // Conduits
     propagate_const<buff_t*> mind_devourer;
@@ -343,6 +343,7 @@ public:
     propagate_const<gain_t*> insanity_eternal_call_to_the_void_mind_flay;
     propagate_const<gain_t*> insanity_eternal_call_to_the_void_mind_sear;
     propagate_const<gain_t*> insanity_mind_sear;
+    propagate_const<gain_t*> painbreaker_psalm;
   } gains;
 
   // Benefits
@@ -426,8 +427,9 @@ public:
     // Fae Blessings CDR can be given to another player, but you can still get the insanity gen
     bool priest_self_benevolent_faerie = true;
 
-    // Ascended Eruption is currently bugged and counts allies as targets for the sqrt damage falloff
-    int priest_ascended_eruption_additional_targets = 10;
+    // Add "bugged" targets to Ascended Eruption for the SQRT calculation
+    // Setting to 0 turns off the bug
+    int priest_ascended_eruption_additional_targets = 0;
   } options;
 
   // Azerite
@@ -437,6 +439,7 @@ public:
     azerite_power_t sacred_flame;
     // Disc
     azerite_power_t depth_of_the_shadows;
+    azerite_power_t contemptuous_homily;
     // Shadow
     azerite_power_t chorus_of_insanity;
     azerite_power_t death_throes;
@@ -461,6 +464,7 @@ public:
   struct
   {
     // Generic Priest
+    item_runeforge_t sephuzs_proclamation;
     item_runeforge_t twins_of_the_sun_priestess;
     // Holy
     item_runeforge_t divine_image;          // NYI
@@ -513,6 +517,7 @@ public:
   void init_spells() override;
   void create_buffs() override;
   void init_scaling() override;
+  void init_finished() override;
   void init_background_actions() override;
   void reset() override;
   void create_options() override;
@@ -540,11 +545,12 @@ public:
   void init_action_list() override;
   void combat_begin() override;
   void init_rng() override;
+  const priest_td_t* find_target_data( const player_t* target ) const override;
   priest_td_t* get_target_data( player_t* target ) const override;
   std::unique_ptr<expr_t> create_expression( util::string_view name_str ) override;
   void arise() override;
   void vision_of_perfection_proc() override;
-  void do_dynamic_regen() override;
+  void do_dynamic_regen( bool ) override;
   void apply_affecting_auras( action_t& ) override;
   void invalidate_cache( cache_e ) override;
 
@@ -599,10 +605,6 @@ public:
   int shadow_weaving_active_dots( const player_t* target, const unsigned int spell_id ) const;
   double shadow_weaving_multiplier( const player_t* target, const unsigned int spell_id ) const;
   pets::fiend::base_fiend_pet_t* get_current_main_pet();
-  const priest_td_t* find_target_data( const player_t* target ) const
-  {
-    return _target_data[ target ];
-  }
 
   std::string default_potion() const override;
   std::string default_flask() const override;
@@ -837,18 +839,19 @@ struct base_fiend_pet_t : public priest_pet_t
     resources.current = resources.max = resources.initial;
   }
 
-  double composite_player_multiplier( school_e school ) const override;
-  double composite_melee_haste() const override;
-
   action_t* create_action( util::string_view name, const std::string& options_str ) override;
 };
 
 struct shadowfiend_pet_t final : public base_fiend_pet_t
 {
+  double power_leech_insanity;
+
   shadowfiend_pet_t( sim_t* sim, priest_t& owner, util::string_view name = "shadowfiend" )
-    : base_fiend_pet_t( sim, owner, PET_SHADOWFIEND, name )
+    : base_fiend_pet_t( sim, owner, PET_SHADOWFIEND, name ),
+      power_leech_insanity( o().find_spell( 262485 )->effectN( 1 ).resource( RESOURCE_INSANITY ) )
   {
     direct_power_mod = 0.408;  // New modifier after Spec Spell has been 0'd -- Anshlun 2020-10-06
+    npc_id           = 19668;
 
     main_hand_weapon.min_dmg = owner.dbc->spell_scaling( owner.type, owner.level() ) * 2;
     main_hand_weapon.max_dmg = owner.dbc->spell_scaling( owner.type, owner.level() ) * 2;
@@ -862,18 +865,22 @@ struct shadowfiend_pet_t final : public base_fiend_pet_t
   }
   double insanity_gain() const override
   {
-    return o().find_spell( 262485 )->effectN( 1 ).resource( RESOURCE_INSANITY );
+    return power_leech_insanity;
   }
 };
 
 struct mindbender_pet_t final : public base_fiend_pet_t
 {
   const spell_data_t* mindbender_spell;
+  double power_leech_insanity;
 
   mindbender_pet_t( sim_t* sim, priest_t& owner, util::string_view name = "mindbender" )
-    : base_fiend_pet_t( sim, owner, PET_MINDBENDER, name ), mindbender_spell( owner.find_spell( 123051 ) )
+    : base_fiend_pet_t( sim, owner, PET_MINDBENDER, name ),
+      mindbender_spell( owner.find_spell( 123051 ) ),
+      power_leech_insanity( o().find_spell( 200010 )->effectN( 1 ).resource( RESOURCE_INSANITY ) )
   {
     direct_power_mod = 0.442;  // New modifier after Spec Spell has been 0'd -- Anshlun 2020-10-06
+    npc_id           = 62982;
 
     main_hand_weapon.min_dmg = owner.dbc->spell_scaling( owner.type, owner.level() ) * 2;
     main_hand_weapon.max_dmg = owner.dbc->spell_scaling( owner.type, owner.level() ) * 2;
@@ -887,7 +894,7 @@ struct mindbender_pet_t final : public base_fiend_pet_t
   }
   double insanity_gain() const override
   {
-    return o().find_spell( 200010 )->effectN( 1 ).resource( RESOURCE_INSANITY );
+    return power_leech_insanity;
   }
 };
 
@@ -936,7 +943,15 @@ struct fiend_melee_t : public priest_pet_melee_t
     if ( base_execute_time == timespan_t::zero() )
       return timespan_t::zero();
 
-    return base_execute_time * player->cache.spell_speed();
+    // Mindbender inherits haste from the player
+    timespan_t hasted_time = base_execute_time * player->cache.spell_speed();
+
+    if ( p().o().conduits.rabid_shadows->ok() )
+    {
+      hasted_time /= 1.0 + p().o().conduits.rabid_shadows.percent();
+    }
+
+    return hasted_time;
   }
 
   void impact( action_state_t* s ) override
@@ -1303,11 +1318,13 @@ struct priest_heal_t : public priest_action_t<heal_t>
 struct priest_spell_t : public priest_action_t<spell_t>
 {
   bool affected_by_shadow_weaving;
+  bool ignores_automatic_mastery;
   unsigned int mind_sear_id;
 
   priest_spell_t( util::string_view name, priest_t& player, const spell_data_t* s = spell_data_t::nil() )
     : base_t( name, player, s ),
       affected_by_shadow_weaving( false ),
+      ignores_automatic_mastery( false ),
       mind_sear_id( priest().find_class_spell( "Mind Sear" )->effectN( 1 ).trigger()->id() )
   {
     weapon_multiplier = 0.0;
@@ -1338,11 +1355,9 @@ struct priest_spell_t : public priest_action_t<spell_t>
 
   void consume_resource() override
   {
-    auto resource = current_resource();
-
     base_t::consume_resource();
 
-    if (priest().azerite_essence.lucid_dreams )
+    if ( priest().azerite_essence.lucid_dreams )
       priest().trigger_lucid_dreams( last_resource_cost );
   }
 
@@ -1374,7 +1389,7 @@ struct priest_spell_t : public priest_action_t<spell_t>
         }
       }
 
-      if (priest().specialization() == PRIEST_SHADOW && priest().buffs.voidform->check() )
+      if ( priest().specialization() == PRIEST_SHADOW && priest().buffs.voidform->check() )
       {
         // TODO: Remove after pre-patch?
         // Just an approximation of the value added by Lucid Minor, not accurate
@@ -1389,7 +1404,15 @@ struct priest_spell_t : public priest_action_t<spell_t>
 
     if ( affected_by_shadow_weaving )
     {
-      tdm *= priest().shadow_weaving_multiplier( t, id );
+      // Guarding against Unfurling Darkness, it does not get the mastery benefit
+      unsigned int spell_id = id;
+      if ( ignores_automatic_mastery )
+      {
+        sim->print_debug( "{} {} cast does not benefit from Mastery automatically.", *player, name_str );
+        spell_id = 1;
+      }
+
+      tdm *= priest().shadow_weaving_multiplier( t, spell_id );
     }
 
     return tdm;
@@ -1452,7 +1475,7 @@ struct priest_spell_t : public priest_action_t<spell_t>
         sim->print_debug( "{} activated Dark Thoughts using {} with {} chance with {} dots", *player, *this,
                           dark_thoughts_proc_percent * dots, dots );
       }
-      priest().buffs.dark_thoughts->trigger();
+      priest().buffs.dark_thought->trigger();
       proc->occur();
     }
   }
@@ -1533,6 +1556,9 @@ protected:
 
 struct dispersion_t final : public priest_buff_t<buff_t>
 {
+  // TODO: hook up rank2 to movement speed
+  const spell_data_t* rank2;
+
   dispersion_t( priest_t& p );
 };
 
@@ -1614,7 +1640,7 @@ struct priest_module_t final : public module_t
  * Takes the cooldown and new maximum charge count
  * Function depends on the internal working of cooldown_t::reset
  */
-inline void adjust_max_charges( cooldown_t* cooldown, int new_max_charges )
+inline void set_cooldown_max_charges( cooldown_t* cooldown, int new_max_charges )
 {
   assert( new_max_charges > 0 && "Cooldown charges must be greater than 0" );
   assert( cooldown && "Cooldown must not be null" );
@@ -1625,6 +1651,8 @@ inline void adjust_max_charges( cooldown_t* cooldown, int new_max_charges )
   if ( charges_max == new_max_charges )
     return;
 
+  cooldown->sim.print_debug( "{} adjusts {} max charges from {} to {}", *cooldown->player, *cooldown, charges_max,
+                             new_max_charges );
   /**
    * If the cooldown ongoing we can assume that the action isn't a nullptr as otherwise the action would not be ongoing.
    * If it has no action we cannot call cooldown->start which means we cannot set fractional charges.
@@ -1683,6 +1711,22 @@ inline void adjust_max_charges( cooldown_t* cooldown, int new_max_charges )
      */
     cooldown->adjust( -charges_fractional * cooldown_t::cooldown_duration( cooldown ) );
   }
+
+  // If the player is queueing an action, cancel it.
+  if ( cooldown->player && cooldown->player->queueing )
+  {
+    event_t::cancel( cooldown->player->queueing->queue_event );
+    cooldown->player->queueing = nullptr;
+    if ( !cooldown->player->executing && !cooldown->player->channeling && !cooldown->player->readying )
+      cooldown->player->schedule_ready();
+  }
+}
+
+inline void adjust_cooldown_max_charges( cooldown_t* cooldown, int charge_change )
+{
+  auto new_charges = cooldown->charges + charge_change;
+  assert( new_charges > 0 && "Adjusting cooldown charges results in 0 new charges." );
+  set_cooldown_max_charges( cooldown, new_charges );
 }
 
 }  // namespace priestspace

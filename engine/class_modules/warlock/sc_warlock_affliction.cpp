@@ -266,6 +266,11 @@ struct agony_t : public affliction_spell_t
       p()->buffs.inevitable_demise->trigger();
     }
 
+    if ( result_is_hit( d->state->result ) && p()->azerite.inevitable_demise.ok() && !p()->buffs.drain_life->check() )
+    {
+      p()->buffs.id_azerite->trigger();
+    }
+
     p()->malignancy_reduction_helper();
 
     affliction_spell_t::tick( d );
@@ -276,7 +281,7 @@ struct corruption_t : public affliction_spell_t
 {
   bool pandemic_invocation_usable;
 
-  corruption_t( warlock_t* p, util::string_view options_str )
+  corruption_t( warlock_t* p, util::string_view options_str, bool seed_action )
     : affliction_spell_t( "corruption", p, p->find_spell( 172 ) )   // 172 triggers 146739
   {
     auto otherSP = p->find_spell( 146739 );
@@ -286,7 +291,7 @@ struct corruption_t : public affliction_spell_t
     pandemic_invocation_usable = false;  // BFA - Azerite
 
     
-    if ( !p->spec.corruption_3->ok() )
+    if ( !p->spec.corruption_3->ok() || seed_action )
     {
       spell_power_mod.direct = 0; //Rank 3 is required for direct damage
     }
@@ -396,10 +401,18 @@ struct unstable_affliction_t : public affliction_spell_t
     {
       td( p()->ua_target )->dots_unstable_affliction->cancel();
     }
+    else if ( p()->ua_target && td( p()->ua_target )->dots_unstable_affliction->is_ticking() &&
+      p()->azerite.cascading_calamity.ok() )
+    {
+      p()->buffs.cascading_calamity->trigger();
+    }
 
     p()->ua_target = target;
 
     affliction_spell_t::execute();
+
+    if ( p()->azerite.dreadful_calling.ok() )
+      p()->cooldowns.darkglare->adjust( (-1 * p()->azerite.dreadful_calling.spell_ref().effectN( 1 ).time_value() ) );
   }
 
   void last_tick( dot_t* d) override
@@ -414,6 +427,13 @@ struct unstable_affliction_t : public affliction_spell_t
     p()->malignancy_reduction_helper();
 
     affliction_spell_t::tick( d );
+  }
+
+  double bonus_ta( const action_state_t* s ) const override
+  {
+    double ta = affliction_spell_t::bonus_ta( s );
+    ta += p()->azerite.dreadful_calling.value( 2 );
+    return ta;
   }
 };
 
@@ -457,7 +477,7 @@ struct seed_of_corruption_t : public affliction_spell_t
 
     seed_of_corruption_aoe_t( warlock_t* p )
       : affliction_spell_t( "seed_of_corruption_aoe", p, p->find_spell( 27285 ) ),
-        corruption( new corruption_t( p, "" ) )
+        corruption( new corruption_t( p, "", true ) )
     {
       aoe                              = -1;
       background                       = true;
@@ -511,7 +531,7 @@ struct seed_of_corruption_t : public affliction_spell_t
     hasted_ticks   = false;
     add_child( explosion );
     if ( p->talents.sow_the_seeds->ok() )
-      aoe = 2;
+      aoe = 1 + as<int>( p->talents.sow_the_seeds->effectN( 1 ).base_value() );
   }
 
   void init() override
@@ -572,14 +592,13 @@ struct malefic_rapture_t : public affliction_spell_t
 {
     struct malefic_rapture_damage_instance_t : public affliction_spell_t
     {
-
-      malefic_rapture_damage_instance_t(warlock_t *p) : 
-          affliction_spell_t( "malefic_rapture_aoe", p, p->find_spell( 324536 ) )
+      malefic_rapture_damage_instance_t( warlock_t *p, double spc ) : 
+          affliction_spell_t( "malefic_rapture_aoe", p, p->find_spell( 324540 ) )
       {
         aoe = 1;
         background = true;
-        spell_power_mod.direct = data().effectN( 1 ).sp_coeff();
-        base_costs[ RESOURCE_SOUL_SHARD ] = 0;
+        spell_power_mod.direct = spc;
+        callbacks = false; //TOCHECK: Malefic Rapture did not proc Psyche Shredder, it may not cause any procs at all
 
         p->spells.malefic_rapture_aoe = this;
       }
@@ -588,6 +607,7 @@ struct malefic_rapture_t : public affliction_spell_t
       {
         double mult = 0.0;
         auto td = this->td( target );
+
         if ( td->dots_agony->is_ticking() )
           mult += 1.0;
 
@@ -603,15 +623,18 @@ struct malefic_rapture_t : public affliction_spell_t
         if ( td->dots_phantom_singularity->is_ticking() )
           mult += 1.0;
 
+        if ( td->dots_soul_rot->is_ticking() )
+          mult += 1.0;
+
         if ( td->dots_siphon_life->is_ticking() )
           mult += 1.0;
 
         if ( td->dots_scouring_tithe->is_ticking() )
           mult += 1.0;
 
-        // TODO:
-        // Impending catastrophe
-        // Soul Rot
+        if ( td->dots_impending_catastrophe->is_ticking() )
+          mult += 1.0;
+
         return mult;
       }
 
@@ -627,7 +650,7 @@ struct malefic_rapture_t : public affliction_spell_t
 
         return m;
       }
-
+      
       void execute() override
       {
         if ( p()->legendary.malefic_wrath->ok() )
@@ -638,34 +661,22 @@ struct malefic_rapture_t : public affliction_spell_t
 
           affliction_spell_t::execute();
       }
-
     };
 
     malefic_rapture_damage_instance_t* damage_instance;
 
     malefic_rapture_t( warlock_t* p, util::string_view options_str )
-      : affliction_spell_t( "malefic_rapture", p, p->find_spell( 324536 ) ), 
-        damage_instance( new malefic_rapture_damage_instance_t(p) )
+      : affliction_spell_t( "malefic_rapture", p, p->find_spell( 324536 ) )
     {
       parse_options( options_str );
       aoe = -1;
+
+      damage_instance = new malefic_rapture_damage_instance_t( p, data().effectN( 1 ).sp_coeff() );
 
       impact_action = damage_instance;
       add_child( impact_action );
 
     }
-
-    void consume_resource() override
-    {
-      affliction_spell_t::consume_resource();
-
-      if ( p()->legendary.mark_of_borrowed_power->ok() )
-      {
-        double chance = p()->legendary.mark_of_borrowed_power->effectN(1).percent();
-        make_event<borrowed_power_event_t>(*p()->sim, p(), as<int>(last_resource_cost), chance);
-      }
-    }
-
 };
 
 // Talents
@@ -874,7 +885,7 @@ action_t* warlock_t::create_action_affliction( util::string_view action_name, co
   if ( action_name == "shadow_bolt" )
     return new shadow_bolt_t( this, options_str );
   if ( action_name == "corruption" )
-    return new corruption_t( this, options_str );
+    return new corruption_t( this, options_str, false );
   if ( action_name == "agony" )
     return new agony_t( this, options_str );
   if ( action_name == "unstable_affliction" )
@@ -918,6 +929,11 @@ void warlock_t::create_buffs_affliction()
                                 ->set_max_stack( find_spell( 334320 )->max_stacks() )
                                 ->set_default_value( talents.inevitable_demise->effectN( 1 ).percent() );
   // BFA - Azerite
+  buffs.id_azerite = make_buff(this, "inevitable_demise_az", azerite.inevitable_demise)
+                         ->set_max_stack(find_spell(273525)->max_stacks())
+                         // Inevitable Demise has a built in 25% reduction to the value of ranks 2 and 3. This is applied as a flat multiplier to the total value.
+                         ->set_default_value(azerite.inevitable_demise.value() * ((1.0 + 0.75 * (azerite.inevitable_demise.n_items() - 1)) / azerite.inevitable_demise.n_items()));
+
   buffs.cascading_calamity = make_buff<stat_buff_t>( this, "cascading_calamity", azerite.cascading_calamity )
                                  ->add_stat( STAT_HASTE_RATING, azerite.cascading_calamity.value() )
                                  ->set_duration( find_spell( 275378 )->duration() )
@@ -1023,51 +1039,85 @@ void warlock_t::init_procs_affliction()
 void warlock_t::create_apl_affliction()
 {
   action_priority_list_t* def   = get_action_priority_list( "default" );
-  action_priority_list_t* prep   = get_action_priority_list( "darkglare_prep" );
+  action_priority_list_t* prep  = get_action_priority_list( "darkglare_prep" );
   action_priority_list_t* cds   = get_action_priority_list( "cooldowns" );
+  action_priority_list_t* se    = get_action_priority_list( "se" );
+  action_priority_list_t* aoe   = get_action_priority_list( "aoe" );
+  action_priority_list_t* item  = get_action_priority_list( "item" );
 
-  def->add_action("phantom_singularity");
-  def->add_action("vile_taint,if=soul_shard>1");
-  def->add_action("siphon_life,if=refreshable");
-  def->add_action("agony,if=refreshable");
-  def->add_action("unstable_affliction,if=refreshable");
-  def->add_action("corruption,if=refreshable");
-  def->add_action("haunt");
+  def->add_action( "call_action_list,name=aoe,if=active_enemies>3" );
+  def->add_action( "phantom_singularity" );
+  def->add_action( "agony,if=refreshable" );
+  def->add_action( "agony,cycle_targets=1,if=active_enemies>1,target_if=refreshable" );
+  def->add_action( "call_action_list,name=darkglare_prep,if=active_enemies>2&cooldown.summon_darkglare.ready&(dot.phantom_singularity.ticking|!talent.phantom_singularity.enabled)" );
+  def->add_action( "seed_of_corruption,if=active_enemies>2&!talent.vile_taint.enabled&(!talent.writhe_in_agony.enabled|talent.sow_the_seeds.enabled)&!dot.seed_of_corruption.ticking&!in_flight&dot.corruption.refreshable" );
+  def->add_action( "vile_taint,if=(soul_shard>1|active_enemies>2)&cooldown.summon_darkglare.remains>12" );
+  def->add_action( "siphon_life,if=refreshable" );
+  def->add_action( "unstable_affliction,if=refreshable" );
+  def->add_action( "unstable_affliction,if=azerite.cascading_calamity.enabled&buff.cascading_calamity.remains<3" );
+  def->add_action( "corruption,if=(active_enemies<3|talent.vile_taint.enabled|talent.writhe_in_agony.enabled&!talent.sow_the_seeds.enabled)&refreshable" );
+  def->add_action( "haunt" );
+  def->add_action( "malefic_rapture,if=soul_shard>4" );
+  def->add_action( "siphon_life,cycle_targets=1,if=active_enemies>1,target_if=dot.siphon_life.remains<3" );
+  def->add_action( "corruption,cycle_targets=1,if=active_enemies<3|talent.vile_taint.enabled|talent.writhe_in_agony.enabled&!talent.sow_the_seeds.enabled,target_if=dot.corruption.remains<3" );
 
-  def->add_action("call_action_list,name=darkglare_prep,if=cooldown.summon_darkglare.remains<2&(dot.phantom_singularity.remains>2|!talent.phantom_singularity.enabled)");
-  def->add_action("dark_soul,if=cooldown.summon_darkglare.remains>time_to_die");
-  def->add_action("call_action_list,name=cooldowns");
+  def->add_action( "call_action_list,name=darkglare_prep,if=cooldown.summon_darkglare.remains<2&(dot.phantom_singularity.remains>2|!talent.phantom_singularity.enabled)" );
+  def->add_action( "dark_soul,if=cooldown.summon_darkglare.remains>time_to_die" );
+  def->add_action( "call_action_list,name=cooldowns" );
+  def->add_action( "call_action_list,name=item" );
 
-  def->add_action("malefic_rapture,if=dot.vile_taint.ticking");
-  def->add_action("malefic_rapture,if=!talent.vile_taint.enabled");
+  def->add_action( "call_action_list,name=se,if=debuff.shadow_embrace.stack<(3-action.shadow_bolt.in_flight)|debuff.shadow_embrace.remains<3" );
+  def->add_action( "malefic_rapture,if=dot.vile_taint.ticking" );
+  def->add_action( "malefic_rapture,if=talent.phantom_singularity.enabled&(dot.phantom_singularity.ticking||cooldown.phantom_singularity.remains>12||soul_shard>3)" );
+  def->add_action( "malefic_rapture,if=talent.sow_the_seeds.enabled" );
 
-  def->add_action("drain_life,if=buff.inevitable_demise.stack>30");
-  def->add_action("drain_soul");
-  def->add_action("shadow_bolt");
+  def->add_action( "drain_life,if=buff.inevitable_demise.stack>30|buff.inevitable_demise.up&time_to_die<5" );
+  def->add_action( "drain_life,if=buff.inevitable_demise_az.stack>30" );
+  def->add_action( "drain_soul" );
+  def->add_action( "shadow_bolt" );
 
-  prep->add_action("vile_taint");
-  prep->add_action("dark_soul");
-  prep->add_action("potion");
-  prep->add_action("use_items");
-  prep->add_action("fireblood");
-  prep->add_action("blood_fury");
-  prep->add_action("berserking");
-  prep->add_action("summon_darkglare");
+  prep->add_action( "vile_taint" );
+  prep->add_action( "dark_soul" );
+  prep->add_action( "potion" );
+  prep->add_action( "fireblood" );
+  prep->add_action( "blood_fury" );
+  prep->add_action( "berserking" );
+  prep->add_action( "summon_darkglare" );
 
-  cds->add_action("worldvein_resonance");
-  cds->add_action("memory_of_lucid_dreams");
-  cds->add_action("blood_of_the_enemy");
-  cds->add_action("guardian_of_azeroth");
-  cds->add_action("ripple_in_space");
-  cds->add_action("focused_azerite_beam");
-  cds->add_action("purifying_blast");
-  cds->add_action("reaping_flames");
-  cds->add_action("concentrated_flame");
-  cds->add_action("the_unbound_force,if=buff.reckless_force.remains");
-}
+  cds->add_action( "worldvein_resonance" );
+  cds->add_action( "memory_of_lucid_dreams" );
+  cds->add_action( "blood_of_the_enemy" );
+  cds->add_action( "guardian_of_azeroth" );
+  cds->add_action( "ripple_in_space" );
+  cds->add_action( "focused_azerite_beam" );
+  cds->add_action( "purifying_blast" );
+  cds->add_action( "reaping_flames" );
+  cds->add_action( "concentrated_flame" );
+  cds->add_action( "the_unbound_force,if=buff.reckless_force.remains" );
 
-std::unique_ptr<expr_t> warlock_t::create_aff_expression( util::string_view name_str )
-{
-  return player_t::create_expression( name_str );
+  se->add_action( "haunt" );
+  se->add_action( "drain_soul,interrupt_if=debuff.shadow_embrace.stack>=3" );
+  se->add_action( "shadow_bolt" );
+
+  aoe->add_action( "phantom_singularity" );
+  aoe->add_action( "haunt" );
+  aoe->add_action( "seed_of_corruption,if=talent.sow_the_seeds.enabled&can_seed" );
+  aoe->add_action( "seed_of_corruption,if=!talent.sow_the_seeds.enabled&!dot.seed_of_corruption.ticking&!in_flight&dot.corruption.refreshable" );
+  aoe->add_action( "agony,cycle_targets=1,if=active_dot.agony>=4,target_if=refreshable&dot.agony.ticking" );
+  aoe->add_action( "agony,cycle_targets=1,if=active_dot.agony<4,target_if=!dot.agony.ticking" );
+  aoe->add_action( "unstable_affliction,if=dot.unstable_affliction.refreshable" );
+  aoe->add_action( "vile_taint,if=soul_shard>1" );
+  aoe->add_action( "call_action_list,name=darkglare_prep,if=cooldown.summon_darkglare.ready&(dot.phantom_singularity.remains>2|!talent.phantom_singularity.enabled)" );
+  aoe->add_action( "dark_soul,if=cooldown.summon_darkglare.remains>time_to_die" );
+  aoe->add_action( "call_action_list,name=cooldowns" );
+  aoe->add_action( "call_action_list,name=item" );
+  aoe->add_action( "malefic_rapture,if=dot.vile_taint.ticking" );
+  aoe->add_action( "malefic_rapture,if=!talent.vile_taint.enabled" );
+  aoe->add_action( "siphon_life,cycle_targets=1,if=active_dot.siphon_life<=3,target_if=!dot.siphon_life.ticking" );
+  aoe->add_action( "drain_life,if=buff.inevitable_demise.stack>=50|buff.inevitable_demise.up&time_to_die<5" );
+  aoe->add_action( "drain_soul" );
+  aoe->add_action( "shadow_bolt" );
+
+  item->add_action( "use_items" );
 }
 }  // namespace warlock

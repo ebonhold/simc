@@ -267,6 +267,7 @@ double spelleffect_data_t::default_multiplier() const
   {
     case E_APPLY_AURA:
     case E_APPLY_AREA_AURA_OWNER:
+    case E_APPLY_AURA_PET:
       switch ( subtype() )
       {
         case A_PERIODIC_TRIGGER_SPELL:
@@ -323,6 +324,30 @@ double spelleffect_data_t::default_multiplier() const
   }
 
   return 1.0; // base_value
+}
+
+unsigned spelleffect_data_t::affected_schools() const
+{
+  switch ( subtype() )
+  {
+    case A_MOD_DAMAGE_DONE:
+    case A_MOD_DAMAGE_TAKEN:
+    case A_SCHOOL_IMMUNITY:
+    case A_SCHOOL_ABSORB:
+    case A_MOD_POWER_COST_SCHOOL_PCT:
+    case A_MOD_POWER_COST_SCHOOL:
+    case A_REFLECT_SPELLS_SCHOOL:
+    case A_MOD_DAMAGE_PERCENT_DONE:
+    case A_MOD_DAMAGE_PERCENT_TAKEN:
+    case A_MOD_DAMAGE_TO_CASTER:
+    case A_MOD_DAMAGE_FROM_CASTER:
+    case A_MOD_CRIT_DAMAGE_BONUS:
+      return static_cast<unsigned>( misc_value1() );
+    default:
+      break;
+  }
+
+  return 0u;
 }
 
 const spelleffect_data_t* spelleffect_data_t::find( unsigned id, bool ptr )

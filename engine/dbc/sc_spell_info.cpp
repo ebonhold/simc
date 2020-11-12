@@ -62,7 +62,7 @@ static constexpr auto _hotfix_spell_map = util::make_static_map<unsigned, util::
   {  6, "Race" },
   {  7, "Scaling Spell" },
   {  8, "Max Scaling Level" },
-  {  9, "Spell Level" },
+  {  9, "Learn Level" },
   { 10, "Max Spell Level" },
   { 11, "Min Range" },
   { 12, "Max Range" },
@@ -90,6 +90,7 @@ static constexpr auto _hotfix_spell_map = util::make_static_map<unsigned, util::
   { 46, "Required Max Level" },
   { 47, "Spell Type" },
   { 48, "Max Targets" },
+  { 49, "Required Level" }
 } );
 
 static constexpr auto _hotfix_spelltext_map = util::make_static_map<unsigned, util::string_view>( {
@@ -326,6 +327,7 @@ static constexpr auto _attribute_strings = util::make_static_map<unsigned, util:
   {  34, "Channeled"                         },
   {  37, "Does not break stealth"            },
   {  38, "Channeled"                         },
+  {  60, "Don't display in aura bar"         },
   {  93, "Cannot crit"                       },
   {  95, "Food buff"                         },
   { 105, "Not a proc"                        },
@@ -341,6 +343,7 @@ static constexpr auto _attribute_strings = util::make_static_map<unsigned, util:
   { 186, "Requires line of sight"            },
   { 221, "Disable player multipliers"        },
   { 265, "Periodic effect can crit"          },
+  { 273, "Duration affected by haste"        },
   { 292, "Fixed travel time"                 },
   { 354, "Scales with item level"            }
 } );
@@ -469,6 +472,7 @@ static constexpr auto _effect_type_strings = util::make_static_map<unsigned, uti
   { 156, "Add Socket"               },
   { 157, "Create Item"              },
   { 164, "Cancel Aura"              },
+  { 174, "Apply Aura Pet"           },
   { 202, "Apply Player/Pet Aura"    },
 } );
 
@@ -575,6 +579,7 @@ static constexpr auto _effect_subtype_strings = util::make_static_map<unsigned, 
   { 142, "Modify Base Resistance"                       },
   { 143, "Modify Cooldown Recharge Rate"                },
   { 144, "Reduce Fall Damage"                           },
+  { 148, "Modify Cooldown Recharge Rate% (Category)"    },
   { 149, "Modify Casting Pushback"                      },
   { 150, "Modify Block Effectiveness"                   },
   { 152, "Modify Aggro Distance"                        },
@@ -624,6 +629,7 @@ static constexpr auto _effect_subtype_strings = util::make_static_map<unsigned, 
   { 271, "Modify Damage Taken% from Caster's Spells"    },
   { 275, "Modify Stance Mask"                           },
   { 283, "Modify Healing Taken% from Caster's Spells"   },
+  { 286, "Modify Cooldown Recharge Rate%"               },
   { 290, "Modify Critical Strike%"                      },
   { 291, "Modify Experience Gained from Quests"         },
   { 301, "Absorb Healing"                               },
@@ -673,10 +679,6 @@ static constexpr auto _effect_subtype_strings = util::make_static_map<unsigned, 
   { 471, "Modify Versatility%"                          },
   { 485, "Resist Forced Movement%"                      },
   { 501, "Modify Crit Damage Done% from Caster's Spells" },
-} );
-
-static constexpr auto _category_effect_subtypes = util::make_static_set<unsigned> ( {
-  341, 411, 453, 454, 457
 } );
 
 static constexpr auto _mechanic_strings = util::make_static_map<unsigned, util::string_view>( {
@@ -994,11 +996,7 @@ std::ostringstream& spell_info::effect_to_str( const dbc_t& dbc,
 
   if ( e -> misc_value1() != 0 || e -> type() == E_ENERGIZE )
   {
-    if ( e -> subtype() == A_MOD_DAMAGE_DONE ||
-         e -> subtype() == A_MOD_DAMAGE_TAKEN ||
-         e -> subtype() == A_MOD_DAMAGE_PERCENT_DONE ||
-         e -> subtype() == A_MOD_DAMAGE_PERCENT_TAKEN ||
-         e -> subtype() == A_MOD_DAMAGE_FROM_CASTER )
+    if ( e -> affected_schools() != 0u )
       snprintf( tmp_buffer, sizeof( tmp_buffer ), "%#.x", e -> misc_value1() );
     else if ( e -> type() == E_ENERGIZE )
       snprintf( tmp_buffer, sizeof( tmp_buffer ), "%s", util::resource_type_string( util::translate_power_type( static_cast<power_e>( e -> misc_value1() ) ) ) );
@@ -1065,13 +1063,10 @@ std::ostringstream& spell_info::effect_to_str( const dbc_t& dbc,
   s << std::endl;
 
   if ( e -> type() == E_APPLY_AURA &&
-       ( e -> subtype() == A_MOD_DAMAGE_PERCENT_DONE ||
-         e -> subtype() == A_MOD_DAMAGE_PERCENT_TAKEN ||
-         e -> subtype() == A_MOD_DAMAGE_FROM_CASTER ) &&
-       e -> misc_value1() != 0 )
+       e -> affected_schools() != 0u )
   {
     s << "                   Affected School(s): ";
-    if ( e -> misc_value1() == 0x7f )
+    if ( e -> affected_schools() == 0x7f )
     {
       s << "All";
     }
@@ -1080,7 +1075,7 @@ std::ostringstream& spell_info::effect_to_str( const dbc_t& dbc,
       std::vector<std::string> schools;
       for ( school_e school = SCHOOL_NONE; school < SCHOOL_MAX_PRIMARY; school++ )
       {
-        if ( e -> misc_value1() & dbc::get_school_mask( school ) )
+        if ( e -> affected_schools() & dbc::get_school_mask( school ) )
           schools.emplace_back( util::inverse_tokenize( util::school_type_string( school ) ) );
       }
 
@@ -1114,7 +1109,7 @@ std::ostringstream& spell_info::effect_to_str( const dbc_t& dbc,
     s << std::endl;
   }
 
-  if ( e -> type() == E_APPLY_AURA && _category_effect_subtypes.contains( e -> subtype() ) )
+  if ( e -> type() == E_APPLY_AURA && range::contains( dbc::effect_category_subtypes(), e -> subtype() ) )
   {
     auto affected_spells = dbc.spells_by_category( e -> misc_value1() );
     if ( affected_spells.size() > 0 )
