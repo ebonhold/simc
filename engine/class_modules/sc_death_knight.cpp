@@ -586,6 +586,7 @@ public:
     gain_t* relish_in_blood;
     gain_t* tombstone;
 
+    gain_t* bryndaors_might;
     gain_t* bloody_runeblade;
 
     // Frost
@@ -961,7 +962,7 @@ public:
     item_runeforge_t superstrain; // 6953
 
     // Blood
-    // item_runeforge_t bryndaors_might; // 6940
+    item_runeforge_t bryndaors_might; // 6940
     // item_runeforge_t crimson_rune_weapon; // 6941
 
     // Frost                                      // bonus_id
@@ -4882,6 +4883,14 @@ struct death_strike_heal_t : public death_knight_heal_t
   {
     death_knight_heal_t::impact( state );
 
+    if ( state -> result_total > player -> resources.max[ RESOURCE_HEALTH ] * p() -> legendary.bryndaors_might -> effectN( 2 ).percent() )
+    {
+      // Last resource cost doesn't return anything so we have to get the cost of Death Strike
+      double c = p() -> find_action( "death_strike" ) -> cost();
+      p() -> resource_gain( RESOURCE_RUNIC_POWER, p() -> legendary.bryndaors_might -> effectN( 1 ).percent() * c,
+      p() -> gains.bryndaors_might, this );
+    }
+
     trigger_blood_shield( state );
   }
 
@@ -8792,7 +8801,7 @@ void death_knight_t::init_spells()
   legendary.superstrain = find_runeforge_legendary( "Superstrain" );
 
   // Blood
-  // legendary.bryndaors_might = find_runeforge_legendary( "Bryndaor's Might" );
+  legendary.bryndaors_might = find_runeforge_legendary( "Bryndaor's Might" );
   // legendary.crimson_rune_weapon = find_runeforge_legendary( "Crimson Rune Weapon" );
 
   // Frost
@@ -9516,6 +9525,7 @@ void death_knight_t::init_gains()
   gains.relish_in_blood                  = get_gain( "Relish in Blood" );
   gains.tombstone                        = get_gain( "Tombstone" );
 
+  gains.bryndaors_might                  = get_gain( "Bryndaor's Might" );
   gains.bloody_runeblade                 = get_gain( "Bloody Runeblade" );
 
   // Frost
