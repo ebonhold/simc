@@ -510,8 +510,8 @@ public:
     buff_t* death_turf;
 
     // Covenants
-    buff_t* swarming_mist;
     buff_t* abomination_limb;
+    buff_t* swarming_mist;
   } buffs;
 
   struct runeforge_t {
@@ -530,8 +530,8 @@ public:
     cooldown_t* abomination_limb;
     cooldown_t* death_and_decay;
     cooldown_t* defile;
-    cooldown_t* shackle_the_unworthy_icd;
     cooldown_t* deaths_due;
+    cooldown_t* shackle_the_unworthy_icd;
     // Blood
     cooldown_t* bone_shield_icd;
     cooldown_t* blood_tap;
@@ -938,10 +938,8 @@ public:
   { // Commented out = NYI           // ID
     // Shared - Covenant ability conduits
     conduit_data_t brutal_grasp; // Necrolord, 127
-    // conduit_data_t impenetrable_glomm; // Venthyr, 126
-    conduit_data_t proliferation; // Kyrian, 128
     conduit_data_t impenetrable_gloom; // Venthyr, 126
-    // conduit_data_t proliferation; // Kyrian, 128
+    conduit_data_t proliferation; // Kyrian, 128
     conduit_data_t withering_ground; // Night Fae, 250
 
     // Shared - other throughput
@@ -976,10 +974,10 @@ public:
 
   struct covenant_t
   {
-    const spell_data_t* shackle_the_unworthy; // Kyrian
-    const spell_data_t* swarming_mist; // Venthyr
     const spell_data_t* abomination_limb; // Necrolord
     const spell_data_t* deaths_due; // Night Fae
+    const spell_data_t* shackle_the_unworthy; // Kyrian
+    const spell_data_t* swarming_mist; // Venthyr
   } covenant;
 
   struct legendary_t
@@ -2452,8 +2450,8 @@ struct dancing_rune_weapon_pet_t : public death_knight_pet_t
     {
       // DRW usually behaves the same regardless of talents, but BP ticks are affected by rapid decomposition
       // https://github.com/SimCMinMax/WoW-BugTracker/issues/240
-      if ( p -> o() -> bugs )
-        base_tick_time *= 1.0 + p -> o() -> talent.rapid_decomposition -> effectN( 1 ).percent();
+      // Arma Nov 18, 2020 - The linked issue has been closed, as such, I am removing the bugs check
+      base_tick_time *= 1.0 + p -> o() -> talent.rapid_decomposition -> effectN( 1 ).percent();
     }
   };
 
@@ -3781,7 +3779,7 @@ struct blood_plague_t : public death_knight_spell_t
 
     if ( d -> state -> result_amount > 0 )
     {
-      heal -> base_dd_min = heal -> base_dd_max = d -> state -> result_amount;
+      heal -> base_dd_min = heal -> base_dd_max = d -> state -> result_amount * (1.0 + p() -> talent.rapid_decomposition -> effectN( 3 ).percent());
       heal -> execute();
     }
   }
@@ -9112,19 +9110,19 @@ void death_knight_t::init_spells()
   // Covenants
   // Damage debuff is not implemented yet for shackle_the_unworthy
   covenant.shackle_the_unworthy = find_covenant_spell( "Shackle the Unworthy" );
-  covenant.swarming_mist = find_covenant_spell( "Swarming Mist" );
   // Death's due damage debuff is NYI
   covenant.deaths_due = find_covenant_spell( "Death's Due" );
   covenant.abomination_limb = find_covenant_spell( "Abomination Limb" );
+  // Damage debuff is not implemented yet for shackle_the_unworthy
+  covenant.shackle_the_unworthy = find_covenant_spell( "Shackle the Unworthy" );
+  covenant.swarming_mist = find_covenant_spell( "Swarming Mist" );
 
   // Conduits
 
   // Shared - Covenant ability conduits
   conduits.brutal_grasp = find_conduit_spell( "Brutal Grasp" );
-  // conduits.impenetrable_glomm = find_conduit_spell( "Impenetrable Gloom" );
-  conduits.proliferation = find_conduit_spell( "Proliferation" );
   conduits.impenetrable_gloom = find_conduit_spell( "Impenetrable Gloom" );
-  // conduits.proliferation = find_conduit_spell( "Proliferation" );
+  conduits.proliferation = find_conduit_spell( "Proliferation" );
   conduits.withering_ground = find_conduit_spell( "Withering Ground" );
 
   // Shared - other throughput
@@ -9285,6 +9283,7 @@ void death_knight_t::default_apl_blood()
   precombat -> add_action( "use_item,effect_name=cyclotronic_blast" );
 
   def -> add_action( "auto_attack" );
+  def -> add_action( "shackle_the_unworthy" );
   // Interrupt
   // def -> add_action( this, "Mind Freeze" );
 
@@ -9870,7 +9869,7 @@ void death_knight_t::create_buffs()
   buffs.death_turf = make_buff( this, "death_turf", find_spell ( 335180) )
     -> set_default_value_from_effect( 1 )
     -> set_pct_buff_type( STAT_PCT_BUFF_HASTE );
-// According to tooltip data and ingame testing, the buff's value is halved for blood
+  // According to tooltip data and ingame testing, the buff's value is halved for blood
   if ( specialization() == DEATH_KNIGHT_BLOOD )
   {
     buffs.death_turf -> default_value /= 2;
