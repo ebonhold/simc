@@ -413,6 +413,7 @@ struct death_knight_td_t : public actor_target_data_t {
     buff_t* deep_cuts;
 
     // Soulbinds
+    buff_t* debilitating_malady;
     buff_t* everfrost;
   } debuff;
 
@@ -599,6 +600,7 @@ public:
     gain_t* relish_in_blood;
     gain_t* tombstone;
 
+    gain_t* bryndaors_might;
     gain_t* bloody_runeblade;
 
     // Frost
@@ -946,9 +948,9 @@ public:
     // conduit_data_t spirit_drain; Finesse trait, 70
 
     // Blood
-    // conduit_data_t debilitating_malady; // 123
+    conduit_data_t debilitating_malady; // 123
     // conduit_data_t meat_shield; // Endurance trait, 121
-    // conduit_data_t withering_plague; // 80
+    conduit_data_t withering_plague; // 80
 
     // Frost
     conduit_data_t accelerated_cold; // 79
@@ -987,7 +989,7 @@ public:
     item_runeforge_t superstrain; // 6953
 
     // Blood
-    // item_runeforge_t bryndaors_might; // 6940
+    item_runeforge_t bryndaors_might; // 6940
     // item_runeforge_t crimson_rune_weapon; // 6941
 
     // Frost                                      // bonus_id
@@ -1215,6 +1217,9 @@ inline death_knight_td_t::death_knight_td_t( player_t* target, death_knight_t* p
                            -> set_default_value_from_effect( 1 );
   debuff.apocalypse_war    = make_buff( *this, "war", p -> find_spell( 327096 ) )
                            -> set_default_value_from_effect( 1 );
+
+  debuff.debilitating_malady = make_buff( *this, "debilitating_malady", p -> find_spell( 338523 ) )
+                           -> set_default_value( p -> conduits.debilitating_malady.percent() );
 
   debuff.everfrost         = make_buff( *this, "everfrost", p -> find_spell( 337989 ) )
                            -> set_default_value( p -> conduits.everfrost.percent() );
@@ -2528,6 +2533,16 @@ struct dancing_rune_weapon_pet_t : public death_knight_pet_t
     int n_targets() const override
     { return p() -> o() -> in_death_and_decay() ? aoe + as<int>( p() -> o() -> spec.death_and_decay_2 -> effectN( 1 ).base_value() ) : aoe; }
 
+    double composite_da_multiplier( const action_state_t* state ) const override
+    {
+    double m = drw_attack_t::composite_da_multiplier( state );
+    if ( p() -> o() -> conduits.withering_plague -> ok() && target ->get_dot( "blood_plague", p()) -> is_ticking() )
+    {
+      m *= 1.0 + p() -> o() -> conduits.withering_plague.percent();
+    }
+    return m;
+    }
+
     void execute( ) override
     {
       drw_attack_t::execute();
@@ -3769,8 +3784,16 @@ struct blood_plague_t : public death_knight_spell_t
     {
       ta += p() -> azerite.deep_cuts.value();
     }
-
     return ta;
+  }
+
+  double composite_target_multiplier( player_t* t ) const override
+  {
+    double m = death_knight_spell_t::composite_target_multiplier( t );
+
+    m *= 1.0 + p() -> get_target_data( t ) -> debuff.debilitating_malady -> check_stack_value();
+
+    return m;
   }
 
   void tick( dot_t* d ) override
@@ -3826,6 +3849,9 @@ struct blood_boil_t : public death_knight_spell_t
         p() -> active_spells.virulent_plague -> execute();
       }
     }
+
+    if ( p() -> conduits.debilitating_malady.ok() )
+      td( state -> target ) -> debuff.debilitating_malady -> trigger();
 
     p() -> buffs.hemostasis -> trigger();
   }
@@ -5073,6 +5099,14 @@ struct death_strike_heal_t : public death_knight_heal_t
   {
     death_knight_heal_t::impact( state );
 
+    if ( state -> result_total > player -> resources.max[ RESOURCE_HEALTH ] * p() -> legendary.bryndaors_might -> effectN( 2 ).percent() )
+    {
+      // Last resource cost doesn't return anything so we have to get the cost of Death Strike
+      double c = p() -> find_action( "death_strike" ) -> cost();
+      p() -> resource_gain( RESOURCE_RUNIC_POWER, p() -> legendary.bryndaors_might -> effectN( 1 ).percent() * c,
+      p() -> gains.bryndaors_might, this );
+    }
+
     trigger_blood_shield( state );
   }
 
@@ -5787,6 +5821,16 @@ struct heart_strike_t : public death_knight_melee_attack_t
 
   int n_targets() const override
   { return p() -> in_death_and_decay() ? aoe + as<int>( p() -> spec.death_and_decay_2 -> effectN( 1 ).base_value() ) : aoe; }
+
+  double composite_da_multiplier( const action_state_t* state ) const override
+  {
+    double m = death_knight_melee_attack_t::composite_da_multiplier( state );
+    if ( p() -> conduits.withering_plague -> ok() && td(state -> target) -> dot.blood_plague -> is_ticking() )
+    {
+      m *= 1.0 + p() -> conduits.withering_plague.percent();
+    }
+    return m;
+  }
 
   void execute() override
   {
@@ -9129,9 +9173,9 @@ void death_knight_t::init_spells()
   // conduits.spirit_drain = find_conduit_spell( "Spirit Drain" );
 
   // Blood
-  // conduits.debilitating_malady = find_conduit_spell( "Debilitating Malady" );
+  conduits.debilitating_malady = find_conduit_spell( "Debilitating Malady" );
   // conduits.meat_shield = find_conduit_spell( "Meat Shield" );
-  // conduits.withering_plague = find_conduit_spell( "Withering Plague" );
+  conduits.withering_plague = find_conduit_spell( "Withering Plague" );
 
   // Frost
   conduits.accelerated_cold      = find_conduit_spell( "Accelerated Cold" );
@@ -9161,7 +9205,7 @@ void death_knight_t::init_spells()
   legendary.superstrain = find_runeforge_legendary( "Superstrain" );
 
   // Blood
-  // legendary.bryndaors_might = find_runeforge_legendary( "Bryndaor's Might" );
+  legendary.bryndaors_might = find_runeforge_legendary( "Bryndaor's Might" );
   // legendary.crimson_rune_weapon = find_runeforge_legendary( "Crimson Rune Weapon" );
 
   // Frost
@@ -9903,6 +9947,7 @@ void death_knight_t::init_gains()
   gains.relish_in_blood                  = get_gain( "Relish in Blood" );
   gains.tombstone                        = get_gain( "Tombstone" );
 
+  gains.bryndaors_might                  = get_gain( "Bryndaor's Might" );
   gains.bloody_runeblade                 = get_gain( "Bloody Runeblade" );
 
   // Frost
