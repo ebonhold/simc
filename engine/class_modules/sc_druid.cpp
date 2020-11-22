@@ -1140,23 +1140,8 @@ struct force_of_nature_t : public pet_t
   force_of_nature_t( sim_t* sim, druid_t* owner ) : pet_t( sim, owner, "treant", true /*GUARDIAN*/, true )
   {
     // Treants have base weapon damage + ap from player's sp.
-    // @50-57: 3 base + 0.6 SP
-    //    @58: 3 base + 0.375 SP (needs more testing)
-    //    @59: 3 base + 0.333 SP (needs more testing)
-    //    @60: 3.5 base + 0.28 SP
-
     owner_coeff.ap_from_sp = 0.6;
     main_hand_weapon.min_dmg = main_hand_weapon.max_dmg = 3.0;
-
-    if ( o()->level() == 58 )
-      owner_coeff.ap_from_sp = 0.375;
-    else if ( o()->level() == 59 )
-      owner_coeff.ap_from_sp = 0.333;
-    else if ( o()->level() == 60 )
-    {
-      owner_coeff.ap_from_sp = 0.28;
-      main_hand_weapon.min_dmg = main_hand_weapon.max_dmg = 3.5;
-    }
 
     resource_regeneration = regen_type::DISABLED;
     main_hand_weapon.type = WEAPON_BEAST;
@@ -7288,6 +7273,7 @@ struct convoke_the_spirits_t : public druid_spell_t
     CAST_OFFSPEC,
     CAST_SPEC,
     CAST_HEAL,
+    CAST_MAIN,
     CAST_WRATH,
     CAST_MOONFIRE,
     CAST_RAKE,
@@ -7470,7 +7456,8 @@ struct convoke_the_spirits_t : public druid_spell_t
 
     // form-agnostic
     cast_list.clear();
-    cast_list.insert( cast_list.end(), static_cast<int>( rng().range( 3, 6 ) ), CAST_OFFSPEC );
+    cast_list.insert( cast_list.end(), static_cast<int>( rng().range( 4, 9 ) ), CAST_OFFSPEC );
+
     if ( rng().roll( p()->convoke_the_spirits_ultimate ) )  // form-based ultimate
     {
       if ( p()->buff.bear_form->check() )
@@ -7480,6 +7467,10 @@ struct convoke_the_spirits_t : public druid_spell_t
       else if ( p()->buff.cat_form->check() )
         cast_list.push_back( CAST_FERAL_FRENZY );
     }
+
+    if (p()->buff.cat_form->check() ) // For the moment only feral will use this
+      cast_list.insert( cast_list.end(), static_cast<int>( rng().gauss( 4.2, 0.9360890055, true ) ), CAST_MAIN );
+
     cast_list.insert( cast_list.end(), max_ticks - cast_list.size(), CAST_SPEC );
 
     // form-specific distribution list
@@ -7509,8 +7500,7 @@ struct convoke_the_spirits_t : public druid_spell_t
   void _execute_cat()
   {
     offspec_list = { CAST_HEAL, CAST_HEAL, CAST_WRATH, CAST_MOONFIRE };
-    chances      = { { CAST_SHRED, 0.10 }, 
-		     { CAST_FEROCIOUS_BITE, 0.22}, 
+    chances      = { { CAST_SHRED, 0.10 },  
 		     { CAST_THRASH_CAT, 0.0588},
 		     { CAST_RAKE, 0.22} };
   }
@@ -7552,6 +7542,9 @@ struct convoke_the_spirits_t : public druid_spell_t
         type = _tick_cat( tl, conv_tar );
     }
 
+    if (type == CAST_MAIN)
+      type = CAST_FEROCIOUS_BITE;
+
     conv_cast = convoke_action_from_type( type );
     if ( !conv_cast )
       return;
@@ -7568,6 +7561,7 @@ struct convoke_the_spirits_t : public druid_spell_t
         type = CAST_WRATH;
       else if ( type == CAST_RAKE && target_data->dots.rake->is_ticking() )
         type = CAST_SHRED;
+
 
       conv_cast = convoke_action_from_type( type );
     }

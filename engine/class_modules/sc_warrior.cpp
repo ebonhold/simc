@@ -2657,7 +2657,7 @@ struct execute_arms_t : public warrior_attack_t
     }
     if ( p()->buff.deadly_calm->check() )
     {
-      c *= 1.0 + p()->talents.deadly_calm->effectN( 1 ).percent();
+      return 0;  // To avoid extremely small number shenanigans on raidbots
     }
     return c;
   }
@@ -3556,15 +3556,8 @@ struct sweeping_strikes_t : public warrior_spell_t
   sweeping_strikes_t( warrior_t* p, const std::string& options_str )
     : warrior_spell_t( "sweeping_strikes", p, p->spec.sweeping_strikes )
   {
-    if ( p->talents.cleave->ok() )
-    {
-      background = true;  // Cleave replaces Sweeping Strikes for Arms.
-    }
-    else
-    {
-      parse_options( options_str );
-      callbacks = false;
-    }
+    parse_options( options_str );
+    callbacks = false;
   }
 
   void execute() override
@@ -4890,7 +4883,7 @@ struct condemn_arms_t : public warrior_attack_t
     }
     if ( p()->buff.deadly_calm->check() )
     {
-      c *= 1.0 + p()->talents.deadly_calm->effectN( 1 ).percent();
+      return 0;  // To avoid extremely small number shenanigans on raidbots
     }
     return c;
   }

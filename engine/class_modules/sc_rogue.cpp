@@ -4001,9 +4001,10 @@ struct black_powder_t: public rogue_attack_t
     int last_cp;
 
     black_powder_bonus_t( util::string_view name, rogue_t* p ) :
-      rogue_attack_t( name, p, p -> find_spell( 319190 ) ),
+      rogue_attack_t( name, p, p->find_spell( 319190 ) ),
       last_cp( 1 )
     {
+      aoe = -1; // Yup, this is uncapped.
     }
 
     void reset() override
@@ -4015,6 +4016,28 @@ struct black_powder_t: public rogue_attack_t
     double combo_point_da_multiplier( const action_state_t* ) const override
     {
       return as<double>( last_cp );
+    }
+
+    size_t available_targets( std::vector< player_t* >& tl ) const override
+    {
+      rogue_attack_t::available_targets( tl );
+
+      // Can only hit targets with the Find Weakness debuff
+      tl.erase( std::remove_if( tl.begin(), tl.end(), [ this ]( player_t* t ) {
+        return !this->td( t )->debuffs.find_weakness->check(); } ), tl.end() );
+
+      return tl.size();
+    }
+
+    void execute() override
+    {
+      // Invalidate target cache to force re-checking Find Weakness debuffs.
+      // Don't attempt to execute this attack if it has no valid targets
+      target_cache.is_valid = false;
+      if ( target_list().size() > 0 )
+      {
+        rogue_attack_t::execute();
+      }
     }
   };
 
@@ -4033,31 +4056,27 @@ struct black_powder_t: public rogue_attack_t
 
   void execute() override
   {
-    // TOCHECK: Does this happen before or after the bonus damage? Currently after, but see https://github.com/SimCMinMax/WoW-BugTracker/issues/733.
-    // For consistency with Evis, we move it before, so that both are self-affecting.
-    p()->buffs.deeper_daggers->trigger();
-
     rogue_attack_t::execute();
 
+    // Deeper Daggers triggers before bonus damage which makes it self-affecting.
+    p()->buffs.deeper_daggers->trigger();
+
+    // BUG: Finality BP triggers after physical instant attack before scheduling the shadow damage and is immediately consumes by that.
+    // See https://github.com/SimCMinMax/WoW-BugTracker/issues/747
     if ( p()->legendary.finality.ok() )
     {
-      if ( p()->buffs.finality_black_powder->check() )
-        p()->buffs.finality_black_powder->expire();
-      else
-        p()->buffs.finality_black_powder->trigger();
+      p()->buffs.finality_black_powder->trigger();
     }
-  }
 
-  void impact( action_state_t* state ) override
-  {
-    rogue_attack_t::impact( state );
-
-    if ( bonus_attack && result_is_hit( state->result ) && td( state->target )->debuffs.find_weakness->up() )
+    if ( bonus_attack )
     {
-      bonus_attack->last_cp = get_combo_points( cast_state( state ) );
-      bonus_attack->set_target( state->target );
+      bonus_attack->last_cp = get_combo_points( cast_state( execute_state ) );
+      bonus_attack->set_target( execute_state->target );
       bonus_attack->execute();
     }
+
+    // See bug above.
+    p()->buffs.finality_black_powder->expire();
   }
 
   bool procs_poison() const override
@@ -5699,7 +5718,13 @@ struct roll_the_bones_t : public buff_t
   rogue_t* rogue;
   std::array<buff_t*, 6> buffs;
   std::array<proc_t*, 6> procs;
-  std::vector<timespan_t> count_the_odds_remains;
+
+  struct count_the_odds_state
+  {
+    buff_t* buff;
+    timespan_t remains;
+  };
+  std::vector<count_the_odds_state> count_the_odds_states;
 
   roll_the_bones_t( rogue_t* r ) :
     buff_t( r, "roll_the_bones", r -> spec.roll_the_bones ),
@@ -5759,31 +5784,35 @@ struct roll_the_bones_t : public buff_t
     inactive_buffs[ buff_idx ]->trigger( duration );
   }
 
-  void count_the_odds_check()
+  void count_the_odds_expire( bool save_remains )
   {
     if ( !rogue->conduit.count_the_odds.ok() )
       return;
 
-    // TOCHECK: Assuming this works the same as the T21 4pc bonus for now
-    // Collect a list of buffs with partially triggered durations
-    count_the_odds_remains.clear();
+    count_the_odds_states.clear();
+
     for ( buff_t* buff : buffs )
     {
-      if ( buff->check() && buff->remains() != remains() )
-        count_the_odds_remains.push_back( buff->remains() );
+      if ( save_remains && buff->check() && buff->remains() != remains() )
+      {
+        count_the_odds_states.push_back( { buff, buff->remains() } );
+      }
     }
   }
 
-  void count_the_odds_reroll()
+  void count_the_odds_restore()
   {
-    if ( count_the_odds_remains.empty() )
+    if ( count_the_odds_states.empty() )
       return;
 
-    // TOCHECK: Assuming this works the same as the T21 4pc bonus for now
-    // Trigger random inactive buffs with the previously remaining durations
-    for ( timespan_t remains : count_the_odds_remains )
+    // 11/21/2020 -- Buffs are only persisted when RtB is already down with no re-randomization
+    //               If the same roll as an existing partial buff is in the result, the partial buff is lost
+    for ( auto state : count_the_odds_states )
     {
-      count_the_odds_trigger( remains );
+      if ( !state.buff->check() )
+      {
+        state.buff->trigger( state.remains );
+      }
     }
   }
 
@@ -5815,7 +5844,7 @@ struct roll_the_bones_t : public buff_t
       std::vector<double> current_odds = rogue->options.fixed_rtb_odds;
       if ( loaded_dice )
       {
-        // At some point Loaded Dice were apparently changed to just convert 1 buffs straight into two buffs. (2020-03-09)
+        // Loaded Dice converts 1 buff chance directly into two buff chance. (2020-03-09)
         current_odds[ 1 ] += current_odds[ 0 ];
         current_odds[ 0 ] = 0.0;
       }
@@ -5880,7 +5909,8 @@ struct roll_the_bones_t : public buff_t
 
   void execute( int stacks, double value, timespan_t duration ) override
   {
-    count_the_odds_check();
+    // 11/21/2020 -- Count the Odds buffs are cleared if rerolling, but not if the buff is down
+    count_the_odds_expire( !check() );
 
     buff_t::execute( stacks, value, duration );
 
@@ -5897,7 +5927,14 @@ struct roll_the_bones_t : public buff_t
       rogue->buffs.paradise_lost->trigger( roll_duration );
     }
 
-    count_the_odds_reroll();
+    count_the_odds_restore();
+  }
+
+  void expire_override( int stacks, timespan_t duration ) override
+  {
+    buff_t::expire_override( stacks, duration );
+    // 11/21/2020 -- Count the Odds buffs are cleared if the container buff expires
+    count_the_odds_expire( false );
   }
 };
 
@@ -7050,7 +7087,7 @@ void rogue_t::init_action_list()
     precombat->add_action( "use_item,effect_name=cyclotronic_blast,if=!raid_event.invulnerable.exists" );
 
     // Main Rotation
-    def->add_action( "variable,name=rtb_reroll,value=0", "Currently not worth rerolling in SL in any known situation" );
+    def->add_action( "variable,name=rtb_reroll,value=rtb_buffs<2&(buff.buried_treasure.up|buff.grand_melee.up|buff.true_bearing.up)", "Reroll single BT/GM/TB buffs when possible" );
     def->add_action( "variable,name=ambush_condition,value=combo_points.deficit>=2+2*(talent.ghostly_strike.enabled&cooldown.ghostly_strike.remains<1)+buff.broadside.up&energy>60&!buff.skull_and_crossbones.up&!buff.keep_your_wits_about_you.up" );
     def->add_action( "variable,name=blade_flurry_sync,value=spell_targets.blade_flurry<2&raid_event.adds.in>20|buff.blade_flurry.up", "With multiple targets, this variable is checked to decide whether some CDs should be synced with Blade Flurry" );
     def->add_action( "call_action_list,name=stealth,if=stealthed.all" );
