@@ -1459,14 +1459,14 @@ struct storm_earth_and_fire_pet_t : public pet_t
 
     void impact( action_state_t* s ) override
     {
-      if ( o()->covenant.necrolord->ok() )
+      if ( o()->covenant.necrolord->ok() && s->result_total > 0 )
       {
         if ( o()->get_target_data( s->target )->debuff.bonedust_brew->up() &&
              o()->rng().roll( o()->covenant.necrolord->proc_chance() ) )
         {
           double damage = s->result_total * o()->covenant.necrolord->effectN( 1 ).percent();
-//          if ( p()->conduit.bone_marrow_hops->ok() && proc_bone_marrow_hops )
-//            damage *= 1 + p()->conduit.bone_marrow_hops.percent();
+//          if ( o()->conduit.bone_marrow_hops->ok() )
+//            damage *= 1 + o()->conduit.bone_marrow_hops.percent();
 
           o()->active_actions.bonedust_brew_dmg->base_dd_min = damage;
           o()->active_actions.bonedust_brew_dmg->base_dd_max = damage;
@@ -4299,7 +4299,7 @@ public:
 
   void trigger_bonedust_brew( action_state_t* s )
   {
-    if ( p()->covenant.necrolord->ok() )
+    if ( p()->covenant.necrolord->ok() && s->result_total > 0 )
     {
       if ( td( s->target )->debuff.bonedust_brew->up() && p()->rng().roll( p()->covenant.necrolord->proc_chance() ) )
       {
@@ -6305,23 +6305,10 @@ struct melee_t : public monk_melee_attack_t
 
   void execute() override
   {
-    // Prevent the monk from melee'ing while channeling soothing_mist.
-    // FIXME: This is super hacky and spams up the APL sample sequence a bit.
-    // Disabled since mistweaver doesn't work atm.
-    // if ( p() -> buff.channeling_soothing_mist -> check() )
-    // return;
-
     if ( first )
       first = false;
 
-    if ( time_to_execute > timespan_t::zero() && player->executing )
-    {
-      sim->print_debug( "Executing {} during melee ({}).", *player->executing,
-                               util::slot_type_string( weapon->slot ) );
-      schedule_execute();
-    }
-    else
-      monk_melee_attack_t::execute();
+    monk_melee_attack_t::execute();
   }
 };
 
@@ -7940,6 +7927,9 @@ struct faeline_stomp_damage_t : public monk_spell_t
   {
     background = true;
     ww_mastery = true;
+
+    attack_power_mod.direct = p.passives.faeline_stomp_damage->effectN( 1 ).ap_coeff();
+    spell_power_mod.direct  = 0;
   }
 
   double composite_aoe_multiplier( const action_state_t* state ) const override
@@ -10104,8 +10094,8 @@ void monk_t::init_spells()
   passives.bonedust_brew_dmg                    = find_spell( 325217 );
   passives.bonedust_brew_heal                   = find_spell( 325218 );
   passives.bonedust_brew_chi                    = find_spell( 328296 );
-  passives.faeline_stomp_damage                 = find_spell( 327264 );
-  passives.faeline_stomp_ww_damage              = find_spell( 345727 );
+  passives.faeline_stomp_damage                 = find_spell( 345727 );
+  passives.faeline_stomp_ww_damage              = find_spell( 327264 );
   passives.faeline_stomp_brm                    = find_spell( 347480 );
   passives.fallen_monk_breath_of_fire           = find_spell( 330907 );
   passives.fallen_monk_clash                    = find_spell( 330909 );
