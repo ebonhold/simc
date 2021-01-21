@@ -7869,6 +7869,46 @@ std::unique_ptr<expr_t> death_knight_t::create_expression( util::string_view nam
 {
   auto splits = util::string_split<util::string_view>( name_str, "." );
 
+  if ( splits.size() == 3 && splits[ 0 ] == "cooldown")
+  {
+    if ( splits[ 2 ] == "remains_guess" )
+    {
+      if ( cooldown_t* cooldown = get_cooldown( splits[ 1 ] ) )
+      {
+        return make_fn_expr( name_str,
+          [ cooldown ] {
+            if ( cooldown -> remains() == cooldown -> duration )
+              return cooldown -> duration;
+
+            if ( cooldown -> up() )
+              return 0_ms;
+
+            double reduction = ( cooldown -> sim.current_time() - cooldown -> last_start ) /
+                               ( cooldown -> duration - cooldown -> remains() );
+            return cooldown -> remains() * reduction;
+          } );
+      }
+    }
+    else if ( splits[ 2 ] == "duration_guess" )
+    {
+      if ( cooldown_t* cooldown = get_cooldown( splits[ 1 ] ) )
+      {
+        return make_fn_expr( name_str,
+          [ cooldown ] {
+            if ( cooldown -> last_charged == 0_ms || cooldown -> remains() == cooldown -> duration )
+              return cooldown -> duration;
+
+            if ( cooldown -> up() )
+              return ( cooldown -> last_charged - cooldown -> last_start );
+
+            double reduction = ( cooldown -> sim.current_time() - cooldown -> last_start ) /
+                               ( cooldown -> duration - cooldown -> remains() );
+            return cooldown -> duration * reduction;
+          } );
+      }
+    }
+  }
+
   if ( util::str_compare_ci( splits[ 0 ], "rune" ) && splits.size() > 1 )
   {
     // rune.time_to_x returns the number of seconds before X runes will be ready at the current generation rate
