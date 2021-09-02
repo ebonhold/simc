@@ -5929,6 +5929,9 @@ double player_t::resource_loss( resource_e resource_type, double amount, gain_t*
   else
   {
     actual_amount = amount;
+    // Only check resources if it's not health, as health can go negative with Killing Blows
+    if ( resource_type != RESOURCE_HEALTH )
+      assert( resources.current[ resource_type ] >= actual_amount );
     resources.current[ resource_type ] -= actual_amount;
     iteration_resource_lost[ resource_type ] += actual_amount;
   }
