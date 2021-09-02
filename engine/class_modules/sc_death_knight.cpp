@@ -2645,7 +2645,20 @@ struct reanimated_shambler_pet_t : public death_knight_pet_t
   {
     necroblast_t( reanimated_shambler_pet_t* p ) :
       pet_spell_t( p, "necroblast", p -> find_spell( 334851 ) )
-    { }
+    { 
+      aoe = -1;
+    }
+
+    double composite_aoe_multiplier( const action_state_t* state ) const override
+  {
+    double cam = pet_spell_t::composite_aoe_multiplier( state );
+
+    if ( state->n_targets > 5 )
+        // When we cross over 5 targets, sqrt on all targets over 5 kicks in
+        cam *= std::sqrt( 5.0 / state->n_targets );
+
+    return cam;
+  }
 
     void execute() override
     {
@@ -3417,6 +3430,18 @@ struct abomination_limb_damage_t : public death_knight_spell_t
     background = true;
     base_multiplier *= 1.0 + p -> conduits.brutal_grasp.percent();
     bone_shield_stack_gain = as<int>(p -> covenant.abomination_limb -> effectN( 3 ).base_value());
+    aoe = -1;
+  }
+
+  double composite_aoe_multiplier( const action_state_t* state ) const override
+  {
+    double cam = death_knight_spell_t::composite_aoe_multiplier( state );
+
+    if ( state->n_targets > 5 )
+        // When we cross over 5 targets, sqrt on all targets over 5 kicks in
+        cam *= std::sqrt( 5.0 / state->n_targets );
+
+    return cam;
   }
 
   void execute() override
@@ -3804,7 +3829,18 @@ struct bonestorm_damage_t : public death_knight_spell_t
     heal( get_action<bonestorm_heal_t>( "bonestorm_heal", p ) ), heal_count( 0 )
   {
     background = true;
-    aoe = as<int>( data().effectN( 2 ).base_value() );
+    aoe = -1;
+  }
+
+  double composite_aoe_multiplier( const action_state_t* state ) const override
+  {
+    double cam = death_knight_spell_t::composite_aoe_multiplier( state );
+
+    if ( state->n_targets > 5 )
+        // When we cross over 5 targets, sqrt on all targets over 5 kicks in
+        cam *= std::sqrt( 5.0 / state->n_targets );
+
+    return cam;
   }
 
   void execute() override
@@ -4055,7 +4091,17 @@ struct consumption_t : public death_knight_melee_attack_t
     // TODO: Healing from damage done
 
     parse_options( options_str );
-    aoe = as<int>( data().effectN( 3 ).base_value() );
+    aoe = -1;
+  }
+  double composite_aoe_multiplier( const action_state_t* state ) const override
+  {
+    double cam = death_knight_melee_attack_t::composite_aoe_multiplier( state );
+
+    if ( state->n_targets > 5 )
+        // When we cross over 5 targets, sqrt on all targets over 5 kicks in
+        cam *= std::sqrt( 5.0 / state->n_targets );
+
+    return cam;
   }
 };
 
@@ -5093,7 +5139,7 @@ struct bursting_sores_t : public death_knight_spell_t
   {
     background = true;
     // Value is 9, -1 is hardcoded in tooltip. Probably because it counts the initial target of the wound burst
-    aoe = as<int> ( data().effectN( 3 ).base_value() - 1 );
+    aoe = -1;
   }
 
   // Bursting sores have a slight delay ingame, but nothing really significant
@@ -5115,6 +5161,17 @@ struct bursting_sores_t : public death_knight_spell_t
     }
 
     return tl.size();
+  }
+
+  double composite_aoe_multiplier( const action_state_t* state ) const override
+  {
+    double cam = death_knight_spell_t::composite_aoe_multiplier( state );
+
+    if ( state->n_targets > 5 )
+        // When we cross over 5 targets, sqrt on all targets over 5 kicks in
+        cam *= std::sqrt( 5.0 / state->n_targets );
+
+    return cam;
   }
 };
 
@@ -5188,9 +5245,20 @@ struct frostscythe_t : public death_knight_melee_attack_t
     inexorable_assault = get_action<inexorable_assault_damage_t>( "inexorable_assault", p );
 
     weapon = &( player -> main_hand_weapon );
-    aoe = as<int>( data().effectN( 5 ).base_value() );
+    aoe = -1;
     triggers_shackle_the_unworthy = triggers_icecap = true;
     // Crit multipier handled in death_knight_t::apply_affecting_aura()
+  }
+
+  double composite_aoe_multiplier( const action_state_t* state ) const override
+  {
+    double cam = death_knight_melee_attack_t::composite_aoe_multiplier( state );
+
+    if ( state->n_targets > 5 )
+        // When we cross over 5 targets, sqrt on all targets over 5 kicks in
+        cam *= std::sqrt( 5.0 / state->n_targets );
+
+    return cam;
   }
 
   void execute() override
@@ -6211,7 +6279,18 @@ struct sacrificial_pact_damage_t : public death_knight_spell_t
     death_knight_spell_t( name, p, p -> find_spell( 327611 ) )
   {
     background = true;
-    aoe = as<int>( data().effectN( 2 ).base_value() );
+    aoe = -1;
+  }
+
+  double composite_aoe_multiplier( const action_state_t* state ) const override
+  {
+    double cam = death_knight_spell_t::composite_aoe_multiplier( state );
+
+    if ( state->n_targets > 5 )
+        // When we cross over 5 targets, sqrt on all targets over 5 kicks in
+        cam *= std::sqrt( 5.0 / state->n_targets );
+
+    return cam;
   }
 };
 
@@ -6431,7 +6510,7 @@ struct swarming_mist_damage_t : public death_knight_spell_t
     double cam = death_knight_spell_t::composite_aoe_multiplier( state );
 
     if ( state->n_targets > p() -> covenant.swarming_mist ->effectN( 5 ).base_value() )
-        // When we cross over 5 targets, sqrt on all targets kicks in
+        // When we cross over 5 targets, sqrt on all targets over 5 kicks in
         cam *= std::sqrt( 5.0 / state->n_targets );
 
     return cam;
