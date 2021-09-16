@@ -328,6 +328,8 @@ void stats_to_json( JsonOutput root, const std::vector<stats_t*>& stats_list, in
     add_non_zero( node, "num_ticks", s -> num_ticks );
     add_non_zero( node, "num_tick_results", s -> num_tick_results );
     add_non_zero( node, "total_tick_time", s -> total_tick_time );
+    add_non_zero( node, "ape", s -> ape );
+    add_non_zero( node, "apet", s -> apet );
     add_non_zero( node, "num_refreshes", s -> num_refreshes );
 
     add_non_zero( node, "num_direct_results", s -> num_direct_results );
