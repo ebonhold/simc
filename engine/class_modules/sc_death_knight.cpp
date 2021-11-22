@@ -6115,6 +6115,12 @@ struct obliterate_t : public death_knight_melee_attack_t
       {
         km_mh -> set_target( target );
         km_mh -> execute();
+        
+        if ( p() -> sets -> has_set_bonus (DEATH_KNIGHT_FROST, T28, B4 ) )
+        {
+          glacial_advance -> set_target ( target );
+          glacial_advance -> execute();
+        }
       }
       else
       {
@@ -6147,12 +6153,6 @@ struct obliterate_t : public death_knight_melee_attack_t
     }
 
     p() -> consume_killing_machine( p() -> procs.killing_machine_oblit );
-
-    if ( p() -> sets -> has_set_bonus (DEATH_KNIGHT_FROST, T28, B4 ) )
-    {
-      glacial_advance -> set_target ( target );
-      glacial_advance -> execute();
-    }
   }
 
   double cost() const override
