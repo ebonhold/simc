@@ -2962,6 +2962,15 @@ struct death_knight_action_t : public Base
       }
     }
   }
+
+  double composite_crit_chance() const override
+  {
+    double cc = action_base_t::composite_crit_chance();
+
+    cc += p() -> buffs.remorseless_winter -> value();
+
+    return cc;
+  }
 };
 
 // ==========================================================================
@@ -3453,6 +3462,71 @@ struct auto_attack_t : public death_knight_melee_attack_t
 // ==========================================================================
 // Death Knight Abilities
 // ==========================================================================
+
+// GA comes first, as it gets called in the tierset.  After Shadowlands move
+// back to it's proper slot in the sorted list.
+// Glacial Advance ==========================================================
+
+struct glacial_advance_damage_t : public death_knight_spell_t
+{
+  glacial_advance_damage_t( util::string_view name, death_knight_t* p ) :
+    death_knight_spell_t( name, p, p -> find_spell( 195975 ) )
+  {
+    aoe = -1; // TODO: Fancier targeting .. make it aoe for now
+    background = true;
+    ap_type = attack_power_type::WEAPON_BOTH;
+    if ( p -> main_hand_weapon.group() == WEAPON_2H )
+    {
+      ap_type = attack_power_type::WEAPON_MAINHAND;
+      // There's a 0.98 modifier hardcoded in the tooltip if a 2H weapon is equipped, probably server side magic
+      base_multiplier *= 0.98;
+    }
+  }
+
+  void impact( action_state_t* state ) override
+  {
+    death_knight_spell_t::impact( state );
+
+    // Only applies the razorice debuff without the damage, regardless of runeforge equipped
+    // https://github.com/SimCMinMax/WoW-BugTracker/issues/663
+    if ( p() -> bugs || p() -> runeforge.rune_of_razorice_mh || p() -> runeforge.rune_of_razorice_oh )
+    {
+      get_td( state -> target ) -> debuff.razorice -> trigger();
+    }
+  }
+};
+
+struct glacial_advance_t : public death_knight_spell_t
+{
+  glacial_advance_t( death_knight_t* p, util::string_view options_str ) :
+    death_knight_spell_t( "glacial_advance", p, p -> talent.glacial_advance )
+  {
+    parse_options( options_str );
+
+    weapon = &( p -> main_hand_weapon );
+
+    execute_action = get_action<glacial_advance_damage_t>( "glacial_advance_damage", p );
+    add_child( execute_action );
+  }
+
+  void execute() override
+  {
+    death_knight_spell_t::execute();
+
+    if ( p() -> buffs.pillar_of_frost -> up() && p() -> talent.obliteration -> ok() )
+    {
+      p() -> trigger_killing_machine( 1.0, p() -> procs.km_from_obliteration_ga,
+                                           p() -> procs.km_from_obliteration_ga_wasted );
+
+      // Obliteration's rune generation
+      if ( rng().roll( p() -> talent.obliteration -> effectN( 2 ).percent() ) )
+      {
+        // WTB spelldata for the rune gain
+        p() -> replenish_rune( 1, p() -> gains.obliteration );
+      }
+    }
+  }
+};
 
 // Abomination Limb =========================================================
 
@@ -5332,6 +5406,7 @@ struct festering_strike_t : public death_knight_melee_attack_t
 struct frostscythe_t : public death_knight_melee_attack_t
 {
   action_t* inexorable_assault;
+  action_t* glacial_advance;
 
   frostscythe_t( death_knight_t* p, util::string_view options_str ) :
     death_knight_melee_attack_t( "frostscythe", p, p -> talent.frostscythe )
@@ -5339,6 +5414,7 @@ struct frostscythe_t : public death_knight_melee_attack_t
     parse_options( options_str );
 
     inexorable_assault = get_action<inexorable_assault_damage_t>( "inexorable_assault", p );
+    glacial_advance = get_action<glacial_advance_damage_t>( "glacial_advance_damage", p );
 
     weapon = &( player -> main_hand_weapon );
     aoe = -1;
@@ -5358,6 +5434,12 @@ struct frostscythe_t : public death_knight_melee_attack_t
     death_knight_melee_attack_t::execute();
 
     p() -> consume_killing_machine( p() -> procs.killing_machine_fsc );
+
+    if ( p() -> sets -> has_set_bonus (DEATH_KNIGHT_FROST, T28, B4 ) )
+    {
+      glacial_advance -> set_target ( target );
+      glacial_advance -> execute();
+    }
 
     if ( p() -> buffs.inexorable_assault -> up() )
     {
@@ -5504,69 +5586,6 @@ struct frost_strike_t : public death_knight_melee_attack_t
     {
       p() -> trigger_killing_machine( 1.0, p() -> procs.km_from_obliteration_fs,
                                            p() -> procs.km_from_obliteration_fs_wasted );
-
-      // Obliteration's rune generation
-      if ( rng().roll( p() -> talent.obliteration -> effectN( 2 ).percent() ) )
-      {
-        // WTB spelldata for the rune gain
-        p() -> replenish_rune( 1, p() -> gains.obliteration );
-      }
-    }
-  }
-};
-
-// Glacial Advance ==========================================================
-
-struct glacial_advance_damage_t : public death_knight_spell_t
-{
-  glacial_advance_damage_t( util::string_view name, death_knight_t* p ) :
-    death_knight_spell_t( name, p, p -> find_spell( 195975 ) )
-  {
-    aoe = -1; // TODO: Fancier targeting .. make it aoe for now
-    background = true;
-    ap_type = attack_power_type::WEAPON_BOTH;
-    if ( p -> main_hand_weapon.group() == WEAPON_2H )
-    {
-      ap_type = attack_power_type::WEAPON_MAINHAND;
-      // There's a 0.98 modifier hardcoded in the tooltip if a 2H weapon is equipped, probably server side magic
-      base_multiplier *= 0.98;
-    }
-  }
-
-  void impact( action_state_t* state ) override
-  {
-    death_knight_spell_t::impact( state );
-
-    // Only applies the razorice debuff without the damage, regardless of runeforge equipped
-    // https://github.com/SimCMinMax/WoW-BugTracker/issues/663
-    if ( p() -> bugs || p() -> runeforge.rune_of_razorice_mh || p() -> runeforge.rune_of_razorice_oh )
-    {
-      get_td( state -> target ) -> debuff.razorice -> trigger();
-    }
-  }
-};
-
-struct glacial_advance_t : public death_knight_spell_t
-{
-  glacial_advance_t( death_knight_t* p, util::string_view options_str ) :
-    death_knight_spell_t( "glacial_advance", p, p -> talent.glacial_advance )
-  {
-    parse_options( options_str );
-
-    weapon = &( p -> main_hand_weapon );
-
-    execute_action = get_action<glacial_advance_damage_t>( "glacial_advance_damage", p );
-    add_child( execute_action );
-  }
-
-  void execute() override
-  {
-    death_knight_spell_t::execute();
-
-    if ( p() -> buffs.pillar_of_frost -> up() && p() -> talent.obliteration -> ok() )
-    {
-      p() -> trigger_killing_machine( 1.0, p() -> procs.km_from_obliteration_ga,
-                                           p() -> procs.km_from_obliteration_ga_wasted );
 
       // Obliteration's rune generation
       if ( rng().roll( p() -> talent.obliteration -> effectN( 2 ).percent() ) )
@@ -6043,6 +6062,7 @@ struct obliterate_t : public death_knight_melee_attack_t
 {
   obliterate_strike_t *mh, *oh, *km_mh, *km_oh;
   action_t* inexorable_assault;
+  action_t* glacial_advance;
 
   obliterate_t( death_knight_t* p, util::string_view options_str = std::string() ) :
     death_knight_melee_attack_t( "obliterate", p, p -> spec.obliterate ),
@@ -6053,6 +6073,7 @@ struct obliterate_t : public death_knight_melee_attack_t
     triggers_shackle_the_unworthy = true;
 
     inexorable_assault = get_action<inexorable_assault_damage_t>( "inexorable_assault", p );
+    glacial_advance = get_action<glacial_advance_damage_t>( "glacial_advance_damage", p );
 
     const spell_data_t* mh_data = p -> main_hand_weapon.group() == WEAPON_2H ? data().effectN( 4 ).trigger() : data().effectN( 2 ).trigger();
 
@@ -6126,6 +6147,12 @@ struct obliterate_t : public death_knight_melee_attack_t
     }
 
     p() -> consume_killing_machine( p() -> procs.killing_machine_oblit );
+
+    if ( p() -> sets -> has_set_bonus (DEATH_KNIGHT_FROST, T28, B4 ) )
+    {
+      glacial_advance -> set_target ( target );
+      glacial_advance -> execute();
+    }
   }
 
   double cost() const override
@@ -6361,6 +6388,11 @@ struct remorseless_winter_buff_t : public buff_t
       damage -> execute();
     } );
     set_partial_tick( true );
+    if ( p -> sets->has_set_bonus( DEATH_KNIGHT_FROST, T28, B2 ) )
+    {
+      set_default_value( p -> sets -> set (DEATH_KNIGHT_FROST, T28, B2 ) -> effectN( 1 ).percent() );
+      add_invalidate( CACHE_CRIT_CHANCE );
+    }
   }
 
   bool trigger( int s, double v, double c, timespan_t d ) override
