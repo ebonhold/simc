@@ -1421,6 +1421,7 @@ class SpellDataGenerator(DataGenerator):
           ( 328275, 0 ), ( 328757, 0 ), # Wild Spirits (Covenenat)
           ( 339928, 2 ), ( 339929, 2 ), # Brutal Projectiles (Conduit)
           ( 341223, 3 ), # Strength of the Pack (Conduit)
+          ( 339061, 0 ), # Empowered Release (Conduit)
           ( 363760, 1 ), # Killing Frenzy (T28 BM 4pc)
           ( 363805, 3 ), # Mad Bombardier (T28 SV 4pc)
         ),
@@ -1646,6 +1647,7 @@ class SpellDataGenerator(DataGenerator):
           ( 327369, 0 ),                            # Disciplinary Command (Arcane tracker)
           ( 336889, 0 ),                            # Nether Precision
           ( 337090, 0 ),                            # Siphoned Malice
+          ( 363685, 0 ),                            # Arcane Lucidity ready buff
         ),
 
         # Warlock:
@@ -2540,7 +2542,12 @@ class SpellDataGenerator(DataGenerator):
             if not SetBonusListGenerator.is_extract_set_bonus(set_spell_data.id_parent)[0]:
                 continue
 
-            self.process_spell(set_spell_data.id_spell, ids, 0, 0)
+            mask_class = 0
+            spec_data = set_spell_data.ref('id_spec')
+            if spec_data.id > 0:
+                mask_class = DataGenerator._class_masks[spec_data.class_id]
+
+            self.process_spell(set_spell_data.id_spell, ids, mask_class, 0)
 
         # Glyph effects, need to do trickery here to get actual effect from spellbook data
         for ability in self.db('SkillLineAbility').values():
