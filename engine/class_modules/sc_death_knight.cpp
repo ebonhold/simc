@@ -3562,7 +3562,8 @@ struct harvest_soul_reaper_execute_t : public death_knight_spell_t
     if ( p() -> sets -> has_set_bonus( DEATH_KNIGHT_UNHOLY, T28, B4 ) )
     {
       p() -> pets.harvest_ghouls.spawn( summon_duration, 1 );
-      p() -> pets.magus_of_the_dead.spawn( summon_duration, 1 );
+      if ( p() -> talent.army_of_the_damned -> ok() )
+        p() -> pets.magus_of_the_dead.spawn( summon_duration, 1 );
     }
   }
 };
@@ -3572,7 +3573,7 @@ struct harvest_soul_reaper_t : public death_knight_melee_attack_t
   action_t* soul_reaper_execute;
 
   harvest_soul_reaper_t( death_knight_t* p, util::string_view options_str ) :
-    death_knight_melee_attack_t( "harvest_soul_reaper", p, p ->  talent.soul_reaper ),
+    death_knight_melee_attack_t( "harvest_soul_reaper", p, p -> find_spell( 343294 ) ),
     soul_reaper_execute( get_action<harvest_soul_reaper_execute_t>( "harvest_soul_reaper_execute", p ) )
   {
     parse_options( options_str );
@@ -6757,7 +6758,8 @@ struct soul_reaper_execute_t : public death_knight_spell_t
     if ( p() -> sets -> has_set_bonus( DEATH_KNIGHT_UNHOLY, T28, B4 ) )
     {
       p() -> pets.harvest_ghouls.spawn( summon_duration, 1 );
-      p() -> pets.magus_of_the_dead.spawn( summon_duration, 1 );
+      if ( p() -> talent.army_of_the_damned -> ok() )
+        p() -> pets.magus_of_the_dead.spawn( summon_duration, 1 );
     }
   }
 };
@@ -7788,7 +7790,7 @@ void death_knight_t::trigger_soul_reaper_death( player_t* target )
     return;
   }
 
-  if ( ! talent.soul_reaper -> ok() )
+  if ( ! talent.soul_reaper -> ok() && ! sets -> has_set_bonus ( DEATH_KNIGHT_UNHOLY, T28, B2 ))
   {
     return;
   }
@@ -9312,7 +9314,7 @@ void death_knight_t::activate()
     // On target death triggers
     if ( specialization() == DEATH_KNIGHT_UNHOLY )
     {
-      if ( talent.soul_reaper->ok() )
+      if ( talent.soul_reaper->ok() || sets->has_set_bonus( DEATH_KNIGHT_UNHOLY, T28, B2 ))
       {
         target->register_on_demise_callback( this, [this]( player_t* t ) { trigger_soul_reaper_death( t ); } );
       }
