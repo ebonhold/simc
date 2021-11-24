@@ -523,6 +523,10 @@ public:
     buff_t* abomination_limb; // Necrolord
     buff_t* deaths_due; // Night Fae
     buff_t* swarming_mist; // Venthyr
+
+    // Tier28 Sets
+    buff_t* harvest_time_stack; // Unholy
+    buff_t* harvest_time_execute; // Unholy
   } buffs;
 
   struct runeforge_t {
@@ -864,6 +868,7 @@ public:
 
     spawner::pet_spawner_t<pets::army_ghoul_pet_t, death_knight_t> army_ghouls;
     spawner::pet_spawner_t<pets::army_ghoul_pet_t, death_knight_t> apoc_ghouls;
+    spawner::pet_spawner_t<pets::army_ghoul_pet_t, death_knight_t> harvest_ghouls;
     spawner::pet_spawner_t<pets::bloodworm_pet_t, death_knight_t> bloodworms;
     spawner::pet_spawner_t<pets::magus_pet_t, death_knight_t> magus_of_the_dead;
     spawner::pet_spawner_t<pets::reanimated_shambler_pet_t, death_knight_t> reanimated_shambler;
@@ -873,6 +878,7 @@ public:
     pets_t( death_knight_t* p ) :
       army_ghouls( "army_ghoul", p ),
       apoc_ghouls( "apoc_ghoul", p ),
+      harvest_ghouls( "harvest_ghoul", p ),
       bloodworms( "bloodworm", p ),
       magus_of_the_dead( "magus_of_the_dead", p ),
       reanimated_shambler( "reanimated_shambler", p ),
@@ -1946,6 +1952,7 @@ struct ghoul_pet_t : public base_ghoul_pet_t
   cooldown_t* gnaw_cd; // shared cd between gnaw/monstrous_blow
   gain_t* dark_transformation_gain;
   buff_t* frenzied_monstrosity;
+  buff_t* harvest_time;
 
   // Generic Dark Transformation pet ability
   struct dt_melee_ability_t : public pet_melee_attack_t<ghoul_pet_t>
@@ -2070,6 +2077,9 @@ struct ghoul_pet_t : public base_ghoul_pet_t
     if ( frenzied_monstrosity -> up() )
       haste *= 1.0 / ( 1.0 + frenzied_monstrosity -> data().effectN( 2 ).percent() );
 
+    if ( harvest_time -> up() )
+      haste *= 1.0 / ( 1.0 + harvest_time -> value() );
+
     return haste;
   }
 
@@ -2122,6 +2132,9 @@ struct ghoul_pet_t : public base_ghoul_pet_t
     frenzied_monstrosity = make_buff( this, "frenzied_monstrosity", find_spell ( 334895 ) )
       -> set_default_value_from_effect( 1 )
       -> set_duration( 0_s );
+
+    harvest_time = make_buff( this, "harvest_time", find_spell( 364173 ) )
+      -> set_default_value_from_effect( 2 );
   }
 };
 
@@ -3465,6 +3478,7 @@ struct auto_attack_t : public death_knight_melee_attack_t
 
 // GA comes first, as it gets called in the tierset.  After Shadowlands move
 // back to it's proper slot in the sorted list.
+// Soul Reaper was also used in T28, move back after shadowlands
 // Glacial Advance ==========================================================
 
 struct glacial_advance_damage_t : public death_knight_spell_t
@@ -3524,6 +3538,95 @@ struct glacial_advance_t : public death_knight_spell_t
         // WTB spelldata for the rune gain
         p() -> replenish_rune( 1, p() -> gains.obliteration );
       }
+    }
+  }
+};
+
+// Soul Reaper ==============================================================
+
+struct harvest_soul_reaper_execute_t : public death_knight_spell_t
+{
+  timespan_t summon_duration;
+  // army ghoul = 42651
+  // apoc ghoul = 221180
+  harvest_soul_reaper_execute_t( util::string_view name, death_knight_t* p ) :
+    death_knight_spell_t( name, p, p -> find_spell( 343295 ) ),
+    summon_duration( p -> find_spell( 42651 ) -> duration() )
+  {
+    background = true;
+  }
+
+  void impact( action_state_t* state ) override
+  {
+    death_knight_spell_t::impact( state );
+    if ( p() -> sets -> has_set_bonus( DEATH_KNIGHT_UNHOLY, T28, B4 ) )
+    {
+      p() -> pets.harvest_ghouls.spawn( summon_duration, 1 );
+      p() -> pets.magus_of_the_dead.spawn( summon_duration, 1 );
+    }
+  }
+};
+
+struct harvest_soul_reaper_t : public death_knight_melee_attack_t
+{
+  action_t* soul_reaper_execute;
+
+  harvest_soul_reaper_t( death_knight_t* p, util::string_view options_str ) :
+    death_knight_melee_attack_t( "harvest_soul_reaper", p, p ->  talent.soul_reaper ),
+    soul_reaper_execute( get_action<harvest_soul_reaper_execute_t>( "harvest_soul_reaper_execute", p ) )
+  {
+    parse_options( options_str );
+    add_child( soul_reaper_execute );
+
+    triggers_shackle_the_unworthy = true;
+    hasted_ticks = false;
+  }
+
+  void init() override
+  {
+    death_knight_melee_attack_t::init();
+    may_proc_bron = true;
+  }
+
+  double cost() const override
+  {
+    if ( p() -> buffs.harvest_time_execute -> check() )
+    {
+      return 0;
+    }
+
+    return death_knight_melee_attack_t::cost();
+  }
+
+  double runic_power_generation_multiplier( const action_state_t* state ) const override
+  {
+    double m = death_knight_melee_attack_t::runic_power_generation_multiplier( state );
+
+    // Currently the reduction isn't in spelldata here, but I have to think it is intended
+    if ( p() -> buffs.harvest_time_execute -> check() )
+    {
+      m *= 1.0 + ( -1.0 );
+    }
+
+    return m;
+  }
+
+  void execute() override
+  {
+    death_knight_melee_attack_t::execute();
+    if ( p() -> sets -> has_set_bonus( DEATH_KNIGHT_UNHOLY, T28, B2 ) )
+        debug_cast<pets::ghoul_pet_t*>( p() -> pets.ghoul_pet ) -> harvest_time -> trigger();
+  }
+
+  void last_tick( dot_t* dot ) override
+  {
+    if ( dot -> target -> health_percentage() < data().effectN( 3 ).base_value() )
+    {
+      soul_reaper_execute -> set_target ( dot -> target );
+      soul_reaper_execute -> execute();
+
+      //if ( p() -> sets -> has_set_bonus( DEATH_KNIGHT_UNHOLY, T28, B2 ) )
+      //  debug_cast<pets::ghoul_pet_t*>( p() -> pets.ghoul_pet ) -> harvest_time -> trigger();
     }
   }
 };
@@ -6497,10 +6600,14 @@ struct sacrificial_pact_t : public death_knight_heal_t
 
 struct scourge_strike_base_t : public death_knight_melee_attack_t
 {
+  action_t* harvest_soul_reaper;
   scourge_strike_base_t( util::string_view name, death_knight_t* p, const spell_data_t* spell ) :
-    death_knight_melee_attack_t( name, p, spell )
+    death_knight_melee_attack_t( name, p, spell ),
+    harvest_soul_reaper( p -> find_action( "harvest_soul_reaper" ) )
   {
     weapon = &( player -> main_hand_weapon );
+    if ( harvest_soul_reaper == NULL )
+      harvest_soul_reaper = new harvest_soul_reaper_t(p, "");
   }
 
   void init() override
@@ -6539,6 +6646,33 @@ struct scourge_strike_base_t : public death_knight_melee_attack_t
     if ( p() -> covenant.deaths_due -> ok() && p() -> in_death_and_decay() )
     {
       p() -> buffs.deaths_due->trigger();
+    }
+  }
+
+  void execute() override
+  {
+    death_knight_melee_attack_t::execute();
+
+    if ( p() -> sets -> has_set_bonus( DEATH_KNIGHT_UNHOLY, T28, B2 ) )
+    {
+      // If execute is up, we fire off the Soul reaper, then reset.
+      if ( p() -> buffs.harvest_time_execute -> up() )
+      {
+        harvest_soul_reaper -> set_target( target );
+        harvest_soul_reaper -> execute();
+        // It's important to expire the buff after the execute, as it's used to reduce the costs in soul reaper.
+        p() -> buffs.harvest_time_execute -> expire();
+      }
+
+      // We stack harvest time every time CS/SS is called
+      p() -> buffs.harvest_time_stack -> trigger();
+
+      // If this puts us at max stacks, trigger execute, and expire the harvest time buff
+      if( p() -> buffs.harvest_time_stack -> at_max_stacks() )
+      {
+        p() -> buffs.harvest_time_execute -> trigger();
+        p() -> buffs.harvest_time_stack -> expire();
+      }
     }
   }
 };
@@ -6609,10 +6743,22 @@ struct shackle_the_unworthy_t : public death_knight_spell_t
 
 struct soul_reaper_execute_t : public death_knight_spell_t
 {
+  timespan_t summon_duration;
   soul_reaper_execute_t( util::string_view name, death_knight_t* p ) :
-    death_knight_spell_t( name, p, p -> find_spell( 343295 ) )
+    death_knight_spell_t( name, p, p -> find_spell( 343295 ) ),
+    summon_duration( p -> find_spell( 42651 ) -> duration() )
   {
     background = true;
+  }
+
+  void impact( action_state_t* state ) override
+  {
+    death_knight_spell_t::impact( state );
+    if ( p() -> sets -> has_set_bonus( DEATH_KNIGHT_UNHOLY, T28, B4 ) )
+    {
+      p() -> pets.harvest_ghouls.spawn( summon_duration, 1 );
+      p() -> pets.magus_of_the_dead.spawn( summon_duration, 1 );
+    }
   }
 };
 
@@ -6621,7 +6767,7 @@ struct soul_reaper_t : public death_knight_melee_attack_t
   action_t* soul_reaper_execute;
 
   soul_reaper_t( death_knight_t* p, util::string_view options_str ) :
-    death_knight_melee_attack_t( "soul_reaper", p, p ->  talent.soul_reaper ),
+    death_knight_melee_attack_t( "soul_reaper", p, p -> talent.soul_reaper ),
     soul_reaper_execute( get_action<soul_reaper_execute_t>( "soul_reaper_execute", p ) )
   {
     parse_options( options_str );
@@ -6637,12 +6783,22 @@ struct soul_reaper_t : public death_knight_melee_attack_t
     may_proc_bron = true;
   }
 
+  void execute() override
+  {
+    death_knight_melee_attack_t::execute();
+    if ( p() -> sets -> has_set_bonus( DEATH_KNIGHT_UNHOLY, T28, B2 ) )
+        debug_cast<pets::ghoul_pet_t*>( p() -> pets.ghoul_pet ) -> harvest_time -> trigger();
+  }
+
   void last_tick( dot_t* dot ) override
   {
     if ( dot -> target -> health_percentage() < data().effectN( 3 ).base_value() )
     {
       soul_reaper_execute -> set_target ( dot -> target );
       soul_reaper_execute -> execute();
+
+      //if ( p() -> sets -> has_set_bonus( DEATH_KNIGHT_UNHOLY, T28, B2 ) )
+      //  debug_cast<pets::ghoul_pet_t*>( p() -> pets.ghoul_pet ) -> harvest_time -> trigger();
     }
   }
 };
@@ -8077,6 +8233,8 @@ action_t* death_knight_t::create_action( util::string_view name, util::string_vi
   // Covenant Actions
   if ( name == "swarming_mist"            ) return new swarming_mist_t            ( this, options_str );
 
+  if ( name == "harvest_soul_reaper"      ) return new harvest_soul_reaper_t      ( this, options_str );
+
   // Dynamic actions
   // any_dnd and dnd_any return defile if talented, or death and decay otherwise
   if ( name == "any_dnd" || name == "dnd_any" )
@@ -8275,7 +8433,12 @@ void death_knight_t::create_pets()
     {
       pets.apoc_ghouls.set_creation_callback(
         [] ( death_knight_t* p ) { return new pets::army_ghoul_pet_t( p, "apoc_ghoul" ); } );
+    }
 
+    if ( sets -> has_set_bonus( DEATH_KNIGHT_UNHOLY, T28, B4 ) )
+    {
+      pets.harvest_ghouls.set_creation_callback(
+        [] ( death_knight_t* p ) { return new pets::army_ghoul_pet_t( p, "harvest_ghoul" ); } );
     }
 
     if ( talent.army_of_the_damned -> ok() )
@@ -9024,6 +9187,12 @@ void death_knight_t::create_buffs()
   // Covenants
   buffs.abomination_limb = new abomination_limb_buff_t( this );
   buffs.swarming_mist = new swarming_mist_buff_t( this );
+
+  // Tier28 Sets
+  buffs.harvest_time_stack = make_buff( this, "harvest_time", find_spell( 363885 ) )
+    -> set_cooldown( sets ->set( DEATH_KNIGHT_UNHOLY, T28, B2 )->internal_cooldown() );
+
+  buffs.harvest_time_execute = make_buff( this, "harvest_time_execute", find_spell( 363887 ) );
 }
 
 // death_knight_t::init_gains ===============================================

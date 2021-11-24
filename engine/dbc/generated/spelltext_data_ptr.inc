@@ -1,5 +1,5 @@
 // Spell text, wow build 9.2.0.41089
-static const std::array<spelltext_data_t, 15745> __ptr_spelltext_data { {
+static const std::array<spelltext_data_t, 15751> __ptr_spelltext_data { {
   {     17, "Shields an ally for $d, absorbing $<shield> damage.  You cannot shield the target again for $6788d.", "Absorbs $w1 damage.", 0 },
   {     53, "Stab the target, causing ${$s2*$<mult>} Physical damage. Damage increased by $s4% when you are behind your target$?s319949[, and critical strikes apply Find Weakness for $319949s1 sec][].\r\n\r\n|cFFFFFFFFAwards $s3 combo $lpoint:points;.|r", 0, 0 },
   {     56, "Stuns target for $d.", "Stunned.", 0 },
@@ -15666,6 +15666,8 @@ static const std::array<spelltext_data_t, 15745> __ptr_spelltext_data { {
   { 363793, "$@spelldesc363496", "The Architect's Aligner is activated, dealing $363789s1 Cosmic damage every $t sec.", 0 },
   { 363805, "$@spelldesc363667", "Your next Wildfire Bomb deals $s1% increased damage and incurs no cooldown.", 0 },
   { 363830, "$@spelldesc363498", "Dealing $s1 every $t1 sec.", 0 },
+  { 363885, "$@spelldesc363560", "At $u stacks your next Scourge Strike will cast Soul Reaper.", 0 },
+  { 363887, "$@spelldesc363560", "Your next Scourge Strike will cast Soul Reaper.", 0 },
   { 363911, "$@spelldesc363734", 0, 0 },
   { 363913, "Every $s1 Rage consumed increases the effectiveness of your next Colossus Smash or Warbreaker by $363917s1%, up to ${$363917s1*$363917u}%.", 0, 0 },
   { 363917, "$@spelldesc363913", "Your next Colossus Smash or Warbreaker increases the damage enemies take from you by $s1%.", 0 },
@@ -15681,6 +15683,8 @@ static const std::array<spelltext_data_t, 15745> __ptr_spelltext_data { {
   { 364086, "Your abilities have a chance to strip the target of its power, decreasing damage done by $364355s1% and increasing damage taken by $364355s2%. Your Cypher power allows this effect to be applied up to $?pc94626[6 stacks]?pc94651[5 stacks]?pc94650[4 stacks]?pc64649[3 stacks]?pc94746[2 stacks][1 stack].", 0, 0 },
   { 364087, "Your damaging abilities have a chance to unleash a blast at the target, dealing $?pc94626[${s3*(1+(s2/100)*5)}]?pc94651[${s3*(1+(s2/100)*4)}]?pc94650[${s3*(1+(s2/100)*3)}]?pc64649[${s3*(1+(s2/100)*2)}]?pc94746[${s3*(1+(s2/100))}][$s3] Cosmic damage.", 0, 0 },
   { 364101, "$@spelldesc363669", 0, 0 },
+  { 364173, "Every 5th Scourge Strike casts Soul Reaper on your target. Soul Reaper's secondary effect grants your Ghoul $s1% attack speed and summons an Army of the Dead ghoul.", 0, 0 },
+  { 364197, "Summons a second rune weapon for $d.", 0, 0 },
   { 364262, "Deals $s1 Shadowflame damage to nearby enemies.\r\n", 0, 0 },
   { 364277, "$@spelldesc363733", "Increases healing dealt by Mistweaver spells by $s1.", 0 },
   { 364304, "Casting Shield of the Righteous increases your Block chance by $s1% for $364305d, stacking up to $364305u times.", 0, 0 },
@@ -15690,6 +15694,7 @@ static const std::array<spelltext_data_t, 15745> __ptr_spelltext_data { {
   { 364365, "Swiftmend heals an additional $<heal> for each periodic healing effect on the target.", 0, 0 },
   { 364370, "Art of War has a $s1% chance to reset the cooldown of Wake of Ashes instead of Blade of Justice.", 0, 0 },
   { 364383, "Remorseless Winter grants $s1% Critical Strike while active.\r\n\r\n", 0, 0 },
+  { 364384, "$@spelldesc364383\r\n\r\n\r\n", "Critical Strike chance increased by $w1%.", 0 },
   { 364392, "Every $s1 $?s207311[Clawing Shadows][Scourge Strikes] casts Soul Reaper on your target. Soul Reaper grants your pet $s3% attack speed for $s4 seconds.", 0, 0 },
   { 364399, "Heart Strike increases your Strength by $s3% and the duration of Dancing Rune Weapon by ${$s1/1000}.1 seconds, persisting for $s4 seconds after Dancing Rune Weapon ends.", 0, 0 },
   { 364415, "Targets ignited by Breath of Fire deal an additional ${$s1/-1}% less damage to you.", 0, 0 },
@@ -15743,6 +15748,7 @@ static const std::array<spelltext_data_t, 15745> __ptr_spelltext_data { {
   { 365474, "$@spelldesc365457", "$pri increased by $w1.", 0 },
   { 365544, "$s2% chance to deflect enemy physical attacks.", "$s2% chance to deflect enemy physical attacks.\r\n\r\nOnly works in Shadowlands outdoor areas or Oribos.", 0 },
   { 365664, "Add the Infernal affix to a Mythic Keystone.", 0, 0 },
+  { 366008, "@spelldesc364399", "Strength increased by $w1%.", 0 },
   { 366057, "$?a366059[Deal $s2 Cosmic damage to melee attackers.][Increases your Block by $s1.]", 0, 0 },
   { 366061, "$?a366059[Deal $366057s4 Cosmic damage to your target and switch to Defense mode.][Shield the most injured member of your party for $366057s3 and switch to Offense mode.]", 0, 0 },
 } };
