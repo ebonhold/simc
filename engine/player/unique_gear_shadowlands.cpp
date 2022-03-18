@@ -3235,14 +3235,6 @@ void resonant_reservoir( special_effect_t& effect )
         // duration is reset on refresh but the current tick does not clip
         return t;
       }
-
-      timespan_t travel_time() const override
-      {
-        // NOTE: Preliminary estimation of time it takes for circle to expand and hit the target. Note that logs DO NOT
-        // show when the missile lands and the halo begins to expand, so we will have to confirm these estimations with
-        // further reviews.
-        return rng().gauss( 0.5_s, 0.25_s );
-      }
     };
 
     struct disintegration_halo_missile_t : public proc_spell_t
@@ -3250,8 +3242,12 @@ void resonant_reservoir( special_effect_t& effect )
       disintegration_halo_missile_t( const special_effect_t& e, std::string_view n, unsigned i, action_t* a )
         : proc_spell_t( n, e.player, e.player->find_spell( i ), e.item )
       {
-        aoe = -1;
         impact_action = a;
+      }
+
+      timespan_t travel_time() const override
+      {
+        return proc_spell_t::travel_time() + rng().gauss( 0.5_s, 0.25_s );  // NOTE: this is just a temporary estimation
       }
     };
 
@@ -3266,16 +3262,21 @@ void resonant_reservoir( special_effect_t& effect )
       buffs.push_back( make_buff<disintegration_halo_counter_t>( e, "disintegration_halo_3", 368224 ) );
       buffs.push_back( make_buff<disintegration_halo_counter_t>( e, "disintegration_halo_4", 368225 ) );
 
-      aoe = -1;
       impact_action = create_proc_action<disintegration_halo_dot_t>( "disintegration_halo_dot", e );
 
       missiles.push_back( new disintegration_halo_missile_t( e, "disintegration_halo_2", 368232, impact_action ) );
       missiles.push_back( new disintegration_halo_missile_t( e, "disintegration_halo_3", 368233, impact_action ) );
       missiles.push_back( new disintegration_halo_missile_t( e, "disintegration_halo_4", 368234, impact_action ) );
 
-      // NOTE: Preliminary estimation of time between repeated missile launches. Note that logs DO NOT show missile
-      // firings so we will have to confirm these estimations with further log reviews.
+      // NOTE: Preliminary estimation of time between repeated missile launches, as well as random time range for
+      // the ring to expand on impact to hit the target. Note that logs DO NOT show missile firings so we will have to
+      // confirm these estimations with further log reviews.
       repeat_time = 0.333_s;
+    }
+
+    timespan_t travel_time() const override
+    {
+      return proc_spell_t::travel_time() + rng().gauss( 0.5_s, 0.25_s );  // NOTE: this is just a temporary estimation
     }
 
     void execute() override
@@ -3557,62 +3558,28 @@ void grim_eclipse( special_effect_t& effect )
   struct grim_eclipse_t : public proc_spell_t
   {
     stat_buff_t* buff;
-    timespan_t base_duration;
 
     grim_eclipse_t( const special_effect_t& e )
       : proc_spell_t( "grim_eclipse", e.player, e.trigger() ),
-        buff( make_buff<stat_buff_t>( e.player, "grim_eclipse", e.player->find_spell( 368645 ), e.item ) ),
-        base_duration( 10_s )
+        buff( make_buff<stat_buff_t>( e.player, "grim_eclipse", e.player->find_spell( 368645 ), e.item ) )
     {
-      dot_duration   = data().duration();
-      // Not in spelldata
+      // TODO: CHECK EVERYTHING SINCE NOTHING IS TESTABLE AND EVERYTHING IS A GUESS
+      dot_duration = data().duration();
       base_tick_time = 1_s;
 
-      if ( e.player->sim->shadowlands_opts.grim_eclipse_dot_duration_multiplier > 0.0 )
-      {
-        e.player->sim->print_debug(
-            "Altering grim_eclipse DoT Uptime by {}. Old Duration: {}. New duration: {}",
-            e.player->sim->shadowlands_opts.grim_eclipse_dot_duration_multiplier, data().duration(),
-            data().duration() * e.player->sim->shadowlands_opts.grim_eclipse_dot_duration_multiplier );
-        dot_duration = data().duration() * e.player->sim->shadowlands_opts.grim_eclipse_dot_duration_multiplier;
-      }
-
       tick_action = create_proc_action<generic_proc_t>( "grim_eclipse_damage", e, "grim_eclipse_damage", 369318 );
-      // Use data().duration() here so that if you alter dot_duration the tick value is not changed
       tick_action->base_dd_min = tick_action->base_dd_max =
-          e.driver()->effectN( 1 ).average( e.item ) / data().duration().total_seconds();
+          e.driver()->effectN( 1 ).average( e.item ) / dot_duration.total_seconds();
 
       buff->add_stat( STAT_HASTE_RATING, e.driver()->effectN( 2 ).average( e.item ) );
-      base_duration = buff->buff_duration();
-
-      if ( player->sim->shadowlands_opts.grim_eclipse_buff_duration_multiplier > 0.0 )
-      {
-        buff->set_duration_multiplier( player->sim->shadowlands_opts.grim_eclipse_buff_duration_multiplier );
-        e.player->sim->print_debug( "Altering grim_eclipse Haste buff duration by {}",
-                                    player->sim->shadowlands_opts.grim_eclipse_buff_duration_multiplier );
-      }
     }
 
-    void execute() override
+    void last_tick( dot_t* d ) override
     {
-      proc_spell_t::execute();
+      proc_spell_t::last_tick( d );
 
-      // Always give the haste buff after the Quasar expires, regardless of DoT duration overrides
-      make_event( *sim, data().duration(), [ this ] {
-        // TODO: implement modeling of leaving/entering the buff zone
-        if ( player->sim->shadowlands_opts.grim_eclipse_buff_duration_multiplier > 0.0 )
-        {
-          // Delay the buff proportional to the multiplier change
-          timespan_t buff_delay = base_duration - buff->buff_duration();
-          make_event( *sim, buff_delay, [ this ] { buff->trigger(); } );
-
-          if ( buff_delay > 0_s )
-          {
-            player->sim->print_debug( "Scheduling grim_eclipse haste buff with a {}s delay.",
-                                      buff_delay.total_seconds() );
-          }
-        }
-      } );
+      // TODO: implement modeling of leaving/entering the buff zone
+      buff->trigger();
     }
   };
 
@@ -4102,6 +4069,242 @@ void singularity_supreme( special_effect_t& effect )
       [ lockout ]( const dbc_proc_callback_t*, action_t*, action_state_t* ) {
         return !lockout->check();
       } );
+}
+
+/** Gavel of the First Arbiter
+  367953 driver
+  369046 on-use
+
+  Boon of Looming Winter
+  368693 driver, buff
+  368698 Absorb buff and frost damage
+
+  Boon of Divine Command
+  368694 driver
+  368699 arcane Damage + armor buff
+
+  Boon of Harvested Hope
+  368695 driver
+  368701 Health leech dot
+
+  Boon of Assured Victory
+  368696 Victory driver
+  368700 Rotting Decay Nature dot, stacks
+
+  Boon of the End
+  368697 driver
+  368702 Proc/buff
+
+  Common
+  369238 - Stores all the damage values
+  s1 - Divine Command arcane damage
+  s2 - Assured Victory - Rotting Decay, stacking nature damage
+  s3 - Looming Winter frost damage
+  s4 - Looming Winter absorb amount
+  s5 - Harvest Hope bleed damage
+  s6 - Boon of the End Shadow Damage
+  s7 - Pretty sure this is Boon of the End Strength buff amount
+  s8 - Divine Command +armor
+
+*/
+void gavel_of_the_first_arbiter( special_effect_t& effect )
+{
+  struct twisted_judgment_t : public proc_spell_t
+  {
+    buff_t* looming_winter_active_buff;
+    buff_t* looming_winter_absorb_buff;
+
+    buff_t* divine_command_active_buff;
+    // buff_t* divine_command_armor_buff;  NYI
+
+    buff_t* harvested_hope_active_buff;
+
+    buff_t* assured_victory_active_buff;
+
+    buff_t* boon_of_the_end_active_buff;
+    buff_t* boon_of_the_end_str_buff;
+
+    twisted_judgment_t( const special_effect_t& effect ) : proc_spell_t( effect )
+    {
+      // Buffs
+      looming_winter_absorb_buff = buff_t::find( effect.player, "boon_of_looming_winter_absorb" );
+      if ( !looming_winter_absorb_buff )
+      {
+        looming_winter_absorb_buff = make_buff<absorb_buff_t>( effect.player, "boon_of_looming_winter_absorb", effect.player -> find_spell( 368698 ) )
+          ->set_default_value( effect.player->find_spell( 369238 )->effectN( 4 ).average( effect.item ) );
+      }
+
+      // Create effect and callback for the damage proc
+      auto looming_winter = new special_effect_t( effect.player );
+      looming_winter -> source = SPECIAL_EFFECT_SOURCE_ITEM;
+      looming_winter -> name_str = "looming_winter";
+      looming_winter -> spell_id = 368693;
+      looming_winter -> proc_flags_ = effect.player->find_spell( 368693 )->proc_flags();
+      looming_winter -> proc_flags2_ = PF2_ALL_HIT;
+      looming_winter -> execute_action = create_proc_action<boon_of_looming_winter_t>( "boon_of_looming_winter_proc", effect, looming_winter_absorb_buff );
+      effect.player->special_effects.push_back( looming_winter );
+
+      auto divine_command = new special_effect_t( effect.player );
+      divine_command -> source = SPECIAL_EFFECT_SOURCE_ITEM;
+      divine_command -> name_str = "divine_command";
+      divine_command -> spell_id = 368694;
+      divine_command -> proc_flags_ = effect.player->find_spell( 368694 )->proc_flags();
+      divine_command -> proc_flags2_ = PF2_ALL_HIT;
+      divine_command -> execute_action = create_proc_action<boon_of_divine_command_t>( "boon_of_divine_command_proc", effect );
+      divine_command -> disable_buff();  // Need to disable, or it auto creates the armor buff
+      effect.player->special_effects.push_back( divine_command );
+
+      auto harvested_hope = new special_effect_t( effect.player );
+      harvested_hope -> source = SPECIAL_EFFECT_SOURCE_ITEM;
+      harvested_hope -> name_str = "harvested_hope";
+      harvested_hope -> spell_id = 368695;
+      harvested_hope -> proc_flags_ = effect.player->find_spell( 368695 )->proc_flags();
+      harvested_hope -> proc_flags2_ = PF2_ALL_HIT;
+      harvested_hope -> execute_action = create_proc_action<boon_of_harvested_hope_t>( "boon_of_harvested_hope_proc", effect );
+      effect.player->special_effects.push_back( harvested_hope );
+	  
+      auto assured_victory = new special_effect_t( effect.player );
+      assured_victory -> source = SPECIAL_EFFECT_SOURCE_ITEM;
+      assured_victory -> name_str = "assured_victory";
+      assured_victory -> spell_id = 368696;
+      assured_victory -> proc_flags_ = effect.player->find_spell( 368696 )->proc_flags();
+      assured_victory -> proc_flags2_ = PF2_ALL_HIT;
+      assured_victory -> execute_action = create_proc_action<boon_of_assured_victory_t>( "boon_of_assured_victory_proc", effect );
+      effect.player->special_effects.push_back( assured_victory );
+
+      auto looming_winter_cb = new dbc_proc_callback_t( effect.player, *looming_winter );
+      looming_winter_cb -> initialize();
+      looming_winter_cb -> deactivate();
+
+      auto divine_command_cb = new dbc_proc_callback_t( effect.player, *divine_command );
+      divine_command_cb -> initialize();
+      divine_command_cb -> deactivate();
+
+      auto harvested_hope_cb = new dbc_proc_callback_t( effect.player, *harvested_hope );
+      harvested_hope_cb -> initialize();
+      harvested_hope_cb -> deactivate();
+	  
+	  auto assured_victory_cb = new dbc_proc_callback_t( effect.player, *assured_victory );
+      assured_victory_cb -> initialize();
+      assured_victory_cb -> deactivate();
+
+      looming_winter_active_buff = buff_t::find( effect.player, "boon_of_looming_winter_active" );
+      if ( !looming_winter_active_buff )
+      {
+        looming_winter_active_buff = make_buff( effect.player, "boon_of_looming_winter_active", effect.player-> find_spell( 368693 ) )
+          ->set_chance( 1.0 )
+          ->set_cooldown( 0_ms )
+          ->set_stack_change_callback( [ looming_winter_cb ]( buff_t*, int old, int new_ ) {
+            if ( old == 0 )
+              looming_winter_cb->activate();
+            else if ( new_ == 0 )
+              looming_winter_cb->deactivate();
+          });
+      }
+
+      divine_command_active_buff = buff_t::find( effect.player, "boon_of_divine_command_active" );
+      if ( !divine_command_active_buff )
+      {
+        divine_command_active_buff = make_buff( effect.player, "boon_of_divine_command_active", effect.player-> find_spell( 368694 ) )
+          ->set_chance( 1.0 )
+          ->set_cooldown( 0_ms )
+          ->set_stack_change_callback( [ divine_command_cb ]( buff_t*, int old, int new_ ) {
+            if ( old == 0 )
+              divine_command_cb->activate();
+            else if ( new_ == 0 )
+              divine_command_cb->deactivate();
+          });
+      }
+
+      harvested_hope_active_buff = buff_t::find( effect.player, "boon_of_harvested_hope_active" );
+      if ( !harvested_hope_active_buff )
+      {
+        harvested_hope_active_buff = make_buff( effect.player, "boon_of_harvested_hope_active", effect.player-> find_spell( 368695 ) )
+          ->set_chance( 1.0 )
+          ->set_cooldown( 0_ms )
+          ->set_stack_change_callback( [ harvested_hope_cb ]( buff_t*, int old, int new_ ) {
+            if ( old == 0 )
+              harvested_hope_cb->activate();
+            else if ( new_ == 0 )
+              harvested_hope_cb->deactivate();
+          });
+      }
+	  
+	  assured_victory_active_buff = buff_t::find( effect.player, "boon_of_assured_victory_active" );
+      if ( !assured_victory_active_buff )
+      {
+        assured_victory_active_buff = make_buff( effect.player, "boon_of_assured_victory_active", effect.player-> find_spell( 368696 ) )
+          ->set_chance( 1.0 )
+          ->set_cooldown( 0_ms )
+          ->set_stack_change_callback( [ assured_victory_cb ]( buff_t*, int old , int new_ ) {
+            if ( old == 0 )
+              assured_victory_cb->activate();
+            else if ( new_ == 0 )
+              assured_victory_cb->deactivate();
+          });
+      }
+    }
+
+    struct boon_of_looming_winter_t : public proc_spell_t
+    {
+      buff_t* absorb;
+      boon_of_looming_winter_t( const special_effect_t& effect, buff_t* absorb_ )
+        : proc_spell_t( "boon_of_looming_winter_damage", effect.player, effect.player->find_spell( 368698 ), effect.item ),
+        absorb( absorb_ )
+        {
+          base_dd_min = base_dd_max = effect.player->find_spell( 369238 )->effectN( 3 ).average( effect.item );
+        }
+
+        void execute() override
+        {
+          proc_spell_t::execute();
+          absorb->trigger();
+        }
+    };
+
+    struct boon_of_divine_command_t : public proc_spell_t
+    {
+      boon_of_divine_command_t( const special_effect_t& effect )
+        : proc_spell_t( "boon_of_divine_command_damage", effect.player, effect.player->find_spell( 368699 ) )
+        {
+          base_dd_min = base_dd_max = effect.player->find_spell( 369238 )->effectN( 1 ).average( effect.item );
+          aoe = -1;
+        }
+    };
+
+    struct boon_of_harvested_hope_t : public proc_spell_t
+    {
+      boon_of_harvested_hope_t( const special_effect_t& effect )
+        : proc_spell_t( "boon_of_harvested_hope_damage", effect.player, effect.player->find_spell( 368701 ) )
+        {
+          base_td = effect.player->find_spell( 369238 )->effectN( 5 ).average( effect.item );
+          aoe = -1;
+        }
+    };
+	
+	struct boon_of_assured_victory_t : public proc_spell_t
+    {
+      boon_of_assured_victory_t( const special_effect_t& effect )
+        : proc_spell_t( "boon_of_assured_victory_damage", effect.player, effect.player->find_spell( 368700 ) )
+        {
+          base_td = effect.player->find_spell( 369238 )->effectN( 2 ).average( effect.item );
+          aoe = -1;
+        }
+    };
+
+    void execute() override
+    {
+      proc_spell_t::execute();
+      // Here is where we select which buff we are going to trigger via random selection
+      //looming_winter_active_buff->trigger();
+      //divine_command_active_buff->trigger();
+      //harvested_hope_active_buff->trigger();
+	  assured_victory_active_buff->trigger();
+    }
+  };
+
+  effect.type           = SPECIAL_EFFECT_USE;
+  effect.execute_action = create_proc_action<twisted_judgment_t>( "twisted_judgment", effect );
 }
 
 // Armor
@@ -5421,6 +5624,7 @@ void register_special_effects()
 
     // 9.2 Weapons
     unique_gear::register_special_effect( 367952, items::singularity_supreme );
+    unique_gear::register_special_effect( 367953, items::gavel_of_the_first_arbiter );
 
     // Armor
     unique_gear::register_special_effect( 352081, items::passablyforged_credentials );
