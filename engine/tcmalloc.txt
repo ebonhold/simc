@@ -1,0 +1,3 @@
+# Commands
+HEAPCHECK=strict LD_LIBRARY_PATH+=/usr/local/lib ./simc high_mem.simc
+HEAPPROFILE=./output LD_LIBRARY_PATH+=/usr/local/lib ./simc high_mem.simc
