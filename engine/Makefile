@@ -218,6 +218,9 @@ all: $(MODULE)
 -include $(SRC_DEPS)
 
 debug:OPTS_INTERNAL += -g -fno-omit-frame-pointer -O0 -fno-optimize-sibling-calls
+debug: CPP_FLAGS += -I/usr/local/include
+debug: LINK_FLAGS += -L/usr/local/lib
+debug: LINK_LIBS += -ltcmalloc
 debug: $(MODULE)
 
 release:CPP_FLAGS += -DNDEBUG
@@ -264,6 +267,8 @@ endif
 
 $(MODULE): $(SRC_OBJ)
 	-@echo [$(MODULE)] Linking $@
+	echo $(LINK_FLAGS)
+	echo $(LINK_LIBS)
 	@$(CXX) $(OPTS_INTERNAL) $(OPTS) $(LINK_FLAGS) $^ $(LINK_LIBS) -o $@
 
 $(OBJ_DIR)$(PATHSEP)%.$(OBJ_EXT): %.cpp $(SRC_H)
