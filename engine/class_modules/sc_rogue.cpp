@@ -668,6 +668,8 @@ public:
 
     // Conduits
     proc_t* count_the_odds;
+    proc_t* count_the_odds_capped;
+    proc_t* count_the_odds_wasted;
 
     // Legendary
     proc_t* duskwalker_patch;
@@ -810,7 +812,7 @@ public:
   void      apply_affecting_auras( action_t& action ) override;
 
   void break_stealth();
-  void cancel_auto_attack();
+  void cancel_auto_attacks() override;
   void do_exsanguinate( dot_t* dot, double coeff );
 
   void trigger_venomous_wounds_death( player_t* ); // On-death trigger for Venomous Wounds energy replenish
@@ -2155,7 +2157,7 @@ struct crippling_poison_t : public rogue_poison_t
   struct crippling_poison_proc_t : public rogue_poison_t
   {
     crippling_poison_proc_t( util::string_view name, rogue_t* p ) :
-      rogue_poison_t( name, p, p->find_class_spell( "Crippling Poison" )->effectN( 1 ).trigger() )
+      rogue_poison_t( name, p, p->find_class_spell( "Crippling Poison" )->effectN( 1 ).trigger(), true )
     { }
 
     void impact( action_state_t* state ) override
@@ -2282,8 +2284,6 @@ struct melee_t : public rogue_attack_t
 
     if ( p->dual_wield() )
       base_hit -= 0.19;
-
-    p->auto_attack = this;
   }
 
   void reset() override
@@ -4300,11 +4300,10 @@ struct slice_and_dice_t : public rogue_spell_t
     int cp = cast_state( execute_state )->get_combo_points();
     timespan_t snd_duration = get_triggered_duration( cp );
 
-    if ( precombat_seconds > 0_s && ! p() -> in_combat )
+    if ( precombat_seconds > 0_s && !p()->in_combat )
       snd_duration -= precombat_seconds;
 
-    double snd_mod = 1.0; // Multiplier for the SnD effects. Was changed in Legion for Loaded Dice artifact trait.
-    p() -> buffs.slice_and_dice -> trigger( 1, snd_mod, -1.0, snd_duration );
+    p()->buffs.slice_and_dice->trigger( snd_duration );
 
     // Grand melee extension goes on top of SnD buff application.
     trigger_grand_melee( execute_state );
@@ -4996,7 +4995,7 @@ struct cancel_autoattack_t : public action_t
   void execute() override
   {
     action_t::execute();
-    rogue->cancel_auto_attack();
+    rogue->cancel_auto_attacks();
   }
 
   bool ready() override
@@ -5465,7 +5464,7 @@ struct stealth_t : public stealth_like_buff_t<buff_t>
   void execute( int stacks, double value, timespan_t duration ) override
   {
     base_t::execute( stacks, value, duration );
-    rogue->cancel_auto_attack();
+    rogue->cancel_auto_attacks();
 
     // Activating stealth buff (via expiring Vanish) also removes Shadow Dance. Not an issue in general since Stealth cannot be used during Dance.
     rogue->buffs.shadow_dance->expire();
@@ -5497,7 +5496,7 @@ struct vanish_t : public stealth_like_buff_t<buff_t>
   void execute( int stacks, double value, timespan_t duration ) override
   {
     base_t::execute( stacks, value, duration );
-    rogue->cancel_auto_attack();
+    rogue->cancel_auto_attacks();
 
     // Confirmed on early beta that Invigorating Shadowdust triggers from Vanish buff (via old Sepsis), not just Vanish casts
     if ( rogue->legendary.invigorating_shadowdust.ok() || ( rogue->options.prepull_shadowdust && rogue->sim->current_time() == 0_s ) )
@@ -5733,7 +5732,10 @@ struct roll_the_bones_t : public buff_t
     }
 
     if ( inactive_buffs.empty() )
+    {
+      rogue->procs.count_the_odds_capped->occur();
       return;
+    }
 
     unsigned buff_idx = static_cast<int>( rng().range( 0, as<double>( inactive_buffs.size() ) ) );
     inactive_buffs[ buff_idx ]->trigger( duration );
@@ -5746,11 +5748,22 @@ struct roll_the_bones_t : public buff_t
 
     count_the_odds_states.clear();
 
+    if ( !save_remains )
+      return;
+
     for ( buff_t* buff : buffs )
     {
-      if ( save_remains && buff->check() && buff->remains() != remains() )
+      if ( buff->check() )
       {
-        count_the_odds_states.push_back( { buff, buff->remains() } );
+        // 2022-06-19 -- 9.2.5: Recent testing shows only buffs with longer duration than existing RtB buffs are preserved
+        if ( buff->remains() < remains() )
+        {
+          rogue->procs.count_the_odds_wasted->occur();
+        }
+        else if ( buff->remains() > remains() )
+        {
+          count_the_odds_states.push_back( { buff, buff->remains() } );
+        }
       }
     }
   }
@@ -5761,6 +5774,7 @@ struct roll_the_bones_t : public buff_t
       return;
 
     // 2021-03-08 -- 9.0.5: If the same roll as an existing partial buff is in the result, the partial buff is lost
+    // 2022-06-09 -- TOCHECK: This may be the cause of odd reroll behavior, need to investgate
     for ( auto &state : count_the_odds_states )
     {
       if ( !state.buff->check() )
@@ -5863,7 +5877,7 @@ struct roll_the_bones_t : public buff_t
 
   void execute( int stacks, double value, timespan_t duration ) override
   {
-    // 2020-11-21-- Count the Odds buffs are kept if rerolling can be overwritten
+    // 2020-11-21 -- Count the Odds buffs are kept if rerolling in some situations
     count_the_odds_expire( true );
 
     buff_t::execute( stacks, value, duration );
@@ -6821,7 +6835,7 @@ double rogue_t::composite_melee_speed() const
 
   if ( buffs.slice_and_dice->check() )
   {
-    h *= 1.0 / ( 1.0 + spell.slice_and_dice->effectN( 1 ).percent() * buffs.slice_and_dice->check_value() );
+    h *= 1.0 / ( 1.0 + buffs.slice_and_dice->check_value() );
   }
 
   if ( buffs.adrenaline_rush->check() )
@@ -7167,7 +7181,7 @@ void rogue_t::init_action_list()
     // Cooldowns
     action_priority_list_t* cds = get_action_priority_list( "cds", "Cooldowns" );
     cds->add_talent( this, "Marked for Death", "line_cd=1.5,target_if=min:target.time_to_die,if=raid_event.adds.up&(!variable.single_target|target.time_to_die<30)&(target.time_to_die<combo_points.deficit*1.5|combo_points.deficit>=cp_max_spend)", "If adds are up, snipe the one with lowest TTD. Use when dying faster than CP deficit or without any CP." );
-    cds->add_talent( this, "Marked for Death", "if=raid_event.adds.in>30-raid_event.adds.duration&combo_points.deficit>=cp_max_spend&(!covenant.venthyr|(debuff.flagellation.up|cooldown.flagellation.remains>15)&(talent.crimson_tempest.enabled|!cooldown.shiv.ready))", "If no adds will die within the next 30s, use MfD for max CP. Attempt to sync with Flagellation if possible." );
+    cds->add_talent( this, "Marked for Death", "if=raid_event.adds.in>30-raid_event.adds.duration&combo_points.deficit>=cp_max_spend&(!covenant.venthyr|(buff.flagellation_buff.up|cooldown.flagellation.remains>15)&(talent.crimson_tempest.enabled|!cooldown.shiv.ready))", "If no adds will die within the next 30s, use MfD for max CP. Attempt to sync with Flagellation if possible." );
     cds->add_action( "variable,name=vendetta_nightstalker_condition,value=!talent.nightstalker.enabled|!talent.exsanguinate.enabled|cooldown.exsanguinate.remains<5-2*talent.deeper_stratagem.enabled", "Sync Vendetta window with Nightstalker+Exsanguinate if applicable" );
     cds->add_action( "variable,name=vendetta_ma_condition,value=!talent.master_assassin.enabled|dot.garrote.ticking|covenant.venthyr&combo_points.deficit=0", "Wait on Vendetta for Garrote with MA, unless we are at max CP for Flagellation" );
     cds->add_action( "variable,name=vendetta_covenant_condition,if=covenant.kyrian|covenant.necrolord|covenant.none,value=1", "Sync Vendetta with Flagellation and Sepsis as long as we won't lose a cast over the fight duration" );
@@ -7237,7 +7251,7 @@ void rogue_t::init_action_list()
 
     // Direct damage abilities
     action_priority_list_t* direct = get_action_priority_list( "direct", "Direct damage abilities" );
-    direct->add_action( this, "Envenom", "if=effective_combo_points>=4+talent.deeper_stratagem.enabled&(debuff.vendetta.up|debuff.shiv.up|debuff.flagellation.up|energy.deficit<=25+energy.regen_combined|!variable.single_target|effective_combo_points>cp_max_spend)&(!talent.exsanguinate.enabled|cooldown.exsanguinate.remains>2)", "Envenom at 4+ (5+ with DS) CP. Immediately on 2+ targets, with Vendetta, or with TB; otherwise wait for some energy. Also wait if Exsg combo is coming up." );
+    direct->add_action( this, "Envenom", "if=effective_combo_points>=4+talent.deeper_stratagem.enabled&(debuff.vendetta.up|debuff.shiv.up|buff.flagellation_buff.up|energy.deficit<=25+energy.regen_combined|!variable.single_target|effective_combo_points>cp_max_spend)&(!talent.exsanguinate.enabled|cooldown.exsanguinate.remains>2)", "Envenom at 4+ (5+ with DS) CP. Immediately on 2+ targets, with Vendetta, or with TB; otherwise wait for some energy. Also wait if Exsg combo is coming up." );
     direct->add_action( "variable,name=use_filler,value=combo_points.deficit>1|energy.deficit<=25+energy.regen_combined|!variable.single_target" );
     direct->add_action( "serrated_bone_spike,if=variable.use_filler&!dot.serrated_bone_spike_dot.ticking", "Apply SBS to all targets without a debuff as priority, preferring targets dying sooner after the primary target" );
     direct->add_action( "serrated_bone_spike,target_if=min:target.time_to_die+(dot.serrated_bone_spike_dot.ticking*600),if=variable.use_filler&!dot.serrated_bone_spike_dot.ticking" );
@@ -7268,7 +7282,7 @@ void rogue_t::init_action_list()
     def->add_action( "call_action_list,name=cds" );
     def->add_action( "run_action_list,name=finish,if=variable.finish_condition" );
     def->add_action( "call_action_list,name=build" );
-    def->add_action( "arcane_torrent,if=energy.deficit>=15+energy.regen" );
+    def->add_action( "arcane_torrent,if=energy.base_deficit>=15+energy.regen" );
     def->add_action( "arcane_pulse" );
     def->add_action( "lights_judgment" );
     def->add_action( "bag_of_tricks" );
@@ -7276,24 +7290,24 @@ void rogue_t::init_action_list()
     // Cooldowns
     action_priority_list_t* cds = get_action_priority_list( "cds", "Cooldowns" );
     cds->add_action( this, "Blade Flurry", "if=spell_targets>=2&!buff.blade_flurry.up", "Blade Flurry on 2+ enemies" );
-    cds->add_action( this, "Vanish", "if=!runeforge.mark_of_the_master_assassin&!runeforge.invigorating_shadowdust&!stealthed.all&variable.ambush_condition&(!runeforge.deathly_shadows|buff.deathly_shadows.down&combo_points<=2)", "Using Ambush is a 2% increase, so Vanish can be sometimes be used as a utility spell unless using Master Assassin or Deathly Shadows" );
+    cds->add_action( this, "Vanish", "if=!runeforge.mark_of_the_master_assassin&!runeforge.invigorating_shadowdust&!stealthed.all&(variable.ambush_condition&(!buff.flagellation_buff.up|runeforge.deathly_shadows)|variable.finish_condition)&(!runeforge.deathly_shadows|buff.deathly_shadows.down&combo_points<=2)" );
     cds->add_action( "variable,name=vanish_ma_condition,if=runeforge.mark_of_the_master_assassin&!talent.marked_for_death.enabled,value=(!cooldown.between_the_eyes.ready&variable.finish_condition)|(cooldown.between_the_eyes.ready&variable.ambush_condition)", "With Master Asssassin, sync Vanish with a finisher or Ambush depending on BtE cooldown, or always a finisher with MfD" );
     cds->add_action( "variable,name=vanish_ma_condition,if=runeforge.mark_of_the_master_assassin&talent.marked_for_death.enabled,value=variable.finish_condition" );
     cds->add_action( this, "Vanish", "if=variable.vanish_ma_condition&master_assassin_remains=0&variable.blade_flurry_sync" );
     cds->add_action( this, "Adrenaline Rush", "if=!buff.adrenaline_rush.up" );
-    cds->add_action( "fleshcraft,if=(soulbind.pustule_eruption|soulbind.volatile_solvent)&!stealthed.all&(!buff.blade_flurry.up|spell_targets.blade_flurry<2)&(!buff.adrenaline_rush.up|energy.time_to_max>2)", "Fleshcraft for Pustule Eruption if not stealthed and not with Blade Flurry" );
-    cds->add_action( "flagellation,target_if=max:target.time_to_die,if=!stealthed.all&(variable.finish_condition|target.time_to_die<13)" );
-    cds->add_talent( this, "Dreadblades", "if=!stealthed.all&combo_points<=2&(!covenant.venthyr|debuff.flagellation.up)&(!talent.marked_for_death|!cooldown.marked_for_death.ready)" );
+    cds->add_action( "fleshcraft,if=(soulbind.pustule_eruption|soulbind.volatile_solvent)&!stealthed.all&(!buff.blade_flurry.up|spell_targets.blade_flurry<2)&(!buff.adrenaline_rush.up|energy.base_time_to_max>2)", "Fleshcraft for Pustule Eruption if not stealthed and not with Blade Flurry" );
+    cds->add_action( "flagellation,target_if=max:target.time_to_die,if=!stealthed.all&(variable.finish_condition&target.time_to_die>10|fight_remains<13)" );
+    cds->add_talent( this, "Dreadblades", "if=!stealthed.all&combo_points<=2&(!covenant.venthyr|buff.flagellation_buff.up)&(!talent.marked_for_death|!cooldown.marked_for_death.ready)" );
     cds->add_action( this, "Roll the Bones", "if=master_assassin_remains=0&buff.dreadblades.down&(buff.roll_the_bones.remains<=3|variable.rtb_reroll)" );
     cds->add_talent( this, "Marked for Death", "line_cd=1.5,target_if=min:target.time_to_die,if=raid_event.adds.up&(target.time_to_die<combo_points.deficit|!stealthed.rogue&combo_points.deficit>=cp_max_spend-1)", "If adds are up, snipe the one with lowest TTD. Use when dying faster than CP deficit or without any CP." );
-    cds->add_talent( this, "Marked for Death", "if=raid_event.adds.in>30-raid_event.adds.duration&!stealthed.rogue&combo_points.deficit>=cp_max_spend-1&(!covenant.venthyr|cooldown.flagellation.remains>10|debuff.flagellation.up)", "If no adds will die within the next 30s, use MfD on boss without any CP." );
+    cds->add_talent( this, "Marked for Death", "if=raid_event.adds.in>30-raid_event.adds.duration&!stealthed.rogue&combo_points.deficit>=cp_max_spend-1&(!covenant.venthyr|cooldown.flagellation.remains>10|buff.flagellation_buff.up)", "If no adds will die within the next 30s, use MfD on boss without any CP." );
     cds->add_action( "variable,name=killing_spree_vanish_sync,value=!runeforge.mark_of_the_master_assassin|cooldown.vanish.remains>10|master_assassin_remains>2", "Attempt to sync Killing Spree with Vanish for Master Assassin" );
-    cds->add_talent( this, "Killing Spree", "if=variable.blade_flurry_sync&variable.killing_spree_vanish_sync&!stealthed.rogue&(debuff.between_the_eyes.up&buff.dreadblades.down&energy.deficit>(energy.regen*2+15)|spell_targets.blade_flurry>(2-buff.deathly_shadows.up)|master_assassin_remains>0)", "Use in 1-2T if BtE is up and won't cap Energy, or at 3T+ (2T+ with Deathly Shadows) or when Master Assassin is up." );
-    cds->add_talent( this, "Blade Rush", "if=variable.blade_flurry_sync&(energy.time_to_max>2&!buff.dreadblades.up&!debuff.flagellation.up|energy<=30|spell_targets>2)" );
-    cds->add_action( this, "Vanish", "if=runeforge.invigorating_shadowdust&covenant.venthyr&!stealthed.all&variable.ambush_condition&(!cooldown.flagellation.ready&(!talent.dreadblades|!cooldown.dreadblades.ready|!debuff.flagellation.up))", "If using Invigorating Shadowdust, use normal logic in addition to checking major CDs." );
+    cds->add_talent( this, "Killing Spree", "if=variable.blade_flurry_sync&variable.killing_spree_vanish_sync&!stealthed.rogue&(debuff.between_the_eyes.up&buff.dreadblades.down&energy.base_deficit>(energy.regen*2+15)|spell_targets.blade_flurry>(2-buff.deathly_shadows.up)|master_assassin_remains>0)", "Use in 1-2T if BtE is up and won't cap Energy, or at 3T+ (2T+ with Deathly Shadows) or when Master Assassin is up." );
+    cds->add_talent( this, "Blade Rush", "if=variable.blade_flurry_sync&(energy.base_time_to_max>2&!buff.dreadblades.up&!buff.flagellation_buff.up|energy<=30|spell_targets>2)" );
+    cds->add_action( this, "Vanish", "if=runeforge.invigorating_shadowdust&covenant.venthyr&!stealthed.all&variable.ambush_condition&(!cooldown.flagellation.ready&(!talent.dreadblades|!cooldown.dreadblades.ready|!buff.flagellation_buff.up))", "If using Invigorating Shadowdust, use normal logic in addition to checking major CDs." );
     cds->add_action( this, "Vanish", "if=runeforge.invigorating_shadowdust&!covenant.venthyr&!stealthed.all&(cooldown.echoing_reprimand.remains>6|!cooldown.sepsis.ready|cooldown.serrated_bone_spike.full_recharge_time>20)" );
 
-    cds->add_action( "shadowmeld,if=!stealthed.all&variable.ambush_condition" );
+    cds->add_action( "shadowmeld,if=!stealthed.all&(conduit.count_the_odds&variable.finish_condition|!talent.weaponmaster.enabled&variable.ambush_condition)" );
 
     // Non-spec stuff with lower prio
     cds->add_action( potion_action );
@@ -7327,9 +7341,9 @@ void rogue_t::init_action_list()
     build->add_action( "echoing_reprimand,if=!soulbind.effusive_anima_accelerator|variable.blade_flurry_sync" );
     build->add_action( "serrated_bone_spike,if=!dot.serrated_bone_spike_dot.ticking", "Apply SBS to all targets without a debuff as priority, preferring targets dying sooner after the primary target" );
     build->add_action( "serrated_bone_spike,target_if=min:target.time_to_die+(dot.serrated_bone_spike_dot.ticking*600),if=!dot.serrated_bone_spike_dot.ticking" );
-    build->add_action( "serrated_bone_spike,if=fight_remains<=5|cooldown.serrated_bone_spike.max_charges-charges_fractional<=0.25|combo_points.deficit=cp_gain&!buff.skull_and_crossbones.up&energy.time_to_max>1", "Attempt to use when it will cap combo points and SnD is down, otherwise keep from capping charges" );
+    build->add_action( "serrated_bone_spike,if=fight_remains<=5|cooldown.serrated_bone_spike.max_charges-charges_fractional<=0.25|combo_points.deficit=cp_gain&!buff.skull_and_crossbones.up&energy.base_time_to_max>1", "Attempt to use when it will cap combo points and SnD is down, otherwise keep from capping charges" );
     build->add_action( this, "Pistol Shot", "if=buff.opportunity.up&(buff.greenskins_wickers.up|buff.concealed_blunderbuss.up|buff.tornado_trigger.up)" );
-    build->add_action( this, "Pistol Shot", "if=buff.opportunity.up&(energy.deficit>energy.regen*1.5|!talent.weaponmaster&combo_points.deficit<=1+buff.broadside.up|talent.quick_draw.enabled)", "Use Pistol Shot with Opportunity if Combat Potency won't overcap energy, when it will exactly cap CP, or when using Quick Draw" );
+    build->add_action( this, "Pistol Shot", "if=buff.opportunity.up&(energy.base_deficit>energy.regen*1.5|!talent.weaponmaster&combo_points.deficit<=1+buff.broadside.up|talent.quick_draw.enabled)", "Use Pistol Shot with Opportunity if Combat Potency won't overcap energy, when it will exactly cap CP, or when using Quick Draw" );
     build->add_action( this, "Sinister Strike", "target_if=min:dot.vicious_wound.remains,if=buff.acquired_axe_driver.up", "Use Sinister Strike on targets without the Cache DoT if the trinket is up" );
     build->add_action( this, "Sinister Strike" );
   }
@@ -7369,7 +7383,7 @@ void rogue_t::init_action_list()
     cds->add_action( "flagellation,target_if=max:target.time_to_die,if=variable.snd_condition&!stealthed.mantle&(spell_targets.shuriken_storm<=1&cooldown.symbols_of_death.up&!talent.shadow_focus.enabled|buff.symbols_of_death.up)&combo_points>=5&target.time_to_die>10" );
     cds->add_action( this, "Vanish", "if=(runeforge.mark_of_the_master_assassin&combo_points.deficit<=1-talent.deeper_strategem.enabled|runeforge.deathly_shadows&combo_points<1)&buff.symbols_of_death.up&buff.shadow_dance.up&master_assassin_remains=0&buff.deathly_shadows.down" );
     cds->add_action( "pool_resource,for_next=1,if=talent.shuriken_tornado.enabled&!talent.shadow_focus.enabled", "Pool for Tornado pre-SoD with ShD ready when not running SF." );
-    cds->add_talent( this, "Shuriken Tornado", "if=spell_targets.shuriken_storm<=1&energy>=60&variable.snd_condition&cooldown.symbols_of_death.up&cooldown.shadow_dance.charges>=1&(!runeforge.obedience|debuff.flagellation.up|spell_targets.shuriken_storm>=(1+4*(!talent.nightstalker.enabled&!talent.dark_shadow.enabled)))&combo_points<=2&!buff.premeditation.up&(!covenant.venthyr|!cooldown.flagellation.up)", "Use Tornado pre SoD when we have the energy whether from pooling without SF or just generally." );
+    cds->add_talent( this, "Shuriken Tornado", "if=spell_targets.shuriken_storm<=1&energy>=60&variable.snd_condition&cooldown.symbols_of_death.up&cooldown.shadow_dance.charges>=1&(!runeforge.obedience|buff.flagellation_buff.up|spell_targets.shuriken_storm>=(1+4*(!talent.nightstalker.enabled&!talent.dark_shadow.enabled)))&combo_points<=2&!buff.premeditation.up&(!covenant.venthyr|!cooldown.flagellation.up)", "Use Tornado pre SoD when we have the energy whether from pooling without SF or just generally." );
     cds->add_action( "serrated_bone_spike,cycle_targets=1,if=variable.snd_condition&!dot.serrated_bone_spike_dot.ticking&target.time_to_die>=21&(combo_points.deficit>=(cp_gain>?4))&!buff.shuriken_tornado.up&(!buff.premeditation.up|spell_targets.shuriken_storm>4)|fight_remains<=5&spell_targets.shuriken_storm<3" );
     cds->add_action( "sepsis,if=variable.snd_condition&combo_points.deficit>=1&target.time_to_die>=16" );
     cds->add_action( this, "Symbols of Death", "if=variable.snd_condition&(!stealthed.all|buff.perforated_veins.stack<4|spell_targets.shuriken_storm>4&!variable.use_priority_rotation)&(!talent.shuriken_tornado.enabled|talent.shadow_focus.enabled|spell_targets.shuriken_storm>=2|cooldown.shuriken_tornado.remains>2)&(!covenant.venthyr|cooldown.flagellation.remains>10|cooldown.flagellation.up&combo_points>=5)", "Use Symbols on cooldown (after first SnD) unless we are going to pop Tornado and do not have Shadow Focus." );
@@ -7884,17 +7898,34 @@ std::unique_ptr<expr_t> rogue_t::create_resource_expression( util::string_view n
   resource_e r = util::parse_resource_type( splits[ 0 ] );
   if ( r == RESOURCE_ENERGY )
   {
-    // Custom Rogue Energy Regen Functions
-    // Handles things that are outside of the normal resource_regen_per_second flow
-    if ( splits.size() == 2 && ( splits[ 1 ] == "regen" || splits[ 1 ] == "regen_combined" ||
-                                 splits[ 1 ] == "time_to_max" || splits[ 1 ] == "time_to_max_combined" ) )
+    // Custom Rogue Energy Deficit
+    // Ignores temporary energy max when calculating the current deficit
+    if ( splits.size() == 2 && ( splits[ 1 ] == "base_deficit" ) )
     {
-      bool regen = ( splits[ 1 ] == "regen" || splits[ 1 ] == "regen_combined" );
-      bool combined = ( splits[ 1 ] == "regen_combined" || splits[ 1 ] == "time_to_max_combined" );
+      return make_fn_expr( name_str, [this] {
+        return std::max( resources.max[ RESOURCE_ENERGY ] -
+                         resources.current[ RESOURCE_ENERGY ] -
+                         resources.temporary[ RESOURCE_ENERGY ], 0.0 );
+      } );
+    }
+    // Custom Rogue Energy Regen Functions
+    // Optionally handles things that are outside of the normal resource_regen_per_second flow
+    if ( splits.size() == 2 && ( splits[ 1 ] == "regen" || splits[ 1 ] == "regen_combined" ||
+                                 splits[ 1 ] == "time_to_max" || splits[ 1 ] == "time_to_max_combined" || 
+                                 splits[ 1 ] == "base_time_to_max" || splits[ 1 ] == "base_time_to_max_combined" ) )
+    {
+      const bool regen = util::str_prefix_ci( splits[ 1 ], "regen" );
+      const bool combined = util::str_in_str_ci( splits[ 1 ], "_combined" );
+      const bool base_max = util::str_prefix_ci( splits[ 1 ], "base" );
 
-      return make_fn_expr( name_str, [ this, regen, combined ] {
-        const double energy_deficit = resources.max[ RESOURCE_ENERGY ] - resources.current[ RESOURCE_ENERGY ];
+      return make_fn_expr( name_str, [ this, regen, combined, base_max] {
+        double energy_deficit = resources.max[ RESOURCE_ENERGY ] - resources.current[ RESOURCE_ENERGY ];
         double energy_regen_per_second = resource_regen_per_second( RESOURCE_ENERGY );
+
+        if ( base_max )
+        {
+          energy_deficit = std::max( energy_deficit - resources.temporary[ RESOURCE_ENERGY ], 0.0 );
+        }
 
         if ( buffs.adrenaline_rush->check() )
         {
@@ -8386,7 +8417,9 @@ void rogue_t::init_procs()
   procs.serrated_bone_spike_waste             = get_proc( "Serrated Bone Spike Refund Wasted" );
   procs.serrated_bone_spike_waste_partial     = get_proc( "Serrated Bone Spike Refund Wasted (Partial)" );
 
-  procs.count_the_odds      = get_proc( "Count the Odds"               );
+  procs.count_the_odds          = get_proc( "Count the Odds"           );
+  procs.count_the_odds_wasted   = get_proc( "Count the Odds Wasted"    );
+  procs.count_the_odds_capped   = get_proc( "Count the Odds Capped" );
 
   procs.duskwalker_patch    = get_proc( "Duskwalker Patch"             );
 
@@ -9153,7 +9186,7 @@ struct restealth_callback_t
     if ( r->sim->target_non_sleeping_list.empty() )
     {
       r->restealth_allowed = true;
-      r->cancel_auto_attack();
+      r->cancel_auto_attacks();
     }
   }
 };
@@ -9194,22 +9227,22 @@ void rogue_t::break_stealth()
 
 // rogue_t::cancel_auto_attack ==============================================
 
-void rogue_t::cancel_auto_attack()
+void rogue_t::cancel_auto_attacks()
 {
   // Cancel scheduled AA events and record the swing timer to reference on restart
   if ( melee_main_hand && melee_main_hand->execute_event )
   {
     melee_main_hand->canceled = true;
     melee_main_hand->prev_scheduled_time = melee_main_hand->execute_event->occurs();
-    event_t::cancel( melee_main_hand->execute_event );
   }
 
   if ( melee_off_hand && melee_off_hand->execute_event )
   {
     melee_off_hand->canceled = true;
     melee_off_hand->prev_scheduled_time = melee_off_hand->execute_event->occurs();
-    event_t::cancel( melee_off_hand->execute_event );
   }
+
+  player_t::cancel_auto_attacks();
 }
 
 // rogue_t::swap_weapon =====================================================

@@ -1769,11 +1769,21 @@ void infernal_t::arise()
 {
   warlock_pet_t::arise();
 
-  buffs.embers->trigger();
-  immolation->trigger();
+  // 2022-06-28 Testing indicates there is a ~1.6 second delay after spawn before first melee
+  // Embers looks to trigger at around the same time as first melee swing, but Immolation takes another minimum GCD to apply (and has no zero-tick)
+  // Additionally, there is some unknown amount of movement adjustment the pet can take, so we model this with a distribution
+  timespan_t delay = timespan_t::from_seconds( rng().gauss( 1.6, 0.2, true ) );
 
-  melee_attack->set_target( target );
-  melee_attack->schedule_execute();
+  make_event( *sim, delay, [ this ] {
+    buffs.embers->trigger();
+
+    melee_attack->set_target( target );
+    melee_attack->schedule_execute();
+  } );
+
+  make_event( *sim, delay + 750_ms, [ this ] {
+    immolation->trigger();
+  } );
 }
 
 void infernal_t::demise()

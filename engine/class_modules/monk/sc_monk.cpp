@@ -4969,7 +4969,7 @@ struct revival_t : public monk_heal_t
     may_miss = false;
     aoe      = -1;
 
-    if ( sim->pvp_crit )
+    if ( sim->pvp_mode )
       base_multiplier *= 2;  // 2016-08-03
   }
 };
@@ -6372,7 +6372,7 @@ monk_t::monk_t( sim_t* sim, util::string_view name, race_e r )
   cooldown.serenity                = get_cooldown( "serenity" );
 
   // Covenants
-  cooldown.weapons_of_order = get_cooldown( "weapnos_of_order" );
+  cooldown.weapons_of_order = get_cooldown( "weapons_of_order" );
   cooldown.bonedust_brew    = get_cooldown( "bonedust_brew" );
   cooldown.faeline_stomp    = get_cooldown( "faeline_stomp" );
   cooldown.fallen_order     = get_cooldown( "fallen_order" );
