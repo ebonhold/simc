@@ -9244,7 +9244,8 @@ void death_knight_t::create_buffs()
   // Frost
   buffs.breath_of_sindragosa = new breath_of_sindragosa_buff_t( this );
 
-  buffs.cold_heart = make_buff( this, "cold_heart", talent.cold_heart -> effectN( 1 ).trigger() );
+  buffs.cold_heart = make_buff( this, "cold_heart", talent.cold_heart -> effectN( 1 ).trigger() )
+          -> set_constant_behavior( buff_constant_behavior::NEVER_CONSTANT );
 
   buffs.empower_rune_weapon = new empower_rune_weapon_buff_t( this );
 
