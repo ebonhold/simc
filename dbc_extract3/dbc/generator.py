@@ -1417,6 +1417,7 @@ class SpellDataGenerator(DataGenerator):
           ( 186254, 5 ), # Bestial Wrath
           ( 257622, 2 ), # Trick Shots buff
           ( 260395, 2 ), # Lethal Shots buff
+          ( 342076, 2 ), # Streamline buff
           ( 259516, 3 ), # Flanking Strike
           ( 267666, 3 ), # Chakrams
           ( 265888, 3 ), # Mongoose Bite (AotE version)
@@ -1635,6 +1636,7 @@ class SpellDataGenerator(DataGenerator):
           ( 336737, 0 ),                                # Runeforged Legendary: Chains of Devastation
           ( 354648, 0 ),                                # Runeforged Legendary: Splintered Elements
           ( 222251, 0 ),                                # Improved Stormbringer damage
+          ( 381725, 0 ), ( 298765, 0 ),                 # Mountains Will Fall Earth Shock and Earthquake Overload
         ),
 
         # Mage:
@@ -1885,7 +1887,8 @@ class SpellDataGenerator(DataGenerator):
           ( 210649, 2 ),       # Feral Instinct (Fangs of Ashamane artifact trait)
           ( 213557, 2 ),       # Protection of Ashamane ICD (Fangs of Ashamane artifact trait)
           ( 211547, 1 ),       # Fury of Elune move spell
-          ( 213771, 3 ),       # Swipe (Bear)
+          ( 106829, 0 ), ( 48629, 0 ), # Bear/Cat form swipe/thrash replacement
+          ( 106899, 0 ), ( 106840, 0 ), # Bear/Cat form stampeding roar replacement
           ( 209406, 1 ),       # Oneth's Intuition buff
           ( 209407, 1 ),       # Oneth's Overconfidence buff
           ( 213666, 1 ),       # Echoing Stars artifact spell
@@ -1930,6 +1933,9 @@ class SpellDataGenerator(DataGenerator):
           # Dragonflight
           ( 370602, 3 ), # Elune's Favored heal
           ( 372505, 3 ), # Ursoc's Fury absorb
+          ( 372019, 3 ), # Vicious Cycle mangle buff
+          ( 340546, 0 ), # Tireless Pursuit buff
+          ( 378989, 0 ), ( 378990, 0 ), ( 378991, 0 ), ( 378992, 0 ), # Lycara's Teachings buffs
         ),
         # Demon Hunter:
         (
@@ -4335,6 +4341,7 @@ class TraitGenerator(DataGenerator):
             fields.append(f'{entry["class_"]:2d}')
             fields += entry['entry'].field('id')
             fields += entry['entry'].field('max_ranks')
+            fields.append(f'{entry["req_points"]:2d}')
             fields += entry['definition'].field('id')
             fields += entry['spell'].field('id')
             fields += entry['definition'].field('id_override_spell')

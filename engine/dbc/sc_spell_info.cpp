@@ -232,7 +232,7 @@ struct class_map_entry_t {
   const char* name;
   player_e pt;
 };
-static constexpr std::array<class_map_entry_t, 14> _class_map { {
+static constexpr std::array<class_map_entry_t, 15> _class_map { {
   { nullptr, PLAYER_NONE },
   { "Warrior", WARRIOR },
   { "Paladin", PALADIN },
@@ -246,6 +246,7 @@ static constexpr std::array<class_map_entry_t, 14> _class_map { {
   { "Monk", MONK },
   { "Druid", DRUID },
   { "Demon Hunter", DEMON_HUNTER },
+  { "Evoker", EVOKER },
   { nullptr, PLAYER_NONE },
 } };
 
@@ -1646,6 +1647,7 @@ static std::string trait_data_to_str( const dbc_t&                            db
     nibbles.emplace_back( fmt::format( "col={}", trait->col ) );
     nibbles.emplace_back( fmt::format( "entry_id={}", trait->id_trait_node_entry ) );
     nibbles.emplace_back( fmt::format( "max_rank={}", trait->max_ranks ) );
+    nibbles.emplace_back( fmt::format( "req_points={}", trait->req_points ) );
     if ( !util::str_compare_ci( spell->name_cstr(), trait->name ) )
     {
       nibbles.emplace_back( fmt::format( "name=\"{}\"", trait->name ) );
