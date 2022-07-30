@@ -1418,6 +1418,7 @@ class SpellDataGenerator(DataGenerator):
           ( 257622, 2 ), # Trick Shots buff
           ( 260395, 2 ), # Lethal Shots buff
           ( 342076, 2 ), # Streamline buff
+          ( 191043, 2 ), # Legacy of the Windrunners
           ( 259516, 3 ), # Flanking Strike
           ( 267666, 3 ), # Chakrams
           ( 265888, 3 ), # Mongoose Bite (AotE version)
@@ -1437,6 +1438,8 @@ class SpellDataGenerator(DataGenerator):
           ( 339061, 0 ), # Empowered Release (Conduit)
           ( 363760, 1 ), # Killing Frenzy (T28 BM 4pc)
           ( 363805, 3 ), # Mad Bombardier (T28 SV 4pc)
+          ( 378016, 0 ), # Latent Poison Injectors (talent dd action)
+          ( 378885, 2 ), # Salvo (MM Bombardment talent buff)
         ),
 
         # Rogue:
