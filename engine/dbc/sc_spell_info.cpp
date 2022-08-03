@@ -195,6 +195,21 @@ std::string concatenate( Range&& data,
   return s.str();
 }
 
+std::streamsize real_ppm_decimals( const spell_data_t* spell, const rppm_modifier_t& modifier )
+{
+  std::streamsize decimals = 3;
+  double rppm_val = spell->real_ppm() * ( 1.0 + modifier.coefficient );
+  if ( rppm_val >= 10 )
+  {
+    decimals += 2;
+  }
+  else if ( rppm_val >= 1 )
+  {
+    decimals += 1;
+  }
+  return decimals;
+}
+
 struct proc_map_entry_t {
   int flag;
   util::string_view proc;
@@ -1645,9 +1660,16 @@ static std::string trait_data_to_str( const dbc_t&                            db
     nibbles.emplace_back( fmt::format( "tree={}", util::talent_tree_string( tree ) ) );
     nibbles.emplace_back( fmt::format( "row={}", trait->row ) );
     nibbles.emplace_back( fmt::format( "col={}", trait->col ) );
-    nibbles.emplace_back( fmt::format( "entry_id={}", trait->id_trait_node_entry ) );
+    // Disabled for now as tree changes results in entirely new trees making NodeEntryID an unstable identifier
+    // nibbles.emplace_back( fmt::format( "entry_id={}", trait->id_trait_node_entry ) );
     nibbles.emplace_back( fmt::format( "max_rank={}", trait->max_ranks ) );
     nibbles.emplace_back( fmt::format( "req_points={}", trait->req_points ) );
+
+    if ( trait->selection_index != -1 )
+    {
+      nibbles.emplace_back( fmt::format( "select_idx={}", trait->selection_index ) );
+    }
+
     if ( !util::str_compare_ci( spell->name_cstr(), trait->name ) )
     {
       nibbles.emplace_back( fmt::format( "name=\"{}\"", trait->name ) );
@@ -2091,52 +2113,66 @@ std::string spell_info::to_str( const dbc_t& dbc, const spell_data_t* spell, int
   if ( spell->real_ppm() != 0 )
   {
     s << "Real PPM         : " << spell->real_ppm();
-    bool has_modifiers = false;
-    auto modifiers = rppm_modifier_t::find( spell->id(), dbc.ptr );
+    auto mod_span = rppm_modifier_t::find( spell->id(), dbc.ptr );
+
+    std::vector<rppm_modifier_t> modifiers( mod_span.begin(), mod_span.end() );
+    range::sort( modifiers, []( rppm_modifier_t a, rppm_modifier_t b ) {
+      return a.modifier_type < b.modifier_type;
+    } );
+
+    std::vector<std::string> mods;
     for ( const auto& modifier : modifiers )
     {
       switch ( modifier.modifier_type )
       {
         case RPPM_MODIFIER_HASTE:
-          if ( !has_modifiers )
-          {
-            s << " (";
-          }
-          s << "Haste multiplier, ";
-          has_modifiers = true;
+          mods.emplace_back( "Haste multiplier" );
           break;
         case RPPM_MODIFIER_CRIT:
-          if ( !has_modifiers )
-          {
-            s << " (";
-          }
-          s << "Crit multiplier, ";
-          has_modifiers = true;
+          mods.emplace_back( "Crit multiplier" );
           break;
         case RPPM_MODIFIER_ILEVEL:
-          if ( !has_modifiers )
-          {
-            s << " (";
-          }
-          s << "Itemlevel multiplier [base=" << modifier.type << "], ";
-          has_modifiers = true;
+          mods.emplace_back( fmt::format( "Itemlevel multiplier [base={}, coeff={}]",
+              modifier.type, modifier.coefficient ) );
           break;
-        case RPPM_MODIFIER_SPEC:
+        case RPPM_MODIFIER_CLASS:
         {
-          if ( !has_modifiers )
+          std::vector<std::string> class_str;
+          for ( player_e p = PLAYER_NONE; p < PLAYER_MAX; ++p )
           {
-            s << " (";
+            if ( util::class_id_mask( p ) & modifier.type )
+            {
+              class_str.emplace_back( util::inverse_tokenize( util::player_type_string( p ) ) );
+            }
           }
 
-          std::streamsize decimals = 3;
-          double rppm_val = spell->real_ppm() * ( 1.0 + modifier.coefficient );
-          if ( rppm_val >= 10 )
-            decimals += 2;
-          else if ( rppm_val >= 1 )
-            decimals += 1;
-          s.precision( decimals );
-          s << util::specialization_string( static_cast<specialization_e>( modifier.type ) ) << ": " << rppm_val << ", ";
-          has_modifiers = true;
+          s.precision( real_ppm_decimals( spell, modifier ) );
+          mods.emplace_back( fmt::format( "{}: {}", util::string_join( class_str, ", "),
+            ( spell->real_ppm() * ( 1.0 + modifier.coefficient ) ) ) );
+          break;
+        }
+        case RPPM_MODIFIER_SPEC:
+        {
+          s.precision( real_ppm_decimals( spell, modifier ) );
+          mods.emplace_back( fmt::format( "{}: {}",
+                util::specialization_string( static_cast<specialization_e>( modifier.type ) ),
+                ( spell->real_ppm() * ( 1.0 + modifier.coefficient ) ) ) );
+          break;
+        }
+        case RPPM_MODIFIER_RACE:
+        {
+          std::vector<std::string> race_str;
+          for ( race_e r = RACE_NONE; r < RACE_MAX; ++r )
+          {
+            if ( util::race_mask( r ) & modifier.type )
+            {
+              race_str.emplace_back( util::inverse_tokenize( util::race_type_string( r ) ) );
+            }
+          }
+
+          s.precision( real_ppm_decimals( spell, modifier ) );
+          mods.emplace_back( fmt::format( "{}: {}", util::string_join( race_str, ", "),
+            ( spell->real_ppm() * ( 1.0 + modifier.coefficient ) ) ) );
           break;
         }
         default:
@@ -2144,10 +2180,9 @@ std::string spell_info::to_str( const dbc_t& dbc, const spell_data_t* spell, int
       }
     }
 
-    if ( has_modifiers )
+    if ( !mods.empty() )
     {
-      s.seekp( -2, std::ios_base::cur );
-      s << ")";
+      s << " (" << util::string_join( mods, ", " ) << ")";
     }
     s << std::endl;
   }
