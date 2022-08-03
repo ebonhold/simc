@@ -216,6 +216,32 @@
       { "data_type": "i", "field": "unk_5"}
     ]
   },
+  "Criteria": {
+    "fields": [
+      { "data_type": "h", "field": "type" },
+      { "data_type": "i", "field": "asset" },
+      { "data_type": "I", "field": "mofifier_tree_id" },
+      { "data_type": "B", "field": "start_event" },
+      { "data_type": "i", "field": "start_asset" },
+      { "data_type": "H", "field": "start_timer" },
+      { "data_type": "B", "field": "fail_event" },
+      { "data_type": "i", "field": "fail_asset" },
+      { "data_type": "B", "field": "flags" },
+      { "data_type": "h", "field": "eligibility_world_state_id" },
+      { "data_type": "b", "field": "id_expansion" }
+    ]
+  },
+  "CriteriaTree": {
+    "fields": [
+      { "data_type": "S", "field": "description_lang" },
+      { "data_type": "I", "field": "parent" },
+      { "data_type": "I", "field": "amount" },
+      { "data_type": "b", "field": "operator" },
+      { "data_type": "I", "field": "criteria_id" },
+      { "data_type": "i", "field": "order_index" },
+      { "data_type": "i", "field": "flags" }
+    ]
+  },
   "CurrencyCategory": {
     "fields": [
       { "data_type": "S", "field": "name" },
