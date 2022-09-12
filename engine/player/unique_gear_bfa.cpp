@@ -155,6 +155,7 @@ void remote_guidance_device( special_effect_t& );
 void gladiators_maledict( special_effect_t& );
 void getiikku_cut_of_death( special_effect_t& );
 void bilestained_crawg_tusks( special_effect_t& );
+void wraps_of_electrostatic_potential( special_effect_t& );
 // 8.2.0 - Rise of Azshara Punchcards
 void yellow_punchcard( special_effect_t& );
 void subroutine_overclock( special_effect_t& );
@@ -4457,6 +4458,8 @@ void items::dribbling_inkpod( special_effect_t& effect )
 void items::reclaimed_shock_coil( special_effect_t& effect )
 {
   effect.proc_flags2_ = PF2_CRIT;
+  // damage spell coefficient is overriden by driver coefficient
+  effect.discharge_amount = effect.driver()->effectN( 1 ).average( effect.item );
 
   new dbc_proc_callback_t( effect.player, effect );
 }
@@ -4707,6 +4710,13 @@ void items::bilestained_crawg_tusks( special_effect_t& effect )
   effect.execute_action = new vile_bile_t( effect );
 
   new dbc_proc_callback_t( effect.player, effect );
+}
+
+void items::wraps_of_electrostatic_potential( special_effect_t& effect )
+{
+  effect.execute_action = create_proc_action<proc_spell_t>( "electrostatic_induction", effect );
+  effect.cooldown_group_name_override = "item_cd_1141_gcd";
+  effect.cooldown_group_duration_override = effect.driver()->gcd();
 }
 
 // Punchcard stuff ========================================================
@@ -5384,14 +5394,19 @@ void items::shorting_bit_band( special_effect_t& effect )
 
     void execute() override
     {
-      auto numTargets = targets_in_range_list( target_list() ).size();
-      if ( numTargets !=
-           0 )  // We only do anything if target in range; we just eat the proc and do nothing if no targets <=8y
+      const auto& targets = targets_in_range_list( target_list() );
+      if ( targets.size() != 0 ) // Skip action_t::execute if no targets are in range.
       {
-        size_t index = rng().range( numTargets );
-        set_target( targets_in_range_list( target_list() )[ index ] );
+        size_t index = rng().range( targets.size() );
+        set_target( targets[ index ] );
 
         generic_proc_t::execute();
+      }
+      else if ( pre_execute_state )
+      {
+        // If action_t::execute is not called, we need to manually release this state.
+        action_state_t::release( pre_execute_state );
+        pre_execute_state = nullptr;
       }
     }
   };
@@ -5497,14 +5512,69 @@ void items::hyperthread_wristwraps( special_effect_t& effect )
 
       for ( auto a : tracker->last_used )
       {
-        sim->print_debug( "Reducing cooldown of action {} by {} s.", a->name_str, reduction.total_seconds() );
-        a->cooldown->adjust( -reduction );
+        timespan_t adjusted_reduction = reduction / a->recharge_rate_multiplier( *a->cooldown );
+        sim->print_debug( "Reducing cooldown of action {} by {} s.", a->name_str, adjusted_reduction.total_seconds() );
+        a->cooldown->adjust( -adjusted_reduction );
       }
+    }
+
+    // returns the number of occurrences of an action in the recently used spells of the tracker
+    unsigned tracked_count( action_t* a )
+    {
+      unsigned count = 0;
+      for ( auto tracked_action : tracker->last_used )
+      {
+        if ( tracked_action->id == a->id )
+        {
+          count++;
+        }
+      }
+      return count;
+    }
+
+    // returns the number of spells required to push the oldest occurrence of an action out of the tracker
+    unsigned tracked_first_remains( action_t* a )
+    {
+      for ( unsigned i = 0; i < tracker->last_used.size(); i++ )
+      {
+        if ( tracker->last_used[ i ]->id == a->id )
+        {
+          return i + 1;
+        }
+      }
+      return 0;
+    }
+
+    // This is somewhat of a misuse of action_t::create_expression, but for an item that
+    // is probably going away in a few months it is not worth significantly restructuring
+    // things to make spell_tracker_cb_t and hyperthread_reduction_t accessible elsewhere.
+    std::unique_ptr<expr_t> create_expression( std::string_view name_str ) override
+    {
+      auto splits = ::util::string_split<std::string_view>( name_str, "." );
+
+      if ( splits[ 0 ] == "hyperthread_wristwraps" )
+      {
+        if ( action_t* a = player->find_action( splits[ 1 ] ) )
+        {
+          if ( splits.size() == 2 || splits.size() == 3 && splits[ 2 ] == "count" )
+          {
+            return make_fn_expr( name_str, [ this, a ] { return tracked_count( a ); } );
+          }
+          else if ( splits.size() == 3 && splits[ 2 ] == "first_remains" )
+          {
+            return make_fn_expr( name_str, [ this, a ] { return tracked_first_remains( a ); } );
+          }
+        }
+      }
+
+      return proc_spell_t::create_expression( name_str );
     }
   };
 
   auto cb = new spell_tracker_cb_t( *spell_tracker, as<size_t>( effect.driver()->effectN( 1 ).base_value() ) );
   effect.execute_action = create_proc_action<hyperthread_reduction_t>( "hyperthread_wristwraps", effect, cb );
+  effect.cooldown_group_name_override = "item_cd_1141_gcd";
+  effect.cooldown_group_duration_override = effect.driver()->gcd();
 }
 
 // Anodized Deflectors
@@ -5534,6 +5604,8 @@ void items::anodized_deflectors( special_effect_t& effect )
   }
 
   effect.custom_buff = anodized_deflectors_buff;
+  effect.cooldown_group_name_override = "item_cd_1141_gcd";
+  effect.cooldown_group_duration_override = effect.driver()->gcd();
 }
 
 // Shared Callback for all Titan trinkets
@@ -6047,6 +6119,7 @@ void unique_gear::register_special_effects_bfa()
   register_special_effect( 305252, items::gladiators_maledict );
   register_special_effect( 281712, items::getiikku_cut_of_death );
   register_special_effect( 281720, items::bilestained_crawg_tusks );
+  register_special_effect( 300145, items::wraps_of_electrostatic_potential );
   // 8.2 Mechagon combo rings
   register_special_effect( 300124, items::logic_loop_of_division );
   register_special_effect( 300125, items::logic_loop_of_recursion );

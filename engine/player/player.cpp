@@ -2005,7 +2005,7 @@ void player_t::create_special_effects()
     }
   }
 
-  if ( sim->fight_style == "DungeonRoute" )
+  if ( sim->fight_style == FIGHT_STYLE_DUNGEON_ROUTE )
   {
     special_effect_t effect( this );
 
@@ -3493,6 +3493,26 @@ void player_t::create_buffs()
       buffs.decrypted_vy_cypher = make_buff<stat_buff_t>( this, "decrypted_vy_cypher", find_spell( 368240 ) )
           ->set_default_value_from_effect( 1 )
           ->set_pct_buff_type( STAT_PCT_BUFF_HASTE );
+
+      // 9.2.5 M+ S4 Shrouded Affix Buffs
+      buffs.bounty_crit = make_buff( this, "bounty_crit", find_spell( 373108 ) )
+        ->set_constant_behavior( buff_constant_behavior::NEVER_CONSTANT )
+        ->set_default_value_from_effect_type( A_MOD_ALL_CRIT_CHANCE )
+        ->set_pct_buff_type( STAT_PCT_BUFF_CRIT )
+        ->set_period( 0_ms );
+      buffs.bounty_haste = make_buff( this, "bounty_haste", find_spell( 373113 ) )
+        ->set_constant_behavior( buff_constant_behavior::NEVER_CONSTANT )
+        ->set_default_value_from_effect_type( A_HASTE_ALL )
+        ->set_pct_buff_type( STAT_PCT_BUFF_HASTE )
+        ->set_period( 0_ms );
+      buffs.bounty_mastery = make_buff<stat_buff_t>( this, "bounty_mastery", find_spell( 373116 ) )
+        ->set_constant_behavior( buff_constant_behavior::NEVER_CONSTANT )
+        ->set_period( 0_ms );
+      buffs.bounty_vers = make_buff( this, "bounty_vers", find_spell( 373121 ) )
+        ->set_constant_behavior( buff_constant_behavior::NEVER_CONSTANT )
+        ->set_default_value_from_effect_type( A_MOD_VERSATILITY_PCT )
+        ->set_pct_buff_type( STAT_PCT_BUFF_VERSATILITY )
+        ->set_period( 0_ms );
     }
   }
   // .. for enemies
@@ -3731,7 +3751,28 @@ double player_t::composite_melee_attack_power_by_type( attack_power_type type ) 
       break;
   }
 
-  return ap;
+  // 2022-08-25 -- Recent logs have shown that player->auto_attack_modifier now works as a general AP modifier
+  //               This is normalized to AP based on weapon speed in a similar way as base weapon DPS above
+  double aa_bonus_ap = 0;
+  if ( auto_attack_modifier > 0 )
+  {
+    if ( type == attack_power_type::WEAPON_MAINHAND )
+    {
+      aa_bonus_ap = auto_attack_modifier / main_hand_weapon.swing_time.total_seconds();
+    }
+    else if ( type == attack_power_type::WEAPON_OFFHAND )
+    {
+      aa_bonus_ap = auto_attack_modifier / off_hand_weapon.swing_time.total_seconds();
+    }
+    else if ( type == attack_power_type::WEAPON_BOTH )
+    {
+      aa_bonus_ap = ( auto_attack_modifier / main_hand_weapon.swing_time.total_seconds()
+              + auto_attack_modifier / off_hand_weapon.swing_time.total_seconds() * 0.5 ) * ( 2.0 / 3.0 );
+    }
+    aa_bonus_ap *= WEAPON_POWER_COEFFICIENT;
+  }
+
+  return ap + aa_bonus_ap;
 }
 
 double player_t::composite_attack_power_multiplier() const
@@ -10936,7 +10977,7 @@ std::unique_ptr<expr_t> player_t::create_expression( util::string_view expressio
     return covenant->create_expression( splits );
   }
 
-  if ( splits[ 0 ] == "rune_word" )
+  if ( splits[ 0 ] == "rune_word" || splits[ 0 ] == "hyperthread_wristwraps" )
   {
     return unique_gear::create_expression( *this, expression_str );
   }

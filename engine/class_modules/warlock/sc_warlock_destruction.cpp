@@ -133,7 +133,8 @@ struct internal_combustion_t : public destruction_spell_t
     double total_damage = ticks_left * tick_base_damage;
 
     action_state_t::release( state );
-    this->base_dd_min = this->base_dd_max = total_damage;
+    double ce_coeff = 1.0 + td->debuffs_combusting_engine->check_stack_value();
+    this->base_dd_min = this->base_dd_max = total_damage/ce_coeff; // 2022-08-15: Combusting Engine appears to not be included in Internal Combustion calculations, so we must approximate by factoring it back out
 
     destruction_spell_t::execute();
     td->dots_immolate->adjust_duration( -remaining );
@@ -742,11 +743,6 @@ struct chaos_bolt_t : public destruction_spell_t
             p()->warlock_pet_list.blasphemy.spawn( duration + 1000_ms, 1U ); // 2022-06-29 Animation has 2 second pad at end of lifetime, but safety window for actions is smaller. TOCHECK
           }
 
-          if ( p()->talents.rain_of_chaos->ok() )
-          {
-            p()->buffs.rain_of_chaos->extend_duration_or_trigger( duration );
-          }
-
           // TOFIX: As of 2022-02-03 PTR, Blasphemy appears to trigger Infernal Awakening on spawn, and Blasphemous Existence if already out
           // This will require first fixing Infernal Awakening to properly be on Infernal pet
           p()->warlock_pet_list.blasphemy.active_pet()->blasphemous_existence->execute();
@@ -927,11 +923,6 @@ struct rain_of_fire_t : public destruction_spell_t
           else
           {
             p()->warlock_pet_list.blasphemy.spawn( duration + 1000_ms, 1U ); // 2022-06-29 Animation has 2 second pad at end of lifetime, but safety window for actions is smaller. TOCHECK
-          }
-
-          if ( p()->talents.rain_of_chaos->ok() )
-          {
-            p()->buffs.rain_of_chaos->extend_duration_or_trigger( duration );
           }
 
           // TOFIX: As of 2022-02-03 PTR, Blasphemy appears to trigger Infernal Awakening on spawn, and Blasphemous Existence if already out

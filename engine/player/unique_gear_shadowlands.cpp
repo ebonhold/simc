@@ -2052,7 +2052,7 @@ void soul_cage_fragment( special_effect_t& effect )
   auto buff = debug_cast<stat_buff_t*>( buff_t::find( effect.player, "torturous_might" ) );
   if ( !buff )
   {
-    buff = make_buff<stat_buff_t>( effect.player, "torturous_might", effect.player->find_spell( 357672 ) )
+    buff = make_buff<stat_buff_t>( effect.player, "torturous_might", effect.driver()->effectN( 1 ).trigger() )
            ->add_stat( effect.player->convert_hybrid_stat( STAT_STR_AGI_INT ), effect.driver()->effectN( 1 ).average( effect.item ) );
 
     effect.custom_buff = buff;
@@ -2163,6 +2163,53 @@ void old_warriors_soul( special_effect_t& effect )
                             [ buff ]() { buff->trigger(); } );
     } );
   }
+}
+	
+/**Whispering Shard of Power
+ * id=357185 Stat buffs
+ * id=355319 periodic roll for proc & coefficients for stat amounts & Driver
+ */
+void whispering_shard_of_power( special_effect_t& effect )
+{
+  if ( unique_gear::create_fallback_buffs(
+     effect, { "strength_in_fealty_crit_rating", "strength_in_fealty_mastery_rating", "strength_in_fealty_haste_rating",
+                  "strength_in_fealty_versatility_rating" } ) )
+  return;
+  // When selecting the highest stat, the priority of equal secondary stats is Vers > Mastery > Haste > Crit.
+  static constexpr std::array<stat_e, 4> ratings = { STAT_VERSATILITY_RATING, STAT_MASTERY_RATING, STAT_HASTE_RATING,
+                                                     STAT_CRIT_RATING };
+
+  // Use a separate buff for each rating type so that individual uptimes are reported nicely and APLs can easily
+  // reference them. Store these in pointers to reduce the size of the events that use them.
+  auto fealty_buffs = std::make_shared<std::map<stat_e, buff_t*>>();
+  double amount     = effect.driver()->effectN( 1 ).average( effect.item );
+
+  for ( auto stat : ratings )
+  {
+    auto name    = std::string( "strength_in_fealty_" ) + util::stat_type_string( stat );
+    buff_t* buff = buff_t::find( effect.player, name );
+
+    if ( !buff )
+    {
+      buff = make_buff<stat_buff_t>( effect.player, name, effect.player->find_spell( 357185 ), effect.item )
+                 ->add_stat( stat, amount );
+    }
+    ( *fealty_buffs )[ stat ] = buff;
+  }
+
+  effect.player->register_combat_begin( [ &effect, fealty_buffs ]( player_t* ) {
+    timespan_t period = effect.player->find_spell( 355319 )->effectN( 1 ).period();
+    // Proc chance appears to be 5% per roll based on testing and logs. 21-8-2022 
+    double chance     = 0.05;
+
+    make_repeating_event( effect.player->sim, period, [ &effect, chance, fealty_buffs ]() {
+      if ( effect.player->rng().roll( chance ) )
+      {
+        stat_e max_stat = util::highest_stat( effect.player, ratings );
+        ( *fealty_buffs )[ max_stat ]->trigger();
+      }
+    } );
+  } );
 }
 
 void salvaged_fusion_amplifier( special_effect_t& effect)
@@ -3227,6 +3274,8 @@ void architects_ingenuity_core( special_effect_t& effect )
   };
 
   effect.execute_action = create_proc_action<architects_ingenuity_t>( "architects_ingenuity", effect );
+  effect.cooldown_group_name_override = "item_cd_1141_gcd";
+  effect.cooldown_group_duration_override = effect.driver()->gcd();
 }
 
 // TODO: extremely annoying to do as none of these things show up on the combat log
@@ -3605,6 +3654,8 @@ void grim_eclipse( special_effect_t& effect )
       // Use data().duration() here so that if you alter dot_duration the tick value is not changed
       tick_action->base_dd_min = tick_action->base_dd_max =
           e.driver()->effectN( 1 ).average( e.item ) / data().duration().total_seconds();
+      // damage effect has a radius so we need to override being auto-parsed as an aoe spell
+      tick_action->aoe = 0;
 
       buff->add_stat( STAT_HASTE_RATING, e.driver()->effectN( 2 ).average( e.item ) );
       base_duration = buff->buff_duration();
@@ -3792,7 +3843,8 @@ void cache_of_acquired_treasures( special_effect_t& effect )
       cycle_period = effect.player->find_spell( 367804 )->effectN( 1 ).period();
 
       auto cycle_weapon = [ this ]( int cycles ) {
-        if ( cooldown->up() )
+        // As of 9.2.5 the Sword buff is triggered in the cycle prior coming off cooldown, rather than after
+        if ( cooldown->remains() < cycle_period )
         {
           weapons.front()->expire();
           std::rotate( weapons.begin(), weapons.begin() + cycles, weapons.end() );
@@ -4283,6 +4335,60 @@ void yasahm_the_riftbreaker( special_effect_t& effect )
 // TODO: Add proc restrictions to match the weapons or expansion options.
 void cruciform_veinripper(special_effect_t& effect)
 {
+  struct cruciform_veinripper_cb_t : public dbc_proc_callback_t
+  {
+    double proc_modifier_override;
+    double proc_modifier_in_front_override;
+
+    cruciform_veinripper_cb_t( const special_effect_t& effect ) : dbc_proc_callback_t( effect.player, effect ),
+      proc_modifier_override( effect.player->sim->shadowlands_opts.cruciform_veinripper_proc_rate ),
+      proc_modifier_in_front_override( effect.player->sim->shadowlands_opts.cruciform_veinripper_in_front_rate )
+    {
+    }
+
+    void trigger( action_t* a, action_state_t* s ) override
+    {
+      assert( rppm );
+      assert( s->target );
+      
+      double proc_modifier = 1.0;
+      if ( proc_modifier_override > 0.0 )
+      {
+        proc_modifier = proc_modifier_override;
+      }
+      else if( s->target->is_boss() )
+      {
+        // CC'd/Snared mobs appear to take the full proc rate, which does not work on bosses
+        // The "from behind" rate is roughly half the CC'd target rate in the spell data
+        proc_modifier = 0.5;
+        if ( a->player->position() == POSITION_FRONT )
+        {
+          if ( proc_modifier_in_front_override > 0.0 )
+          {
+            proc_modifier *= proc_modifier_in_front_override;
+          }
+          else
+          {
+            // Generalize default tank "behind boss" time as ~40% when no manual modifier is specified
+            // This does not proc from the front at all, but tanks are always position front for sims
+            //
+            // When the role is not tank, this is explicitly set to 0 to allow DPS to model bosses where
+            // they can't hit from behind.
+            proc_modifier *= a->player->primary_role() == ROLE_TANK ? 0.4 : 0.0;
+          }
+        }
+      }
+
+      if ( proc_modifier != rppm->get_modifier() )
+      {
+        effect.player->sim->print_debug( "Player {} (position: {}, role: {}) adjusts {} rppm modifer: old={} new={}",
+                                         *a->player, a->player->position(), a->player->primary_role(), effect, rppm->get_modifier(), proc_modifier);
+        rppm->set_modifier( proc_modifier );
+      }
+
+      dbc_proc_callback_t::trigger( a, s );
+    }
+  };
 
   struct sadistic_glee_t : public proc_spell_t
   {
@@ -4306,24 +4412,36 @@ void cruciform_veinripper(special_effect_t& effect)
   if (!sadistic_glee)
     effect.execute_action = create_proc_action<sadistic_glee_t>("sadistic_glee", effect);
   else
-    sadistic_glee->scaled_dmg += effect.driver()->effectN(1).average(effect.item);
+    sadistic_glee->scaled_dmg += effect.driver()->effectN( 1 ).average( effect.item );
 
-  effect.spell_id = 357588;
-  /* apparently due to proc rate being lower than reported in spell data (?) - emallson */
-  effect.rppm_modifier_ = 0.5;
+  effect.spell_id = effect.driver()->effectN( 1 ).trigger_spell_id();
 
-
-  /* override proc rate for tanks (40% of regular proc rate unless option is
-     set), and allow override via expansion option */
-  auto proc_option = effect.player->sim->shadowlands_opts.cruciform_veinripper_proc_rate;
-  if (proc_option == 0.0 && effect.player->position() == POSITION_FRONT) {
-    effect.rppm_modifier_ *= 0.4;
-  } else if(proc_option > 0.0) {
-    effect.rppm_modifier_ *= proc_option;
-  }
-
-  new dbc_proc_callback_t(effect.player, effect);
+  new cruciform_veinripper_cb_t( effect );
 }
+	
+void jotungeirr_destinys_call(special_effect_t& effect)
+{
+    for (auto a : effect.player->action_list)
+    {
+        if (a->action_list && a->action_list->name_str == "precombat" && a->name_str == "use_item_" + effect.item->name_str)
+        {
+            a->harmful = false;  // pass down harmful to allow action_t::init() precombat check bypass
+            break;
+        }
+    }
+
+    effect.player->register_combat_begin([effect](player_t*) {
+        auto precombat_seconds = effect.player->sim->shadowlands_opts.jotungeirr_prepull_seconds;
+        if (precombat_seconds > 0_s)
+        {
+            auto buff = static_cast<stat_buff_t*>(buff_t::find(effect.player, "burden_of_divinity"));
+            buff->extend_duration(effect.player, -1 * precombat_seconds);
+            effect.player->get_cooldown("item_cd_1141")->adjust(-1 * precombat_seconds, false);
+        }
+    });
+
+}
+	
 
 struct singularity_supreme_t : public stat_buff_t
 {
@@ -4774,6 +4892,8 @@ void gavel_of_the_first_arbiter( special_effect_t& effect )
 
   effect.type           = SPECIAL_EFFECT_USE;
   effect.execute_action = create_proc_action<twisted_judgment_t>( "twisted_judgment", effect );
+  effect.cooldown_group_name_override = "item_cd_1141_gcd";
+  effect.cooldown_group_duration_override = effect.driver()->gcd();
 }
 
 // Armor
@@ -4912,8 +5032,8 @@ void soulwarped_seal_of_menethil( special_effect_t& effect )
       assert( rppm );
       assert( s->target );
 
-      // Below 70% HP, proc rate appears to be 2rppm
-      double mod = 0.150;
+      // Below 70% HP, proc rate appears to be 4rppm
+      double mod = 0.2;
 	  
       // Above 70% HP, proc rate appears to be the full 20rppm.
       if ( s -> target -> health_percentage() >= 70 )
@@ -6164,6 +6284,7 @@ void register_special_effects()
     unique_gear::register_special_effect( 355323, items::decanter_of_endless_howling );
     unique_gear::register_special_effect( 355324, items::tormentors_rack_fragment );
     unique_gear::register_special_effect( 355297, items::old_warriors_soul );
+    unique_gear::register_special_effect( 355319, items::whispering_shard_of_power, true );
     unique_gear::register_special_effect( 355333, items::salvaged_fusion_amplifier );
     unique_gear::register_special_effect( 355313, items::titanic_ocular_gland );
     unique_gear::register_special_effect( 355327, items::ebonsoul_vise );
@@ -6206,7 +6327,8 @@ void register_special_effects()
     unique_gear::register_special_effect( 358571, items::jaithys_the_prison_blade_5 );
     unique_gear::register_special_effect( 351527, items::yasahm_the_riftbreaker );
     unique_gear::register_special_effect( 359168, items::cruciform_veinripper );
-
+    unique_gear::register_special_effect(357773, items::jotungeirr_destinys_call);
+	
     // 9.2 Weapons
     unique_gear::register_special_effect( 367952, items::singularity_supreme, true );
     unique_gear::register_special_effect( 367953, items::gavel_of_the_first_arbiter );

@@ -4,6 +4,7 @@
 #   Available build-arg:
 #     - THREADS=[int] Default 1, provide a value for -j
 #     - APIKEY=[str] Default '' (empty) SC_DEFAULT_APIKEY used for authentication with blizzard api (armory)
+#     - PTR_DATA=[int] Default 1, enable the PTR data removing script, to smaller images
 ##
 #   Example usage:
 #   - creating the image (note the dot!)
@@ -26,6 +27,7 @@ FROM alpine:latest AS build
 
 ARG THREADS=1
 ARG APIKEY=''
+ARG PTR_DATA=1
 
 COPY . /app/SimulationCraft/
 
@@ -56,7 +58,8 @@ RUN make -C /app/SimulationCraft/engine clean && make -C /app/SimulationCraft/en
 RUN apk del build_dependencies
 
 # disable ptr to reduce build size
-# sed -i '' -e 's/#define SC_USE_PTR 1/#define SC_USE_PTR 0/g' engine/dbc.hpp
+# if PTR_DATA is equal to 1, it leaves the files in the build.
+RUN sh -c "if [ $PTR_DATA -ne 1 ]; then sed -i '' -e 's/#define SC_USE_PTR 1/#define SC_USE_PTR 0/g' engine/dbc.hpp; fi;"
 
 # fresh image to reduce size
 FROM alpine:latest

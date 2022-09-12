@@ -2001,7 +2001,8 @@ struct shaman_spell_t : public shaman_spell_base_t<spell_t>
     base_t::execute();
 
     // BfA Elemental talent - Master of the Elements
-    if ( affected_by_master_of_the_elements && !background )
+    if ( affected_by_master_of_the_elements && !background &&
+         p()->buff.master_of_the_elements->check() )
     {
       p()->buff.master_of_the_elements->decrement();
       proc_moe->occur();
@@ -2968,6 +2969,14 @@ struct windfury_attack_t : public shaman_attack_t
     if ( p()->buff.doom_winds_buff->check() )
     {
       m *= 1.0 + p()->buff.doom_winds_buff->data().effectN( 3 ).percent();
+    }
+
+    if ( p()->buff.crackling_surge->up() )
+    {
+      for ( int x = 1; x <= p()->buff.crackling_surge->check(); x++ )
+      {
+        m *= 1.0 + p()->buff.crackling_surge->value();
+      }
     }
 
     return m;
@@ -6969,6 +6978,11 @@ struct totem_pulse_action_t : public T
 
     this->crit_bonus_multiplier *= 1.0 + totem->o()->spec.elemental_fury->effectN( 1 ).percent();
 
+    if ( this->data().affected_by( totem->o()->spec.elemental_shaman->effectN( 1 ) ) )
+    {
+      this->base_dd_multiplier *= 1.0 + totem->o()->spec.elemental_shaman->effectN( 1 ).percent();
+    }
+
     if ( this->type == ACTION_HEAL )
     {
       this->harmful = false;
@@ -7104,6 +7118,11 @@ struct liquid_magma_globule_t : public spell_t
     if ( p->o()->spec.elemental_fury->ok() )
     {
       crit_bonus_multiplier *= 1.0 + p->o()->spec.elemental_fury->effectN( 1 ).percent();
+    }
+
+    if ( data().affected_by( p->o()->spec.elemental_shaman->effectN( 1 ) ) )
+    {
+      base_dd_multiplier *= 1.0 + p->o()->spec.elemental_shaman->effectN( 1 ).percent();
     }
   }
 };
@@ -10005,7 +10024,7 @@ void shaman_t::init_action_list_elemental()
         "60&spell_targets.chain_lightning>=2&(!runeforge.echoes_of_great_sundering.equipped|buff.echoes_of_great_"
         "sundering.up)" );
     se_single_target->add_action( this, "Lava Burst",
-                                  "if=(buff.wind_gust.stack<18&!buff.bloodlust.up)|buff.lava_surge.up" );
+                                  "if=buff.lava_surge.up" );
     se_single_target->add_action( this, "Lava Burst,target_if=dot.flame_shock.remains",
                                   "if=buff.lava_surge.up&buff.primordial_wave.up" );
     se_single_target->add_action(
@@ -10022,7 +10041,6 @@ void shaman_t::init_action_list_elemental()
                                   "if=(spell_targets.chain_lightning>1)&(!dot.flame_shock.refreshable)" );
     se_single_target->add_action( this, "Chain Lightning",
                                   "if=active_enemies>1&pet.storm_elemental.active&buff.bloodlust.up" );
-    se_single_target->add_action( this, "Lightning Bolt", "if=pet.storm_elemental.active&buff.bloodlust.up" );
     se_single_target->add_action( this, "Lava Burst", "if=buff.ascendance.up" );
     se_single_target->add_action( this, "Lava Burst", "if=cooldown_react" );
     se_single_target->add_action( this, "Icefury",
@@ -10030,6 +10048,7 @@ void shaman_t::init_action_list_elemental()
     se_single_target->add_action( this, "Lava Burst", "if=cooldown_react&charges>talent.echo_of_the_elements.enabled" );
     se_single_target->add_action( this, "Frost Shock", "if=talent.icefury.enabled&buff.icefury.up" );
     se_single_target->add_action( "chain_harvest" );
+    se_single_target->add_action( this, "Lightning Bolt", "if=pet.storm_elemental.active&buff.bloodlust.up" );
     se_single_target->add_action( "fleshcraft,if=soulbind.volatile_solvent&!buff.volatile_solvent_humanoid.up,interrupt_immediate=1,interrupt_global=1,interrupt_if=soulbind.volatile_solvent" );
     se_single_target->add_talent( this, "Static Discharge", "if=talent.static_discharge.enabled" );
     se_single_target->add_action(
@@ -10292,7 +10311,6 @@ void shaman_t::init_action_list_restoration_dps()
   def->add_action( this, "Wind Shear", "", "Interrupt of casts." );
   def->add_action( "potion" );
   def->add_action( "use_items" );
-  def->add_action( this, "Flame Shock", "if=!ticking" );
   def->add_action( this, "Earth Elemental" );
 
   // Racials
@@ -10306,11 +10324,12 @@ void shaman_t::init_action_list_restoration_dps()
   def->add_action( "chain_harvest,if=covenant.venthyr" );
   def->add_action( "vesper_totem,if=covenant.kyrian" );
 
+  def->add_action( this, "Chain Lightning", "if=spell_targets.chain_lightning>2" );
+  def->add_action( this, "Flame Shock", "if=!ticking" );
   def->add_action( this, "Lava Burst", "if=dot.flame_shock.remains>cast_time&cooldown_react" );
   def->add_action( "fae_transfusion,if=covenant.night_fae" );
   def->add_action( "primordial_wave,if=covenant.necrolord" );
   def->add_action( this, "Lightning Bolt", "if=spell_targets.chain_lightning<3" );
-  def->add_action( this, "Chain Lightning", "if=spell_targets.chain_lightning>2" );
   def->add_action( this, "Flame Shock", "moving=1" );
   def->add_action( this, "Frost Shock", "moving=1" );
 }
