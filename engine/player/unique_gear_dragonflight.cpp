@@ -2028,7 +2028,7 @@ void decoration_of_flame( special_effect_t& effect )
 // 396434 ??? 
 void manic_grieftorch( special_effect_t& effect )
 {
-    struct manic_grieftorch_damage_t : public proc_spell_t
+  struct manic_grieftorch_damage_t : public proc_spell_t
   {
     manic_grieftorch_damage_t( const special_effect_t& e ) :
       proc_spell_t( "manic_grieftorch", e.player, e.player->find_spell( 382135 ), e.item )
@@ -2044,6 +2044,7 @@ void manic_grieftorch( special_effect_t& effect )
         proc_spell_t("manic_grieftorch_missile", e.player, e.player->find_spell(382136), e.item)
     {
       background = true;
+      cooldown -> duration = 0_ms;
       aoe = -1;
       radius = e.player -> find_spell( 382256 ) -> effectN( 1 ).radius();
       impact_action = create_proc_action<manic_grieftorch_damage_t>( "manic_grieftorch", e );
@@ -2089,6 +2090,20 @@ void manic_grieftorch( special_effect_t& effect )
 
       if ( was_channeling && !player->readying )
         player->schedule_ready( rng().gauss( sim->channel_lag, sim->channel_lag_stddev ) );
+    }
+
+    void execute() override
+    {
+      proc_spell_t::execute();
+      if ( sim -> dragonflight_opts.manic_grieftorch_deaths == true )
+      {
+        double min_cd = 30;
+        double interval = sim -> dragonflight_opts.manic_grieftorch_cooldown;
+        double interval_stddev = 0.05;
+        timespan_t new_cd = timespan_t::from_seconds( std::max( min_cd, rng().gauss( interval, interval_stddev ) ) );
+
+        cooldown -> duration = new_cd;
+      }
     }
   };
 

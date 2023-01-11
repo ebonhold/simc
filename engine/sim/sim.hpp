@@ -497,6 +497,10 @@ struct sim_t : private sc_thread_t
     timespan_t hood_of_surging_time_period = 5_s;
     // Hood of Surging Time stacks to grant when the period is set
     unsigned int hood_of_surging_time_stacks = 1;
+    // Manic Grieftorch Deaths Enable
+    bool manic_grieftorch_deaths = false;
+    // Manic Grieftorch Cooldown Average
+    unsigned int manic_grieftorch_cooldown = 120;
   } dragonflight_opts;
 
   // Auras and De-Buffs

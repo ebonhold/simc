@@ -10044,7 +10044,7 @@ void death_knight_t::assess_damage_imminent( school_e school, result_amount_type
         antimagic_zone -> add_result( damage_absorbed, damage_absorbed, result_amount_type::ABSORB, RESULT_HIT, BLOCK_RESULT_UNBLOCKED, this );
 
       // Generates 1 RP for every 1% of the shield
-      if (talent.assimilation)
+      if ( talent.assimilation -> ok() )
       {
         double absorb_pct = resources.max[ RESOURCE_HEALTH ] * 1.5 * ( 1 + talent.assimilation -> effectN( 1 ).percent() ) * ( 1 + cache.heal_versatility() );
         // Assimilation can generate no more than 100 runic power 
