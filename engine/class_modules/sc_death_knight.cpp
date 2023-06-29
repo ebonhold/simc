@@ -1065,6 +1065,14 @@ public:
     real_ppm_t* runic_attenuation;
   } rppm;
 
+  struct pet_summon_action_t
+  {
+    action_t* summon_gargoyle;
+    action_t* army_of_the_dead;
+    action_t* apocalypse;
+    action_t* raise_dead;
+  } pet_summon_action;
+
   // Pets and Guardians
   struct pets_t
   {
@@ -1077,13 +1085,15 @@ public:
     spawner::pet_spawner_t<pets::army_ghoul_pet_t, death_knight_t> army_ghouls;
     spawner::pet_spawner_t<pets::army_ghoul_pet_t, death_knight_t> apoc_ghouls;
     spawner::pet_spawner_t<pets::bloodworm_pet_t, death_knight_t> bloodworms;
-    spawner::pet_spawner_t<pets::magus_pet_t, death_knight_t> magus_of_the_dead;
+    spawner::pet_spawner_t<pets::magus_pet_t, death_knight_t> army_magus;
+    spawner::pet_spawner_t<pets::magus_pet_t, death_knight_t> apoc_magus;
 
     pets_t(death_knight_t* p) :
         army_ghouls("army_ghoul", p),
         apoc_ghouls("apoc_ghoul", p),
         bloodworms("bloodworm", p),
-        magus_of_the_dead("magus_of_the_dead", p)
+        army_magus("army_magus", p),
+        apoc_magus("apoc_magus", p)
 
     {}
   } pets;
@@ -1780,15 +1790,29 @@ struct death_knight_pet_t : public pet_t
 {
   bool use_auto_attack, precombat_spawn, affected_by_commander_of_the_dead, guardian;
   timespan_t precombat_spawn_adjust;
+  action_t* proxy_action;
+  util::string_view n;
 
   death_knight_pet_t( death_knight_t* player, util::string_view name, bool guardian = true, bool auto_attack = true, bool dynamic = true ) :
     pet_t( player -> sim, player, name, guardian, dynamic ), use_auto_attack( auto_attack ),
     precombat_spawn( false ), precombat_spawn_adjust( 0_s ),
-    affected_by_commander_of_the_dead( false ), guardian( guardian )
+    affected_by_commander_of_the_dead( false ), guardian( guardian ), proxy_action( nullptr ), n( name )
   {
     if ( auto_attack )
     {
       main_hand_weapon.type = WEAPON_BEAST;
+    }
+    if( name == "army_ghoul" )
+    {
+      proxy_action = dk() -> pet_summon_action.army_of_the_dead;
+    }
+    if( name == "apoc_ghoul" )
+    {
+      proxy_action = dk() -> pet_summon_action.apocalypse;
+    }
+    if (name == "ghoul")
+    {
+      proxy_action = dk() -> pet_summon_action.raise_dead;
     }
   }
 
@@ -1843,6 +1867,33 @@ struct death_knight_pet_t : public pet_t
 
   // Standard Death Knight pet actions
 
+  struct ghoul_auto_attack_t : public melee_attack_t
+  {
+    action_t* proxy_action;
+    ghoul_auto_attack_t( death_knight_pet_t* p, action_t* a ) :
+      melee_attack_t( "auto_attack", p ), proxy_action( a )
+    {
+      assert( p -> main_hand_weapon.type != WEAPON_NONE );
+      p -> main_hand_attack = p -> create_auto_attack();
+      trigger_gcd = 0_ms;
+      auto proxy                = proxy_action;
+      auto it                   = range::find( proxy->child_action, data().id(), &action_t::id );
+      if ( it != proxy->child_action.end() )
+        stats = ( *it )->stats;
+      else
+        proxy->add_child( this );
+    }
+
+    void execute() override
+    { player -> main_hand_attack -> schedule_execute(); }
+
+    bool ready() override
+    {
+      if ( player -> is_moving() ) return false;
+      return ( player -> main_hand_attack -> execute_event == nullptr );
+    }
+  };
+
   struct auto_attack_t : public melee_attack_t
   {
     auto_attack_t( death_knight_pet_t* p ) :
@@ -1865,7 +1916,14 @@ struct death_knight_pet_t : public pet_t
 
   action_t* create_action( util::string_view name, util::string_view options_str ) override
   {
-    if ( name == "auto_attack" ) return new auto_attack_t( this );
+    if( n == "apoc_ghoul" || n == "army_ghoul" || n == "ghoul" )
+    {
+      if ( name == "auto_attack" ) return new ghoul_auto_attack_t( this, proxy_action );
+    }
+    else
+    {
+      if ( name == "auto_attack" ) return new auto_attack_t( this );
+    }
 
     return pet_t::create_action( name, options_str );
   }
@@ -2135,6 +2193,12 @@ struct ghoul_pet_t : public base_ghoul_pet_t
     {
       parse_options( options_str );
       triggers_infected_claws = triggers_runeforge_apocalypse = true;
+      auto proxy                = dk()->pet_summon_action.raise_dead;
+      auto it                   = range::find( proxy->child_action, data().id(), &action_t::id );
+      if ( it != proxy->child_action.end() )
+        stats = ( *it )->stats;
+      else
+        proxy->add_child( this );
     }
   };
 
@@ -2146,6 +2210,12 @@ struct ghoul_pet_t : public base_ghoul_pet_t
       parse_options( options_str );
       aoe = -1;
       triggers_infected_claws = triggers_runeforge_apocalypse = true;
+      auto proxy                = dk()->pet_summon_action.raise_dead;
+      auto it                   = range::find( proxy->child_action, data().id(), &action_t::id );
+      if ( it != proxy->child_action.end() )
+        stats = ( *it )->stats;
+      else
+        proxy->add_child( this );
     }
   };
 
@@ -2156,6 +2226,12 @@ struct ghoul_pet_t : public base_ghoul_pet_t
     {
       parse_options( options_str );
       cooldown = p -> get_cooldown( "gnaw" );
+      auto proxy                = dk()->pet_summon_action.raise_dead;
+      auto it                   = range::find( proxy->child_action, data().id(), &action_t::id );
+      if ( it != proxy->child_action.end() )
+        stats = ( *it )->stats;
+      else
+        proxy->add_child( this );
     }
   };
 
@@ -2166,6 +2242,12 @@ struct ghoul_pet_t : public base_ghoul_pet_t
     {
       parse_options( options_str );
       cooldown = p -> get_cooldown( "gnaw" );
+      auto proxy                = dk()->pet_summon_action.raise_dead;
+      auto it                   = range::find( proxy->child_action, data().id(), &action_t::id );
+      if ( it != proxy->child_action.end() )
+        stats = ( *it )->stats;
+      else
+        proxy->add_child( this );
     }
   };
 
@@ -2333,23 +2415,39 @@ struct ghoul_pet_t : public base_ghoul_pet_t
 struct army_ghoul_pet_t : public base_ghoul_pet_t
 {
   pet_spell_t<army_ghoul_pet_t>* ruptured_viscera;
+  action_t* proxy_action;
 
   struct army_claw_t : public pet_melee_attack_t<army_ghoul_pet_t>
   {
-    army_claw_t( army_ghoul_pet_t* p, util::string_view options_str ) :
-      pet_melee_attack_t( p, "claw", p -> dk() -> pet_spell.army_claw )
+    action_t* proxy_action;
+
+    army_claw_t( army_ghoul_pet_t* p, action_t* a, util::string_view options_str ) :
+      pet_melee_attack_t( p, "claw", p -> dk() -> pet_spell.army_claw ), proxy_action( a )
     {
       parse_options( options_str );
+      auto proxy                = proxy_action;
+      auto it                   = range::find( proxy->child_action, data().id(), &action_t::id );
+      if ( it != proxy->child_action.end() )
+        stats = ( *it )->stats;
+      else
+        proxy->add_child( this );
     }
   };
   
   struct ruptured_viscera_t final : public pet_spell_t<army_ghoul_pet_t>
   {
-    ruptured_viscera_t( army_ghoul_pet_t* p ) :
-      pet_spell_t( p, "ruptured_viscera", p -> dk() -> pet_spell.ruptured_viscera )
+    action_t* proxy_action;
+    ruptured_viscera_t( army_ghoul_pet_t* p, action_t* a ) :
+      pet_spell_t( p, "ruptured_viscera", p -> dk() -> pet_spell.ruptured_viscera ), proxy_action( a )
     {
       aoe = -1;
       background = true;
+      auto proxy                = proxy_action;
+      auto it                   = range::find( proxy->child_action, data().id(), &action_t::id );
+      if ( it != proxy->child_action.end() )
+        stats = ( *it )->stats;
+      else
+        proxy->add_child( this );
     }
 
     void impact( action_state_t* s ) override
@@ -2363,9 +2461,17 @@ struct army_ghoul_pet_t : public base_ghoul_pet_t
   };
 
   army_ghoul_pet_t( death_knight_t* owner, util::string_view name = "army_ghoul" ) :
-    base_ghoul_pet_t( owner, name, true )
+    base_ghoul_pet_t( owner, name, true ), proxy_action( nullptr )
   {
     affected_by_commander_of_the_dead = true;
+    if( name == "army_ghoul" )
+    {
+      proxy_action = dk()->pet_summon_action.army_of_the_dead;
+    }
+    else
+    {
+      proxy_action = dk()->pet_summon_action.apocalypse;
+    }
   }
 
   void init_base_stats() override
@@ -2382,7 +2488,7 @@ struct army_ghoul_pet_t : public base_ghoul_pet_t
 
     if ( dk()->talent.unholy.ruptured_viscera.ok() )
     {
-      ruptured_viscera = new ruptured_viscera_t( this );
+      ruptured_viscera = new ruptured_viscera_t( this, proxy_action );
     }
   }
 
@@ -2408,7 +2514,7 @@ struct army_ghoul_pet_t : public base_ghoul_pet_t
 
   action_t* create_action( util::string_view name, util::string_view options_str ) override
   {
-    if ( name == "claw" ) return new army_claw_t( this, options_str );
+    if ( name == "claw" ) return new army_claw_t( this, proxy_action, options_str );
 
     return base_ghoul_pet_t::create_action( name, options_str );
   }
@@ -2444,7 +2550,13 @@ struct gargoyle_pet_t : public death_knight_pet_t
     gargoyle_strike_t( gargoyle_pet_t* p ) :
       pet_spell_t( p, "gargoyle_strike", p -> dk() -> pet_spell.gargoyle_strike )
     { 
-      background = repeating =true;
+      background = repeating = true;
+      auto proxy                = dk()->pet_summon_action.summon_gargoyle;
+      auto it                   = range::find( proxy->child_action, data().id(), &action_t::id );
+      if ( it != proxy->child_action.end() )
+        stats = ( *it )->stats;
+      else
+        proxy->add_child( this );
     }
   };
 
@@ -2912,6 +3024,7 @@ struct bloodworm_pet_t : public death_knight_pet_t
 
 struct magus_pet_t : public death_knight_pet_t
 {
+  util::string_view pet_name;
   struct magus_td_t : public actor_target_data_t
   {
     buff_t* frostbolt_debuff;
@@ -2955,11 +3068,32 @@ struct magus_pet_t : public death_knight_pet_t
 
   struct frostbolt_magus_t final : public magus_spell_t
   {
-    frostbolt_magus_t( magus_pet_t* p, util::string_view options_str ) :
-      magus_spell_t( p, "frostbolt", p -> dk() -> pet_spell.frostbolt, options_str )
+    util::string_view pet_name;
+    frostbolt_magus_t( magus_pet_t* p, util::string_view n, util::string_view options_str ) :
+      magus_spell_t( p, "frostbolt", p -> dk() -> pet_spell.frostbolt, options_str ), pet_name( n )
     {
       // If the target is immune to slows, frostbolt seems to be used at most every 6 seconds
       cooldown -> duration = dk() -> pet_spell.frostbolt -> duration();
+      
+      if( pet_name == "apoc_magus" )
+      {
+          auto proxy = dk()->pet_summon_action.apocalypse;
+          auto it = range::find(proxy->child_action, data().id(), &action_t::id);
+          if (it != proxy->child_action.end())
+              stats = (*it)->stats;
+          else
+              proxy->add_child(this);
+      }
+
+      if( pet_name == "army_magus" )
+      {
+          auto proxy = dk()->pet_summon_action.army_of_the_dead;
+          auto it = range::find(proxy->child_action, data().id(), &action_t::id);
+          if (it != proxy->child_action.end())
+              stats = (*it)->stats;
+          else
+              proxy->add_child(this);
+      }
     }
 
     // Frostbolt applies a slowing debuff on non-boss targets
@@ -2977,13 +3111,34 @@ struct magus_pet_t : public death_knight_pet_t
 
   struct shadow_bolt_magus_t final : public magus_spell_t
   {
-    shadow_bolt_magus_t( magus_pet_t* p, util::string_view options_str ) :
-      magus_spell_t( p, "shadow_bolt", p -> dk() -> pet_spell.shadow_bolt, options_str )
-    { }
+    util::string_view pet_name;
+    shadow_bolt_magus_t( magus_pet_t* p, util::string_view n, util::string_view options_str ) :
+      magus_spell_t( p, "shadow_bolt", p -> dk() -> pet_spell.shadow_bolt, options_str ), pet_name( n )
+    {
+      if( pet_name == "apoc_magus" )
+      {
+          auto proxy = dk()->pet_summon_action.apocalypse;
+          auto it = range::find(proxy->child_action, data().id(), &action_t::id);
+          if (it != proxy->child_action.end())
+              stats = (*it)->stats;
+          else
+              proxy->add_child(this);
+      }
+
+      if( pet_name == "army_magus" )
+      {
+          auto proxy = dk()->pet_summon_action.army_of_the_dead;
+          auto it = range::find(proxy->child_action, data().id(), &action_t::id);
+          if (it != proxy->child_action.end())
+              stats = (*it)->stats;
+          else
+              proxy->add_child(this);
+      }
+    }
   };
 
-  magus_pet_t( death_knight_t* owner ) :
-    death_knight_pet_t( owner, "magus_of_the_dead", true, false )
+  magus_pet_t( death_knight_t* owner, util::string_view name = "army_magus" ) :
+    death_knight_pet_t( owner, name, true, false ), pet_name( name )
   {
     resource_regeneration = regen_type::DISABLED;
     affected_by_commander_of_the_dead = true;
@@ -3011,8 +3166,8 @@ struct magus_pet_t : public death_knight_pet_t
 
   action_t* create_action( util::string_view name, util::string_view options_str ) override
   {
-    if ( name == "frostbolt" ) return new frostbolt_magus_t( this, options_str );
-    if ( name == "shadow_bolt" ) return new shadow_bolt_magus_t( this, options_str );
+    if ( name == "frostbolt" ) return new frostbolt_magus_t( this, pet_name, options_str );
+    if ( name == "shadow_bolt" ) return new shadow_bolt_magus_t( this, pet_name, options_str );
 
     return death_knight_pet_t::create_action( name, options_str );
   }
@@ -3978,16 +4133,42 @@ struct abomination_limb_t : public death_knight_spell_t
 };
 
 // Apocalypse ===============================================================
-
-struct apocalypse_t final : public death_knight_melee_attack_t
+struct apocalypse_proxy_t final : public death_knight_melee_attack_t
 {
   timespan_t summon_duration;
   int rune_generation;
+  int n_wounds;
 
-  apocalypse_t( death_knight_t* p, util::string_view options_str ) :
-    death_knight_melee_attack_t( "apocalypse", p, p -> talent.unholy.apocalypse ),
+  apocalypse_proxy_t( util::string_view n, death_knight_t* p, int i ) :
+    death_knight_melee_attack_t( n, p, p -> talent.unholy.apocalypse ),
     summon_duration( p -> spell.apocalypse_duration -> duration() ),
-    rune_generation( as<int>( p -> spell.apocalypse_rune_gen -> effectN( 1 ).base_value() ) )
+    rune_generation( as<int>( p -> spell.apocalypse_rune_gen -> effectN( 1 ).base_value() ) ), n_wounds( i )
+  {
+    background = true;
+    cooldown -> duration = 0_ms; // override cooldown, handled by the main action
+  }
+
+  void execute() override
+  {
+    death_knight_melee_attack_t::execute();
+    p() -> pets.apoc_ghouls.spawn( summon_duration, n_wounds );
+
+    if ( p() -> talent.unholy.magus_of_the_dead.ok() )
+    {
+      p() -> pets.apoc_magus.spawn( summon_duration, 1 );
+    }
+
+    if ( p() -> talent.unholy.apocalypse.ok() )
+    {
+      p() -> replenish_rune( rune_generation, p() -> gains.apocalypse );
+    }
+  }
+};
+
+struct apocalypse_t final : public death_knight_melee_attack_t
+{
+  apocalypse_t( death_knight_t* p, util::string_view options_str ) :
+    death_knight_melee_attack_t( "apocalypse", p, p -> talent.unholy.apocalypse ), apoc_proxy( nullptr )
   {
     parse_options( options_str );
 
@@ -4006,18 +4187,10 @@ struct apocalypse_t final : public death_knight_melee_attack_t
     assert( td && "apocalypse impacting without any target data" ); // td should should exist because the debuff is a condition of target_ready()
     auto n_wounds = std::min( as<int>( data().effectN( 2 ).base_value() ), td -> debuff.festering_wound -> check() );
 
+    apoc_proxy = get_action<apocalypse_proxy_t>( "apocalypse", p(), n_wounds);
+
     p() -> burst_festering_wound( state -> target, n_wounds );
-    p() -> pets.apoc_ghouls.spawn( summon_duration, n_wounds );
-
-    if ( p() -> talent.unholy.magus_of_the_dead.ok() )
-    {
-      p() -> pets.magus_of_the_dead.spawn( summon_duration, 1 );
-    }
-
-    if ( p() -> talent.unholy.apocalypse.ok() )
-    {
-      p() -> replenish_rune( rune_generation, p() -> gains.apocalypse );
-    }
+    apoc_proxy -> execute();
   }
 
   bool target_ready( player_t* candidate_target ) override
@@ -4030,11 +4203,12 @@ struct apocalypse_t final : public death_knight_melee_attack_t
 
     return death_knight_melee_attack_t::target_ready( candidate_target );
   }
+private:
+    propagate_const<action_t*> apoc_proxy;
 };
 
 // Army of the Dead =========================================================
-
-struct army_of_the_dead_t final : public death_knight_spell_t
+struct army_of_the_dead_proxy_t final : public death_knight_spell_t
 {
   double precombat_time;
   timespan_t summon_duration;
@@ -4064,61 +4238,20 @@ struct army_of_the_dead_t final : public death_knight_spell_t
     }
   };
 
-  army_of_the_dead_t( death_knight_t* p, util::string_view options_str ) :
-    death_knight_spell_t( "army_of_the_dead", p, p -> talent.unholy.army_of_the_dead ),
-    precombat_time( 2.0 ),
+  army_of_the_dead_proxy_t( util::string_view n, death_knight_t* p, double i ) :
+    death_knight_spell_t( n, p, p -> talent.unholy.army_of_the_dead ),
+    precombat_time( i ),
     summon_duration( p -> talent.unholy.army_of_the_dead -> effectN( 1 ).trigger() -> duration() )
   {
-    // disable_aotd=1 can be added to the profile to disable aotd usage, for example for specific dungeon simming
-
-    if ( p -> options.disable_aotd )
-      background = true;
-
-    // If used during precombat, army is cast around X seconds before the fight begins
-    // This is done to save rune regeneration time once the fight starts
-    // Default duration is 6, and can be changed by the user
-
-    add_option( opt_float( "precombat_time", precombat_time ) );
-    parse_options( options_str );
-
+    background = true;
+    cooldown -> duration = 0_ms; // override cooldown, handled by the main action
     harmful = false;
     track_cd_waste = true;
   }
 
-  void init_finished() override
-  {
-    death_knight_spell_t::init_finished();
-
-    if ( is_precombat )
-    {
-      double MIN_TIME = player -> base_gcd.total_seconds(); // the player's base unhasted gcd: 1.5s
-      double MAX_TIME = 10; // Using 10s as highest value because it's the time to recover the rune cost of AOTD at 0 haste
-
-      // Ensure that we're using a positive value
-      if ( precombat_time < 0 )
-        precombat_time = -precombat_time;
-
-      // Limit Army of the dead precast option between 10s before pull (because rune regeneration time is 10s at 0 haste) and on pull
-      if ( precombat_time > MAX_TIME )
-      {
-        precombat_time = MAX_TIME;
-        sim -> error( "{} tried to cast army of the dead more than {} seconds before combat begins, setting to {}",
-                       player -> name(), MAX_TIME, MAX_TIME );
-      }
-      else if ( precombat_time < MIN_TIME )
-      {
-        precombat_time = MIN_TIME;
-        sim -> error( "{} tried to cast army of the dead less than {} before combat begins, setting to {} (has to be >= base gcd)",
-                       player -> name(), MIN_TIME, MIN_TIME );
-      }
-    }
-    else precombat_time = 0;
-
-  }
-
-  // Army of the Dead should always cost resources
+  // Dont consume another rune for the proxy action
   double cost() const override
-  { return base_costs[ RESOURCE_RUNE ]; }
+  { return base_costs[ RESOURCE_NONE ]; }
 
   void execute() override
   {
@@ -4162,13 +4295,76 @@ struct army_of_the_dead_t final : public death_knight_spell_t
       make_event<summon_army_event_t>( *sim, p(), n_ghoul, summon_interval, summon_duration );
 
     if ( p() -> talent.unholy.magus_of_the_dead.ok() )
-      p() -> pets.magus_of_the_dead.spawn( summon_duration - timespan_t::from_seconds( precombat_time ), 1 );
+      p() -> pets.army_magus.spawn( summon_duration - timespan_t::from_seconds( precombat_time ), 1 );
 
     if ( p() -> sets -> has_set_bonus ( DEATH_KNIGHT_UNHOLY, T30, B4 ) )
     {
       p() -> buffs.unholy_t30_2pc_stacking -> trigger( 20 );
     }
   }
+};
+
+struct army_of_the_dead_t final : public death_knight_spell_t
+{
+  double precombat_time;
+  army_of_the_dead_t( death_knight_t* p, util::string_view options_str ) :
+    death_knight_spell_t( "army_of_the_dead", p, p -> talent.unholy.army_of_the_dead ), army_proxy( nullptr ),
+      precombat_time( 2.0 )
+  {
+    // disable_aotd=1 can be added to the profile to disable aotd usage, for example for specific dungeon simming
+    if ( p -> options.disable_aotd )
+      background = true;
+    // If used during precombat, army is cast around X seconds before the fight begins
+    // This is done to save rune regeneration time once the fight starts
+    // Default duration is 6, and can be changed by the user
+
+    add_option( opt_float( "precombat_time", precombat_time ) );
+
+    parse_options( options_str );
+
+    army_proxy = get_action<army_of_the_dead_proxy_t>( "army_of_the_dead", p, precombat_time );
+    harmful = false;
+    track_cd_waste = true;
+  }
+
+  void init_finished() override
+  {
+    death_knight_spell_t::init_finished();
+
+    if ( is_precombat )
+    {
+      double MIN_TIME = player -> base_gcd.total_seconds(); // the player's base unhasted gcd: 1.5s
+      double MAX_TIME = 10; // Using 10s as highest value because it's the time to recover the rune cost of AOTD at 0 haste
+
+      // Ensure that we're using a positive value
+      if ( precombat_time < 0 )
+        precombat_time = -precombat_time;
+
+      // Limit Army of the dead precast option between 10s before pull (because rune regeneration time is 10s at 0 haste) and on pull
+      if ( precombat_time > MAX_TIME )
+      {
+        precombat_time = MAX_TIME;
+        sim -> error( "{} tried to cast army of the dead more than {} seconds before combat begins, setting to {}",
+                       player -> name(), MAX_TIME, MAX_TIME );
+      }
+      else if ( precombat_time < MIN_TIME )
+      {
+        precombat_time = MIN_TIME;
+        sim -> error( "{} tried to cast army of the dead less than {} before combat begins, setting to {} (has to be >= base gcd)",
+                       player -> name(), MIN_TIME, MIN_TIME );
+      }
+    }
+    else precombat_time = 0;
+
+  }
+
+  void execute() override
+  {
+    death_knight_spell_t::execute();
+    army_proxy -> execute();
+  }
+private: 
+    propagate_const<action_t*> army_proxy;
 };
 
 // Blood Boil ===============================================================
@@ -7024,19 +7220,15 @@ struct vile_contagion_t final : public death_knight_spell_t
 };
 
 // Raise Dead ===============================================================
-
-struct raise_dead_t final : public death_knight_spell_t
+struct raise_dead_proxy_t final : public death_knight_spell_t
 {
-  raise_dead_t( death_knight_t* p, util::string_view options_str ) :
-    death_knight_spell_t( "raise_dead", p, p -> talent.unholy.raise_dead.ok() ?
+  raise_dead_proxy_t( util::string_view n, death_knight_t* p ) :
+    death_knight_spell_t( n, p, p -> talent.unholy.raise_dead.ok() ?
                           p -> talent.unholy.raise_dead : p -> talent.raise_dead )
   {
-    parse_options( options_str );
-
-    cooldown -> duration += p -> talent.unholy.all_will_serve -> effectN( 1 ).time_value();
-
+    cooldown -> duration = 0_ms; // Handled by the main action
+    background = true;
     harmful = false;
-    track_cd_waste = true;
   }
 
   void execute() override
@@ -7060,6 +7252,26 @@ struct raise_dead_t final : public death_knight_spell_t
       p() -> pets.risen_skulker -> summon( 0_ms );
     }
   }
+};
+struct raise_dead_t final : public death_knight_spell_t
+{
+  raise_dead_t( death_knight_t* p, util::string_view options_str ) :
+    death_knight_spell_t( "raise_dead", p, p -> talent.unholy.raise_dead.ok() ?
+                          p -> talent.unholy.raise_dead : p -> talent.raise_dead ), raise_dead_proxy( get_action<raise_dead_proxy_t>( "raise_dead", p ) )
+  {
+    parse_options( options_str );
+
+    cooldown -> duration += p -> talent.unholy.all_will_serve -> effectN( 1 ).time_value();
+
+    harmful = false;
+    track_cd_waste = true;
+  }
+
+  void execute() override
+  {
+    death_knight_spell_t::execute();
+    raise_dead_proxy -> execute();
+  }
 
   bool ready() override
   {
@@ -7068,6 +7280,8 @@ struct raise_dead_t final : public death_knight_spell_t
 
     return death_knight_spell_t::ready();
   }
+private:
+    propagate_const<action_t*> raise_dead_proxy;
 };
 
 // Remorseless Winter =======================================================
@@ -7498,23 +7712,40 @@ private:
 };
 
 // Summon Gargoyle ==========================================================
+struct summon_gargoyle_proxy_t final : public death_knight_spell_t
+{
+  summon_gargoyle_proxy_t( util::string_view n, death_knight_t* p ) :
+      death_knight_spell_t( n, p, p -> talent.unholy.summon_gargoyle)
+  {
+    background = true;
+    harmful = false;
+  }
+  void execute() override
+  {
+    death_knight_spell_t::execute();
+    p()->pets.gargoyle->summon( data().duration() );
+  }
+};
 
 struct summon_gargoyle_t final : public death_knight_spell_t
 {
-  summon_gargoyle_t( death_knight_t* p, util::string_view options_str ) :
-    death_knight_spell_t( "summon_gargoyle", p, p -> talent.unholy.summon_gargoyle )
+  summon_gargoyle_t( death_knight_t* p, util::string_view options_str )
+    : death_knight_spell_t( "summon_gargoyle", p, p->talent.unholy.summon_gargoyle ),
+      proxy( get_action<summon_gargoyle_proxy_t>( "summon_gargoyle", p ) )
   {
     parse_options( options_str );
-    harmful = false;
+    harmful        = false;
     track_cd_waste = true;
   }
 
   void execute() override
   {
     death_knight_spell_t::execute();
-
-    p() -> pets.gargoyle -> summon( data().duration() );
+    proxy -> execute();
   }
+
+private:
+  propagate_const<action_t*> proxy;
 };
 
 // Tombstone ================================================================
@@ -8432,6 +8663,15 @@ void death_knight_t::datacollection_end()
 
 void death_knight_t::analyze( sim_t& s )
 {
+  if ( pet_summon_action.summon_gargoyle )
+    range::for_each( pet_summon_action.summon_gargoyle->child_action, [ this ]( action_t* a ) { a->stats->player = this; } );
+
+  if ( pet_summon_action.army_of_the_dead )
+    range::for_each( pet_summon_action.army_of_the_dead->child_action, [ this ]( action_t* a ) { a->stats->player = this; } );
+
+  if ( pet_summon_action.apocalypse )
+    range::for_each( pet_summon_action.apocalypse->child_action, [ this ]( action_t* a ) { a->stats->player = this; } );
+
   player_t::analyze( s );
 
   _runes.rune_waste.analyze();
@@ -8812,6 +9052,9 @@ void death_knight_t::create_actions()
   if ( talent.blood_draw.ok() )
     active_spells.blood_draw = new blood_draw_t( "blood_draw", this );
 
+  if ( talent.raise_dead.ok() )
+    pet_summon_action.raise_dead = new raise_dead_proxy_t( "raise_dead", this);
+
   // Blood
   if ( specialization() == DEATH_KNIGHT_BLOOD )
   {
@@ -8836,6 +9079,21 @@ void death_knight_t::create_actions()
     if ( talent.unholy.bursting_sores.ok() )
     {
       active_spells.bursting_sores = new bursting_sores_t( this );
+    }
+
+    if ( talent.unholy.summon_gargoyle.ok() )
+    {
+      pet_summon_action.summon_gargoyle = new summon_gargoyle_proxy_t( "summon_gargoyle", this);
+    }
+
+    if ( talent.unholy.army_of_the_dead.ok() )
+    {
+      pet_summon_action.army_of_the_dead = new army_of_the_dead_proxy_t( "army_of_the_dead", this, 0 );
+    }
+
+    if ( talent.unholy.apocalypse.ok() )
+    {
+      pet_summon_action.apocalypse = new apocalypse_proxy_t( "apocalypse", this, 0 );
     }
   }
 
@@ -9101,7 +9359,7 @@ void death_knight_t::create_pets()
   if ( specialization() == DEATH_KNIGHT_UNHOLY )
   {
     // Initialized even if the talent isn't picked for APL purpose
-    pets.gargoyle = new pets::gargoyle_pet_t( this );
+      pets.gargoyle = new pets::gargoyle_pet_t( this );
 
     if ( talent.unholy.all_will_serve.ok() )
     {
@@ -9112,18 +9370,24 @@ void death_knight_t::create_pets()
     {
       pets.army_ghouls.set_creation_callback(
         [] ( death_knight_t* p ) { return new pets::army_ghoul_pet_t( p, "army_ghoul" ); } );
+
+      if ( talent.unholy.magus_of_the_dead.ok() )
+      {
+        pets.army_magus.set_creation_callback(
+          [] ( death_knight_t* p ) { return new pets::magus_pet_t( p, "army_magus" ); });
+      }
     }
 
     if ( find_action( "apocalypse" ) )
     {
       pets.apoc_ghouls.set_creation_callback(
         [] ( death_knight_t* p ) { return new pets::army_ghoul_pet_t( p, "apoc_ghoul" ); } );
-    }
 
-    if ( talent.unholy.magus_of_the_dead.ok() )
-    {
-      pets.magus_of_the_dead.set_creation_callback(
-        [] ( death_knight_t* p ) { return new pets::magus_pet_t( p ); } );
+      if ( talent.unholy.magus_of_the_dead.ok() )
+      {
+        pets.apoc_magus.set_creation_callback(
+          [] ( death_knight_t* p ) { return new pets::magus_pet_t( p, "apoc_magus" ); });
+      }
     }
   }
 
