@@ -668,16 +668,27 @@ struct player_t : public actor_t
     double amplification_2;
   } passive_values;
 
+  enum player_value_type_e
+  {
+    DATA_VALUE,
+    DEFAULT_VALUE,
+    CURRENT_VALUE,
+  };
+
+  using bfun = std::function<bool()>;
   struct buff_effect_t
   {
     buff_t* buff;
     double value;
+    player_value_type_e type;
+    bool use_stacks;
     bool mastery;
-    bool stacks;
+    bfun func;
     const spelleffect_data_t& eff;
 
-    buff_effect_t( buff_t* b, double v, bool m = false, bool s = true, const spelleffect_data_t& e = spelleffect_data_t::nil() )
-      : buff( b ), value( v ), mastery( m ), eff( e ), stacks( s )
+    buff_effect_t( buff_t* b, double v, player_value_type_e t = DATA_VALUE, bool s = true, bool m = false, bfun f = nullptr,
+                   const spelleffect_data_t& e = spelleffect_data_t::nil() )
+      : buff( b ), value( v ), type( t ), use_stacks( s ), mastery( m ), func( std::move( f ) ), eff( e )
     {}
   };
 
@@ -694,34 +705,41 @@ struct player_t : public actor_t
     parse_aura_effects_mods( val, m, base, idx, mod );
     parse_aura_effects_mods( val, m, base, idx, mods... );
   }
-  template <typename T>
-  void apply_buff_aura( buff_t* buff, bool stacks, T mod );
-
-  template <typename T>
-  void apply_passive_aura( const spell_data_t* spell, T mod );
-
   template <typename... Ts>
-  void apply_affecting_effect( buff_t* buff, const spelleffect_data_t& effect, const spell_data_t* spell, size_t i, bool mastery, util::string_view name, bool stacks, Ts... mods );
+  void apply_buff_aura_effect( buff_t* buff, const bfun& f, const spell_data_t* s_data, size_t i, bool use_stacks,
+                          player_value_type_e value_type, bool force, Ts... mods );
+  template <typename... Ts>
+  void apply_buff_aura_effects( buff_t* buff, unsigned ignore_mask, bool use_stacks, player_value_type_e value_type, Ts... mods );
 
   template <typename... Ts>
-  void apply_buff_auras( buff_t* buff, bool stacks, Ts... mods )
-  {
-    apply_buff_aura( buff, stacks, mods... );
-  }
-  template <typename... Ts>
-  void apply_buff_auras( buff_t* buff, Ts... mods )
-  {
-    apply_buff_aura( buff, true, mods... );
-  }
+  void apply_buff_aura_effects( buff_t* buff, unsigned ignore_mask, Ts... mods );
 
   template <typename... Ts>
-  void apply_passive_auras( const spell_data_t* s, Ts... mods )
-  {
-    apply_passive_aura( s, mods... );
-  }
+  void apply_buff_aura_effects( buff_t* buff, bool stack, Ts... mods );
 
   template <typename... Ts>
-  void parse_aura_modifiers( const spell_data_t* s_data, Ts... mods );
+  void apply_buff_aura_effects( buff_t* buff, player_value_type_e value_type, Ts... mods );
+
+  template <typename... Ts>
+  void apply_buff_aura_effects( buff_t* buff, Ts... mods );
+
+  template <typename... Ts>
+  void force_aura_effect( buff_t* buff, unsigned idx, bool stack, player_value_type_e value_type, Ts... mods );
+
+  template <typename... Ts>
+  void force_buff_aura_effect( buff_t* buff, unsigned idx, Ts... mods );
+
+  template <typename... Ts>
+  void apply_conditional_buff_aura_effects( const spell_data_t* spell, const bfun& func, unsigned ignore_mask = 0U,
+                                            bool use_stack = true, player_value_type_e value_type = DATA_VALUE, Ts... mods );
+
+  void force_conditional_buff_aura_effect( const spell_data_t* spell, const bfun& func, unsigned idx, bool use_stack = true,
+                                           player_value_type_e value_type = DATA_VALUE );
+
+  void apply_passive_aura_effects( const spell_data_t* spell, unsigned ignore_mask = 0U );
+
+  void force_passive_aura_effect( const spell_data_t* spell, unsigned idx, bool use_stack = true,
+                                  player_value_type_e value_type = DATA_VALUE );
 
   double get_aura_effects_value( const std::vector<buff_effect_t>& auras, bool flat, bool benefit ) const;
 
@@ -1108,7 +1126,7 @@ public:
   virtual void init_finished();
   virtual void add_precombat_buff_state( buff_t* buff, int stacks, double value, timespan_t duration );
   virtual void add_precombat_cooldown_state( cooldown_t* cd, timespan_t duration );
-  virtual void apply_player_auras();
+  virtual void apply_player_auras( player_t* p );
   virtual void apply_affecting_auras( action_t& );
   virtual void action_init_finished( action_t& );
   virtual bool verify_use_items() const;

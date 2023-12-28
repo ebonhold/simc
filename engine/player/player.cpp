@@ -3642,7 +3642,7 @@ void player_t::init_finished()
     }
   }
 
-  apply_player_auras();
+  apply_player_auras( this );
 
   // Naive recording of minimum energy thresholds for the actor.
   // TODO: Energy pooling, and energy-based expressions (energy>=10) are not included yet
@@ -3800,122 +3800,105 @@ void player_t::parse_aura_effects_mods( double& val, bool& mastery, const spell_
   }
 }
 
-template <typename T>
-void player_t::apply_buff_aura( buff_t* buff, bool stacks, T mod )
-{
-  if ( !buff )
-  {
-    return;
-  }
-
-  const spell_data_t* spell = &buff->data();
-  bool mastery = false;
-  if ( spell->flags(SX_MASTERY_AFFECTS_POINTS) )
-  {
-    mastery = true;
-  }
-
-  util::string_view name = spell->name_cstr();
-
-  assert( ( spell->flags( SX_PASSIVE ) || spell->duration() < 0_ms ) &&
-          "only passive spells should be affecting the player." );
-
-  for ( const spelleffect_data_t& effect : spell->effects() )
-  {
-    apply_affecting_effect( buff, effect, spell, spell->effect_count(), mastery, name, stacks, mod );
-  }
-}
-
-template <typename T>
-void player_t::apply_passive_aura( const spell_data_t* spell, T mod )
-{
-  if ( !spell || !spell->ok() )
-  {
-    return;
-  }
-
-  bool mastery = false;
-  if ( spell->flags( SX_MASTERY_AFFECTS_POINTS ) )
-  {
-    mastery = true;
-  }
-
-  util::string_view name = spell->name_cstr();
-
-  assert( ( spell->flags( SX_PASSIVE ) || spell->duration() < 0_ms ) &&
-          "only passive spells should be affecting the player." );
-
-  for ( const spelleffect_data_t& effect : spell->effects() )
-  {
-    apply_affecting_effect( nullptr, effect, spell, spell->effect_count(), mastery, name, false, mod );
-  }
-}
-
-void player_t::apply_player_auras()
+void player_t::apply_player_auras( player_t* p )
 {
 
 }
 
 template <typename... Ts>
-void player_t::apply_affecting_effect( buff_t* buff, const spelleffect_data_t& effect, const spell_data_t* spell, size_t i, bool mastery, util::string_view name, bool stacks, Ts... mods )
+void player_t::apply_buff_aura_effect( buff_t* buff, const bfun& f, const spell_data_t* s_data, size_t i, bool use_stacks,
+                                  player_value_type_e value_type, bool force, Ts... mods )
 {
-  if ( !effect.ok() || effect.type() != E_APPLY_AURA )
+  const auto& eff = s_data->effectN( i );
+  bool mastery    = s_data->flags( SX_MASTERY_AFFECTS_POINTS );
+  double val      = ( buff && value_type == DEFAULT_VALUE ) ? ( buff->default_value * 100 )
+                                                            : ( mastery ? eff.mastery_value() : eff.base_value() );
+  double val_mul  = 0.01;
+
+  // TODO: more robust logic around 'party' buffs with radius
+  if ( !( eff.type() == E_APPLY_AURA || eff.type() == E_APPLY_AREA_AURA_PARTY ) || eff.radius() )
     return;
 
-  double calc_value = mastery ? effect.mastery_value() : effect.percent();
-
   if ( i <= 5 )
-    parse_aura_effects_mods( calc_value, mastery, spell, i, mods... );
+    parse_aura_effects_mods( val, mastery, s_data, i, mods... );
 
-  auto debug_message = [ & ]( std::string_view type )
-  {
-    if( mastery )
+  auto debug_message = [ & ]( std::string_view type ) {
+    if ( buff )
     {
-      sim->print_debug( "apply-player-effects: {} modified {} by {}*mastery", name, type, calc_value * 100 );
+      std::string val_str;
+
+      if ( value_type == player_value_type_e::CURRENT_VALUE )
+        val_str = "current value";
+      else if ( value_type == player_value_type_e::DEFAULT_VALUE )
+        val_str = fmt::format( "default value ({})", val * val_mul );
+      else if ( mastery )
+        val_str = fmt::format( "{}*mastery", val * val_mul * 100 );
+      else
+        val_str = fmt::format( "{}", val * val_mul );
+
+      sim->print_debug( "player-buff-effects: {} {} modified by {} {} buff {} ({}#{})", name(), type,
+                                 val_str, use_stacks ? "per stack of" : "with", buff->name(), buff->data().id(), i );
     }
-    else if( stacks )
+    else if ( mastery && !f )
     {
-      sim->print_debug( "apply-player-effects: {} modified {} by {} per stack", name, type, calc_value );
+      sim->print_debug( "player-mastery-effects: {} {} modified by {}*mastery from {} ({}#{})",
+                                 name(), type, val * val_mul * 100, s_data->name_cstr(), s_data->id(), i );
+    }
+    else if ( f )
+    {
+      sim->print_debug( "player-conditional-effects: {} {} modified by {} with condition from {} ({}#{})",
+                                 name(), type, val * val_mul, s_data->name_cstr(), s_data->id(), i );
     }
     else
     {
-      sim->print_debug( "apply-player-effects: {} modified {} by {}", name, type, calc_value );
+      sim->print_debug( "player-passive-effects: {} {} modified by {} from {} ({}#{})", name(), type,
+                                 val * val_mul, s_data->name_cstr(), s_data->id(), i );
     }
   };
 
+  if ( !val )
+    return;
 
-  switch (effect.subtype())
+  if ( mastery )
+    val_mul = 1.0;
+
+  switch ( eff.subtype() )
   {
     case A_MOD_PET_DAMAGE_DONE:
-      parse_auras.pet_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      parse_auras.pet_damage_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery, f,
+                                                            eff );
       debug_message( "pet damage" );
       break;
     case A_MOD_GUARDIAN_DAMAGE_DONE:
-      parse_auras.guardian_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      parse_auras.guardian_damage_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery,
+                                                                 f, eff );
       debug_message( "guardian damage" );
       break;
     case A_MOD_TOTAL_STAT_PERCENTAGE:
-      if (effect.misc_value2())
+      if ( eff.misc_value2() )
       {
         enum stat_mask_e
         {
-          STAT_MASK_STRENGTH = 0x1,
-          STAT_MASK_AGILITY = 0x2,
-          STAT_MASK_STAMINA = 0x4,
+          STAT_MASK_STRENGTH  = 0x1,
+          STAT_MASK_AGILITY   = 0x2,
+          STAT_MASK_STAMINA   = 0x4,
           STAT_MASK_INTELLECT = 0x8,
         };
-        if (effect.misc_value2() == 0xb)
+        if ( eff.misc_value2() == 0xb )
         {
-          switch (convert_hybrid_stat( STAT_STR_AGI_INT ))
+          switch ( convert_hybrid_stat( STAT_STR_AGI_INT ) )
           {
             case STAT_STRENGTH:
-              parse_auras.strength_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+              parse_auras.strength_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery,
+                                                                  f, eff );
               break;
             case STAT_AGILITY:
-              parse_auras.agility_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+              parse_auras.agility_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery,
+                                                                 f, eff );
               break;
             case STAT_INTELLECT:
-              parse_auras.intellect_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+              parse_auras.intellect_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery,
+                                                                   f, eff );
               break;
             default:
               break;
@@ -3924,155 +3907,180 @@ void player_t::apply_affecting_effect( buff_t* buff, const spelleffect_data_t& e
         }
         else
         {
-          if (( effect.misc_value2() & STAT_MASK_STRENGTH ) == STAT_MASK_STRENGTH)
+          if ( ( eff.misc_value2() & STAT_MASK_STRENGTH ) == STAT_MASK_STRENGTH )
           {
-            parse_auras.strength_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            parse_auras.strength_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery, f,
+                                                                eff );
             debug_message( "strength multiplier" );
           }
-          if (( effect.misc_value2() & STAT_MASK_AGILITY ) == STAT_MASK_AGILITY)
+          if ( ( eff.misc_value2() & STAT_MASK_AGILITY ) == STAT_MASK_AGILITY )
           {
-            parse_auras.agility_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            parse_auras.agility_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery, f,
+                                                               eff );
             debug_message( "agility multiplier" );
           }
-          if (( effect.misc_value2() & STAT_MASK_STAMINA ) == STAT_MASK_STAMINA)
+          if ( ( eff.misc_value2() & STAT_MASK_STAMINA ) == STAT_MASK_STAMINA )
           {
-            parse_auras.stamina_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            parse_auras.stamina_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery, f,
+                                                               eff );
             debug_message( "stamina multiplier" );
           }
-          if (( effect.misc_value2() & STAT_MASK_INTELLECT ) == STAT_MASK_INTELLECT)
+          if ( ( eff.misc_value2() & STAT_MASK_INTELLECT ) == STAT_MASK_INTELLECT )
           {
-            parse_auras.intellect_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            parse_auras.intellect_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery,
+                                                                 f, eff );
             debug_message( "intellect multiplier" );
           }
         }
       }
       break;
     case A_MOD_LEECH_PERCENT:
-      parse_auras.leech_additive_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      parse_auras.leech_additive_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery, f, eff );
       debug_message( "leech additive modifier" );
       break;
     case A_MOD_EXPERTISE:
-      parse_auras.expertise_additive_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      parse_auras.expertise_additive_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery, f, eff );
       debug_message( "expertise additive modifier" );
       break;
     case A_MOD_PARRY_PERCENT:
-      parse_auras.parry_additive_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      parse_auras.parry_additive_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery, f, eff );
       debug_message( "parry additive modifier" );
       break;
     case A_MOD_DAMAGE_PERCENT_DONE:
-      if (effect.misc_value1())
+      if ( eff.misc_value1() )
       {
-        if (effect.misc_value1() == 0x7f)
+        if ( eff.misc_value1() == 0x7f )
         {
-          parse_auras.all_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+          parse_auras.all_damage_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery, f,
+                                                                eff );
           debug_message( "all damage multiplier" );
         }
         else
         {
-          if (( effect.misc_value1() & SCHOOL_MASK_PHYSICAL ) == SCHOOL_MASK_PHYSICAL)
+          if ( ( eff.misc_value1() & SCHOOL_MASK_PHYSICAL ) == SCHOOL_MASK_PHYSICAL )
           {
-            parse_auras.phys_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            parse_auras.phys_damage_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery,
+                                                                   f, eff );
             debug_message( "physical damage multiplier" );
           }
-          if (( effect.misc_value1() & SCHOOL_MASK_HOLY ) == SCHOOL_MASK_HOLY)
+          if ( ( eff.misc_value1() & SCHOOL_MASK_HOLY ) == SCHOOL_MASK_HOLY )
           {
-            parse_auras.holy_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            parse_auras.holy_damage_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery,
+                                                                   f, eff );
             debug_message( "holy damage multiplier" );
           }
 
-          if (( effect.misc_value1() & SCHOOL_MASK_FIRE ) == SCHOOL_MASK_FIRE)
+          if ( ( eff.misc_value1() & SCHOOL_MASK_FIRE ) == SCHOOL_MASK_FIRE )
           {
-            parse_auras.fire_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            parse_auras.fire_damage_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery,
+                                                                   f, eff );
             debug_message( "fire damage multiplier" );
           }
 
-          if (( effect.misc_value1() & SCHOOL_MASK_NATURE ) == SCHOOL_MASK_NATURE)
+          if ( ( eff.misc_value1() & SCHOOL_MASK_NATURE ) == SCHOOL_MASK_NATURE )
           {
-            parse_auras.nature_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            parse_auras.nature_damage_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks,
+                                                                     mastery, f, eff );
             debug_message( "nature damage multiplier" );
           }
 
-          if (( effect.misc_value1() & SCHOOL_MASK_FROST ) == SCHOOL_MASK_FROST)
+          if ( ( eff.misc_value1() & SCHOOL_MASK_FROST ) == SCHOOL_MASK_FROST )
           {
-            parse_auras.frost_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            parse_auras.frost_damage_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks,
+                                                                    mastery, f, eff );
             debug_message( "frost damage multiplier" );
           }
 
-          if (( effect.misc_value1() & SCHOOL_MASK_SHADOW ) == SCHOOL_MASK_SHADOW)
+          if ( ( eff.misc_value1() & SCHOOL_MASK_SHADOW ) == SCHOOL_MASK_SHADOW )
           {
-            parse_auras.shadow_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            parse_auras.shadow_damage_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks,
+                                                                     mastery, f, eff );
             debug_message( "shadow damage multiplier" );
           }
 
-          if (( effect.misc_value1() & SCHOOL_MASK_ARCANE ) == SCHOOL_MASK_ARCANE)
+          if ( ( eff.misc_value1() & SCHOOL_MASK_ARCANE ) == SCHOOL_MASK_ARCANE )
           {
-            parse_auras.arcane_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            parse_auras.arcane_damage_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks,
+                                                                     mastery, f, eff );
             debug_message( "arcane damage multiplier" );
           }
         }
       }
       break;
     case A_MOD_ATTACK_POWER_PCT:
-      parse_auras.attack_power_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      parse_auras.attack_power_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery, f,
+                                                              eff );
       debug_message( "attack power multiplier" );
       break;
     case A_HASTE_ALL:
-      parse_auras.all_haste_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      parse_auras.all_haste_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery, f,
+                                                           eff );
       debug_message( "all haste multiplier" );
       break;
     case A_MOD_RANGED_AND_MELEE_ATTACK_SPEED:
-      parse_auras.all_attack_speed_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      parse_auras.all_attack_speed_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery,
+                                                                  f, eff );
       debug_message( "all attack speed multiplier" );
       break;
     case A_MOD_MELEE_ATTACK_SPEED_PCT:
-      parse_auras.melee_attack_speed_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      parse_auras.melee_attack_speed_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks,
+                                                                    mastery, f, eff );
       debug_message( "melee attack speed multiplier" );
       break;
     case A_MOD_ALL_CRIT_CHANCE:
-      parse_auras.crit_chance_additive_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      parse_auras.crit_chance_additive_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery, f,
+                                                           eff );
       debug_message( "crit chance additive" );
       break;
     case A_MOD_ATTACKER_MELEE_CRIT_CHANCE:
-      parse_auras.crit_avoidance_additive_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      parse_auras.crit_avoidance_additive_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery, f,
+                                                              eff );
       debug_message( "crit avoidance additive" );
       break;
     case A_MOD_BASE_RESISTANCE_PCT:
-      parse_auras.base_armor_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      parse_auras.base_armor_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery, f,
+                                                            eff );
       debug_message( "base resistance" );
       break;
     case A_MOD_DODGE_PERCENT:
-      parse_auras.dodge_additive_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      parse_auras.dodge_additive_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery, f, eff );
       debug_message( "dodge additive" );
       break;
     case A_MOD_VERSATILITY_PCT:
-      parse_auras.versatility_additive_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      parse_auras.versatility_additive_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery, f,
+                                                           eff );
       debug_message( "vers additive" );
       break;
     case A_MOD_MASTERY_PCT:
-      parse_auras.mastery_additive_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      parse_auras.mastery_additive_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery, f, eff );
       debug_message( "mastery additive" );
       break;
     case A_MOD_CRIT_DAMAGE_BONUS:
-      parse_auras.crit_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      parse_auras.crit_damage_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery, f,
+                                                             eff );
       debug_message( "crit damage multiplier" );
       break;
     case A_MOD_STAT_FROM_RATING_PCT:
-      switch (effect.misc_value1())
+      switch ( eff.misc_value1() )
       {
         case 1792:
-          parse_auras.crit_rating_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+          parse_auras.crit_rating_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery,
+                                                                 f, eff );
           debug_message( "crit rating multiplier" );
           break;
         case 917504:
-          parse_auras.haste_rating_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+          parse_auras.haste_rating_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks, mastery,
+                                                                  f, eff );
           debug_message( "haste rating multiplier" );
           break;
         case 33554432:
-          parse_auras.mastery_rating_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+          parse_auras.mastery_rating_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks,
+                                                                    mastery, f, eff );
           debug_message( "mastery rating multiplier" );
           break;
         case 1879048192:
-          parse_auras.versatility_rating_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+          parse_auras.versatility_rating_multiplier_auras.emplace_back( buff, val * val_mul, value_type, use_stacks,
+                                                                        mastery, f, eff );
           debug_message( "versatility rating multiplier" );
           break;
         default:
@@ -4085,55 +4093,89 @@ void player_t::apply_affecting_effect( buff_t* buff, const spelleffect_data_t& e
 }
 
 template <typename... Ts>
-void player_t::parse_aura_modifiers( const spell_data_t* s_data, Ts... mods )
+void player_t::apply_buff_aura_effects( buff_t* buff, unsigned ignore_mask, bool use_stacks, player_value_type_e value_type, Ts... mods )
 {
-  for (size_t i = 1; i <= s_data->effect_count(); i++)
-  {
-    const auto& eff = s_data->effectN( i );
-    auto subtype = eff.subtype();
-    size_t target_idx = 0;
+  if (!buff)
+    return;
 
-    if (eff.type() != E_APPLY_AURA)
+  const spell_data_t* spell = &buff->data();
+
+  for (size_t i = 1; i <= spell->effect_count(); i++)
+  {
+    if (ignore_mask & 1 << ( i - 1 ))
       continue;
 
-    switch (subtype)
-    {
-      case A_ADD_FLAT_MODIFIER:
-      case A_ADD_FLAT_LABEL_MODIFIER:
-      case A_ADD_PCT_MODIFIER:
-      case A_ADD_PCT_LABEL_MODIFIER:
-        break;
-      default:
-        continue;
-    }
-
-    switch (eff.property_type())
-    {
-      case P_EFFECT_1:
-        target_idx = 1;
-        break;
-      case P_EFFECT_2:
-        target_idx = 2;
-        break;
-      case P_EFFECT_3:
-        target_idx = 3;
-        break;
-      case P_EFFECT_4:
-        target_idx = 4;
-        break;
-      case P_EFFECT_5:
-        target_idx = 5;
-        break;
-      default:
-        continue;
-    }
-
-    double val = eff.base_value();
-    bool m;  // dummy throwaway
-
-    if (i <= 5)
-      parse_aura_effects_mods( val, m, s_data, i, mods... );
+    apply_buff_aura_effect( buff, nullptr, spell, i, use_stacks, value_type, false, mods... );
   }
+}
+
+template <typename... Ts>
+void player_t::apply_buff_aura_effects( buff_t* buff, unsigned ignore_mask, Ts... mods )
+{
+  apply_buff_aura_effects( buff, ignore_mask, true, DATA_VALUE, mods... );
+}
+
+template <typename... Ts>
+void player_t::apply_buff_aura_effects( buff_t* buff, bool stack, Ts... mods )
+{
+  apply_buff_aura_effects( buff, 0U, stack, DATA_VALUE, mods... );
+}
+
+template <typename... Ts>
+void player_t::apply_buff_aura_effects( buff_t* buff, player_value_type_e value_type, Ts... mods )
+{
+  apply_buff_aura_effects( buff, 0U, true, value_type, mods... );
+}
+
+template <typename... Ts>
+void player_t::apply_buff_aura_effects( buff_t* buff, Ts... mods )
+{
+  apply_buff_aura_effects( buff, 0U, true, DATA_VALUE, mods... );
+}
+
+template <typename... Ts>
+void player_t::force_aura_effect( buff_t* buff, unsigned idx, bool stack, player_value_type_e value_type, Ts... mods )
+{
+  apply_buff_aura_effect( buff, nullptr, &buff->data(), idx, stack, value_type, true, mods... );
+}
+
+template <typename... Ts>
+void player_t::force_buff_aura_effect( buff_t* buff, unsigned idx, Ts... mods )
+{
+  force_aura_effect( buff, idx, true, DATA_VALUE, mods... );
+}
+
+template <typename... Ts>
+void player_t::apply_conditional_buff_aura_effects( const spell_data_t* spell, const bfun& func, unsigned ignore_mask,
+                                          bool use_stack, player_value_type_e value_type, Ts... mods )
+{
+  if (!spell || !spell->ok())
+    return;
+
+  for (size_t i = 1; i <= spell->effect_count(); i++)
+  {
+    if (ignore_mask & 1 << ( i - 1 ))
+      continue;
+
+    apply_buff_aura_effect( nullptr, func, spell, i, use_stack, value_type, false, mods... );
+  }
+}
+
+void player_t::force_conditional_buff_aura_effect( const spell_data_t* spell, const bfun& func, unsigned idx, bool use_stack,
+                                         player_value_type_e value_type )
+{
+  apply_buff_aura_effect( nullptr, func, spell, idx, use_stack, value_type, true );
+}
+
+void player_t::apply_passive_aura_effects( const spell_data_t* spell, unsigned ignore_mask )
+{
+  apply_conditional_buff_aura_effects( spell, nullptr, ignore_mask );
+}
+
+void player_t::force_passive_aura_effect( const spell_data_t* spell, unsigned idx, bool use_stack,
+                                player_value_type_e value_type )
+{
+  apply_buff_aura_effect( nullptr, nullptr, spell, idx, use_stack, value_type, true );
 }
 
 double player_t::get_aura_effects_value( const std::vector<buff_effect_t>& auras, bool flat = false,
@@ -4146,6 +4188,9 @@ double player_t::get_aura_effects_value( const std::vector<buff_effect_t>& auras
     double eff_val = i.value;
     int mod = 1;
 
+    if (i.func && !i.func())
+      continue;  // continue to next effect if conditional effect function is false
+
     if (i.buff)
     {
       auto stack = benefit ? i.buff->stack() : i.buff->check();
@@ -4153,7 +4198,10 @@ double player_t::get_aura_effects_value( const std::vector<buff_effect_t>& auras
       if (!stack)
         continue;  // continue to next effect if stacks == 0 (buff is down)
 
-      mod = i.stacks ? stack : 1;
+      mod = i.use_stacks ? stack : 1;
+
+      if (i.type == CURRENT_VALUE)
+        eff_val = i.buff->check_value();
     }
 
     if (i.mastery)

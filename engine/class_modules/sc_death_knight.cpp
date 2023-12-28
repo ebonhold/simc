@@ -1366,7 +1366,7 @@ public:
   void      datacollection_end() override;
   void      analyze( sim_t& sim ) override;
   void      apply_affecting_auras( action_t& action ) override;
-  void      apply_player_auras() override;
+  void      apply_player_auras( player_t* p ) override;
 
   // Default consumables
   std::string default_flask() const override { return death_knight_apl::flask( this ); }
@@ -11091,14 +11091,14 @@ void death_knight_t::adjust_dynamic_cooldowns()
   _runes.update_coefficient();
 }
 
-void death_knight_t::apply_player_auras()
+void death_knight_t::apply_player_auras( player_t* p )
 {
-  player_t::apply_player_auras();
+  player_t::apply_player_auras( p );
   // Shared
-  apply_passive_auras( spec.death_knight );
-  apply_passive_auras( talent.might_of_thassarian );
-  apply_passive_auras( talent.veteran_of_the_third_war );
-  apply_passive_auras( talent.merciless_strikes );
+  apply_passive_aura_effects( spec.death_knight );
+  apply_passive_aura_effects( talent.might_of_thassarian );
+  apply_passive_aura_effects( talent.veteran_of_the_third_war );
+  apply_passive_aura_effects( talent.merciless_strikes );
   // Blood
   if ( specialization() == DEATH_KNIGHT_BLOOD )
   {
@@ -11110,8 +11110,8 @@ void death_knight_t::apply_player_auras()
   // Unholy
   if ( specialization() == DEATH_KNIGHT_UNHOLY )
   {
-    apply_passive_auras( mastery.dreadblade );
-    apply_buff_auras( buffs.ghoulish_frenzy, talent.unholy.ghoulish_frenzy );
+    apply_passive_aura_effects( mastery.dreadblade );
+    apply_buff_aura_effects( buffs.ghoulish_frenzy, talent.unholy.ghoulish_frenzy );
   }
 }
 
