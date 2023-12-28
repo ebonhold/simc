@@ -1236,7 +1236,6 @@ player_t::player_t( sim_t* s, player_e t, util::string_view n, race_e r )
 {
   actor_index = sim->actor_list.size();
   sim->actor_list.push_back( this );
-
   if ( ! is_enemy() && ! is_pet() )
   {
     azerite = azerite::create_state( this );
@@ -3643,6 +3642,7 @@ void player_t::init_finished()
     }
   }
 
+  apply_player_auras();
 
   // Naive recording of minimum energy thresholds for the actor.
   // TODO: Energy pooling, and energy-based expressions (energy>=10) are not included yet
@@ -3762,6 +3762,410 @@ void player_t::init_finished()
       add_precombat_buff_state( buff, buff_state.stacks, buff_state.value, buff_state.duration );
     }
   }
+}
+
+template <typename T>
+void player_t::parse_aura_effects_mods( double& val, bool& mastery, const spell_data_t* base, size_t idx, T mod )
+{
+  bool mod_is_mastery = false;
+
+  if (mod->effect_count() && mod->flags( SX_MASTERY_AFFECTS_POINTS ))
+  {
+    mastery = true;
+    mod_is_mastery = true;
+  }
+
+  for (size_t i = 1; i <= mod->effect_count(); i++)
+  {
+    const auto& eff = mod->effectN( i );
+
+    if (eff.type() != E_APPLY_AURA)
+      continue;
+
+    if (( base->affected_by_all( eff ) &&
+         ( ( eff.misc_value1() == P_EFFECT_1 && idx == 1 ) || ( eff.misc_value1() == P_EFFECT_2 && idx == 2 ) ||
+         ( eff.misc_value1() == P_EFFECT_3 && idx == 3 ) || ( eff.misc_value1() == P_EFFECT_4 && idx == 4 ) ||
+         ( eff.misc_value1() == P_EFFECT_5 && idx == 5 ) ) ) ||
+         ( eff.subtype() == A_PROC_TRIGGER_SPELL_WITH_VALUE && eff.trigger_spell_id() == base->id() && idx == 1 ))
+    {
+      double pct = mod_is_mastery ? eff.mastery_value() : mod_spell_effects_value( mod, eff );
+
+      if (eff.subtype() == A_ADD_FLAT_MODIFIER || eff.subtype() == A_ADD_FLAT_LABEL_MODIFIER)
+        val += pct;
+      else if (eff.subtype() == A_ADD_PCT_MODIFIER || eff.subtype() == A_ADD_PCT_LABEL_MODIFIER)
+        val *= 1.0 + pct / 100;
+      else if (eff.subtype() == A_PROC_TRIGGER_SPELL_WITH_VALUE)
+        val = pct;
+    }
+  }
+}
+
+template <typename T>
+void player_t::apply_buff_aura( buff_t* buff, bool stacks, T mod )
+{
+  if ( !buff )
+  {
+    return;
+  }
+
+  const spell_data_t* spell = &buff->data();
+  bool mastery = false;
+  if ( spell->flags(SX_MASTERY_AFFECTS_POINTS) )
+  {
+    mastery = true;
+  }
+
+  util::string_view name = spell->name_cstr();
+
+  assert( ( spell->flags( SX_PASSIVE ) || spell->duration() < 0_ms ) &&
+          "only passive spells should be affecting the player." );
+
+  for ( const spelleffect_data_t& effect : spell->effects() )
+  {
+    apply_affecting_effect( buff, effect, spell, spell->effect_count(), mastery, name, stacks, mod );
+  }
+}
+
+template <typename T>
+void player_t::apply_passive_aura( const spell_data_t* spell, T mod )
+{
+  if ( !spell || !spell->ok() )
+  {
+    return;
+  }
+
+  bool mastery = false;
+  if ( spell->flags( SX_MASTERY_AFFECTS_POINTS ) )
+  {
+    mastery = true;
+  }
+
+  util::string_view name = spell->name_cstr();
+
+  assert( ( spell->flags( SX_PASSIVE ) || spell->duration() < 0_ms ) &&
+          "only passive spells should be affecting the player." );
+
+  for ( const spelleffect_data_t& effect : spell->effects() )
+  {
+    apply_affecting_effect( nullptr, effect, spell, spell->effect_count(), mastery, name, false, mod );
+  }
+}
+
+void player_t::apply_player_auras()
+{
+
+}
+
+template <typename... Ts>
+void player_t::apply_affecting_effect( buff_t* buff, const spelleffect_data_t& effect, const spell_data_t* spell, size_t i, bool mastery, util::string_view name, bool stacks, Ts... mods )
+{
+  if ( !effect.ok() || effect.type() != E_APPLY_AURA )
+    return;
+
+  double calc_value = mastery ? effect.mastery_value() : effect.percent();
+
+  if ( i <= 5 )
+    parse_aura_effects_mods( calc_value, mastery, spell, i, mods... );
+
+  auto debug_message = [ & ]( std::string_view type )
+  {
+    if( mastery )
+    {
+      sim->print_debug( "apply-player-effects: {} modified {} by {}*mastery", name, type, calc_value * 100 );
+    }
+    else if( stacks )
+    {
+      sim->print_debug( "apply-player-effects: {} modified {} by {} per stack", name, type, calc_value );
+    }
+    else
+    {
+      sim->print_debug( "apply-player-effects: {} modified {} by {}", name, type, calc_value );
+    }
+  };
+
+
+  switch (effect.subtype())
+  {
+    case A_MOD_PET_DAMAGE_DONE:
+      parse_auras.pet_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      debug_message( "pet damage" );
+      break;
+    case A_MOD_GUARDIAN_DAMAGE_DONE:
+      parse_auras.guardian_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      debug_message( "guardian damage" );
+      break;
+    case A_MOD_TOTAL_STAT_PERCENTAGE:
+      if (effect.misc_value2())
+      {
+        enum stat_mask_e
+        {
+          STAT_MASK_STRENGTH = 0x1,
+          STAT_MASK_AGILITY = 0x2,
+          STAT_MASK_STAMINA = 0x4,
+          STAT_MASK_INTELLECT = 0x8,
+        };
+        if (effect.misc_value2() == 0xb)
+        {
+          switch (convert_hybrid_stat( STAT_STR_AGI_INT ))
+          {
+            case STAT_STRENGTH:
+              parse_auras.strength_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+              break;
+            case STAT_AGILITY:
+              parse_auras.agility_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+              break;
+            case STAT_INTELLECT:
+              parse_auras.intellect_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+              break;
+            default:
+              break;
+          }
+          debug_message( "primary stat multiplier" );
+        }
+        else
+        {
+          if (( effect.misc_value2() & STAT_MASK_STRENGTH ) == STAT_MASK_STRENGTH)
+          {
+            parse_auras.strength_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            debug_message( "strength multiplier" );
+          }
+          if (( effect.misc_value2() & STAT_MASK_AGILITY ) == STAT_MASK_AGILITY)
+          {
+            parse_auras.agility_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            debug_message( "agility multiplier" );
+          }
+          if (( effect.misc_value2() & STAT_MASK_STAMINA ) == STAT_MASK_STAMINA)
+          {
+            parse_auras.stamina_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            debug_message( "stamina multiplier" );
+          }
+          if (( effect.misc_value2() & STAT_MASK_INTELLECT ) == STAT_MASK_INTELLECT)
+          {
+            parse_auras.intellect_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            debug_message( "intellect multiplier" );
+          }
+        }
+      }
+      break;
+    case A_MOD_LEECH_PERCENT:
+      parse_auras.leech_additive_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      debug_message( "leech additive modifier" );
+      break;
+    case A_MOD_EXPERTISE:
+      parse_auras.expertise_additive_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      debug_message( "expertise additive modifier" );
+      break;
+    case A_MOD_PARRY_PERCENT:
+      parse_auras.parry_additive_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      debug_message( "parry additive modifier" );
+      break;
+    case A_MOD_DAMAGE_PERCENT_DONE:
+      if (effect.misc_value1())
+      {
+        if (effect.misc_value1() == 0x7f)
+        {
+          parse_auras.all_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+          debug_message( "all damage multiplier" );
+        }
+        else
+        {
+          if (( effect.misc_value1() & SCHOOL_MASK_PHYSICAL ) == SCHOOL_MASK_PHYSICAL)
+          {
+            parse_auras.phys_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            debug_message( "physical damage multiplier" );
+          }
+          if (( effect.misc_value1() & SCHOOL_MASK_HOLY ) == SCHOOL_MASK_HOLY)
+          {
+            parse_auras.holy_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            debug_message( "holy damage multiplier" );
+          }
+
+          if (( effect.misc_value1() & SCHOOL_MASK_FIRE ) == SCHOOL_MASK_FIRE)
+          {
+            parse_auras.fire_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            debug_message( "fire damage multiplier" );
+          }
+
+          if (( effect.misc_value1() & SCHOOL_MASK_NATURE ) == SCHOOL_MASK_NATURE)
+          {
+            parse_auras.nature_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            debug_message( "nature damage multiplier" );
+          }
+
+          if (( effect.misc_value1() & SCHOOL_MASK_FROST ) == SCHOOL_MASK_FROST)
+          {
+            parse_auras.frost_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            debug_message( "frost damage multiplier" );
+          }
+
+          if (( effect.misc_value1() & SCHOOL_MASK_SHADOW ) == SCHOOL_MASK_SHADOW)
+          {
+            parse_auras.shadow_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            debug_message( "shadow damage multiplier" );
+          }
+
+          if (( effect.misc_value1() & SCHOOL_MASK_ARCANE ) == SCHOOL_MASK_ARCANE)
+          {
+            parse_auras.arcane_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+            debug_message( "arcane damage multiplier" );
+          }
+        }
+      }
+      break;
+    case A_MOD_ATTACK_POWER_PCT:
+      parse_auras.attack_power_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      debug_message( "attack power multiplier" );
+      break;
+    case A_HASTE_ALL:
+      parse_auras.all_haste_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      debug_message( "all haste multiplier" );
+      break;
+    case A_MOD_RANGED_AND_MELEE_ATTACK_SPEED:
+      parse_auras.all_attack_speed_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      debug_message( "all attack speed multiplier" );
+      break;
+    case A_MOD_MELEE_ATTACK_SPEED_PCT:
+      parse_auras.melee_attack_speed_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      debug_message( "melee attack speed multiplier" );
+      break;
+    case A_MOD_ALL_CRIT_CHANCE:
+      parse_auras.crit_chance_additive_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      debug_message( "crit chance additive" );
+      break;
+    case A_MOD_ATTACKER_MELEE_CRIT_CHANCE:
+      parse_auras.crit_avoidance_additive_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      debug_message( "crit avoidance additive" );
+      break;
+    case A_MOD_BASE_RESISTANCE_PCT:
+      parse_auras.base_armor_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      debug_message( "base resistance" );
+      break;
+    case A_MOD_DODGE_PERCENT:
+      parse_auras.dodge_additive_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      debug_message( "dodge additive" );
+      break;
+    case A_MOD_VERSATILITY_PCT:
+      parse_auras.versatility_additive_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      debug_message( "vers additive" );
+      break;
+    case A_MOD_MASTERY_PCT:
+      parse_auras.mastery_additive_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      debug_message( "mastery additive" );
+      break;
+    case A_MOD_CRIT_DAMAGE_BONUS:
+      parse_auras.crit_damage_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+      debug_message( "crit damage multiplier" );
+      break;
+    case A_MOD_STAT_FROM_RATING_PCT:
+      switch (effect.misc_value1())
+      {
+        case 1792:
+          parse_auras.crit_rating_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+          debug_message( "crit rating multiplier" );
+          break;
+        case 917504:
+          parse_auras.haste_rating_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+          debug_message( "haste rating multiplier" );
+          break;
+        case 33554432:
+          parse_auras.mastery_rating_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+          debug_message( "mastery rating multiplier" );
+          break;
+        case 1879048192:
+          parse_auras.versatility_rating_multiplier_auras.emplace_back( buff, calc_value, mastery, stacks, effect );
+          debug_message( "versatility rating multiplier" );
+          break;
+        default:
+          break;
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+template <typename... Ts>
+void player_t::parse_aura_modifiers( const spell_data_t* s_data, Ts... mods )
+{
+  for (size_t i = 1; i <= s_data->effect_count(); i++)
+  {
+    const auto& eff = s_data->effectN( i );
+    auto subtype = eff.subtype();
+    size_t target_idx = 0;
+
+    if (eff.type() != E_APPLY_AURA)
+      continue;
+
+    switch (subtype)
+    {
+      case A_ADD_FLAT_MODIFIER:
+      case A_ADD_FLAT_LABEL_MODIFIER:
+      case A_ADD_PCT_MODIFIER:
+      case A_ADD_PCT_LABEL_MODIFIER:
+        break;
+      default:
+        continue;
+    }
+
+    switch (eff.property_type())
+    {
+      case P_EFFECT_1:
+        target_idx = 1;
+        break;
+      case P_EFFECT_2:
+        target_idx = 2;
+        break;
+      case P_EFFECT_3:
+        target_idx = 3;
+        break;
+      case P_EFFECT_4:
+        target_idx = 4;
+        break;
+      case P_EFFECT_5:
+        target_idx = 5;
+        break;
+      default:
+        continue;
+    }
+
+    double val = eff.base_value();
+    bool m;  // dummy throwaway
+
+    if (i <= 5)
+      parse_aura_effects_mods( val, m, s_data, i, mods... );
+  }
+}
+
+double player_t::get_aura_effects_value( const std::vector<buff_effect_t>& auras, bool flat = false,
+                               bool benefit = true ) const
+{
+  double return_value = flat ? 0.0 : 1.0;
+
+  for (const auto& i : auras)
+  {
+    double eff_val = i.value;
+    int mod = 1;
+
+    if (i.buff)
+    {
+      auto stack = benefit ? i.buff->stack() : i.buff->check();
+
+      if (!stack)
+        continue;  // continue to next effect if stacks == 0 (buff is down)
+
+      mod = i.stacks ? stack : 1;
+    }
+
+    if (i.mastery)
+      eff_val *= cache.mastery();
+
+    if (flat)
+      return_value += eff_val * mod;
+    else
+      return_value *= 1.0 + eff_val * mod;
+  }
+
+  return return_value;
 }
 
 void player_t::add_precombat_buff_state( buff_t* buff, int stacks, double value, timespan_t duration )
@@ -4204,6 +4608,8 @@ double player_t::composite_melee_haste() const
 
     if ( buffs.power_infusion )
       h *= 1.0 / ( 1.0 + buffs.power_infusion->check_value() );
+
+    h *= 1.0 / get_aura_effects_value( parse_auras.all_haste_multiplier_auras );
   }
 
   return h;
@@ -4224,6 +4630,9 @@ double player_t::composite_melee_speed() const
 
   if ( buffs.heavens_nemesis && buffs.heavens_nemesis->data().effectN( 1 ).subtype() == A_MOD_RANGED_AND_MELEE_ATTACK_SPEED && buffs.heavens_nemesis->check() )
     h *= 1.0 / ( 1.0 + buffs.heavens_nemesis->check_stack_value() );
+
+  h *= ( 1.0 / get_aura_effects_value( parse_auras.all_attack_speed_multiplier_auras ) );
+  h *= ( 1.0 / get_aura_effects_value( parse_auras.melee_attack_speed_multiplier_auras ) );
 
   return h;
 }
@@ -4328,6 +4737,7 @@ double player_t::composite_attack_power_multiplier() const
   double m = current.attack_power_multiplier;
 
   m *= 1.0 + sim->auras.battle_shout->check_value();
+  m *= get_aura_effects_value( parse_auras.attack_power_multiplier_auras );
 
   return m;
 }
@@ -4351,6 +4761,8 @@ double player_t::composite_melee_crit_chance() const
   if ( timeofday == DAY_TIME )
     ac += racials.touch_of_elune->effectN( 1 ).percent();
 
+  ac += get_aura_effects_value( parse_auras.crit_chance_additive_auras, true );
+
   return ac;
 }
 
@@ -4359,6 +4771,7 @@ double player_t::composite_melee_expertise( const weapon_t* ) const
   double e = current.expertise;
 
   // e += composite_expertise_rating() / current.rating.expertise;
+  e += get_aura_effects_value( parse_auras.expertise_additive_auras, true );
 
   return e;
 }
@@ -4395,6 +4808,8 @@ double player_t::composite_base_armor_multiplier() const
   {
     a += 0.02;
   }
+
+  a *= get_aura_effects_value( parse_auras.base_armor_multiplier_auras );
 
   return a;
 }
@@ -4484,6 +4899,7 @@ double player_t::composite_dodge() const
   {
     bonus_dodge += ( cache.agility() - dbc->race_base( race ).agility -
         dbc->attribute_base( type, level() ).agility ) * current.dodge_per_agility;
+    bonus_dodge += get_aura_effects_value( parse_auras.dodge_additive_auras, true );
   }
 
   // if we have any bonus_dodge, apply diminishing returns and add it to total_dodge.
@@ -4505,6 +4921,7 @@ double player_t::composite_parry() const
   {
     bonus_parry += ( cache.strength() - dbc->race_base( race ).strength -
         dbc->attribute_base( type, level() ).strength ) * current.parry_per_strength;
+    bonus_parry += get_aura_effects_value( parse_auras.parry_additive_auras, true );
   }
 
   // if we have any bonus_parry, apply diminishing returns and add it to total_parry.
@@ -4536,7 +4953,11 @@ double player_t::composite_crit_block() const
 
 double player_t::composite_crit_avoidance() const
 {
-  return 0;
+  double m = 0;
+
+  m *= get_aura_effects_value( parse_auras.crit_avoidance_additive_auras, true );
+
+  return m;
 }
 
 /**
@@ -4570,6 +4991,8 @@ double player_t::composite_spell_haste() const
 
     if ( buffs.power_infusion )
       h *= 1.0 / ( 1.0 + buffs.power_infusion->check_value() );
+
+    h *= 1.0 / get_aura_effects_value( parse_auras.all_haste_multiplier_auras );
   }
 
   return h;
@@ -4655,6 +5078,8 @@ double player_t::composite_spell_crit_chance() const
   if ( buffs.focus_magic )
     sc += buffs.focus_magic->check_value();
 
+  sc += get_aura_effects_value( parse_auras.crit_chance_additive_auras, true );
+
   return sc;
 }
 
@@ -4679,6 +5104,8 @@ double player_t::composite_mastery() const
   for ( auto b : buffs.stat_pct_buffs[ STAT_PCT_BUFF_MASTERY ] )
     cm += b->check_stack_value();
 
+  cm += get_aura_effects_value( parse_auras.mastery_additive_auras, true );
+
   return cm;
 }
 
@@ -4699,6 +5126,8 @@ double player_t::composite_damage_versatility() const
   {
     cdv += sim->auras.mark_of_the_wild->check_value();
   }
+
+  cdv += get_aura_effects_value( parse_auras.versatility_additive_auras, true );
 
   if ( buffs.dmf_well_fed )
     cdv += buffs.dmf_well_fed->check_value();
@@ -4722,6 +5151,8 @@ double player_t::composite_heal_versatility() const
     chv += sim->auras.mark_of_the_wild->check_value();
   }
 
+  chv += get_aura_effects_value( parse_auras.versatility_additive_auras, true );
+
   if ( buffs.dmf_well_fed )
     chv += buffs.dmf_well_fed->check_value();
 
@@ -4744,6 +5175,8 @@ double player_t::composite_mitigation_versatility() const
     cmv += sim->auras.mark_of_the_wild->check_value() / 2;
   }
 
+  cmv += get_aura_effects_value( parse_auras.versatility_additive_auras, true ) / 2;
+
   if ( buffs.dmf_well_fed )
     cmv += buffs.dmf_well_fed->check_value() / 2;
 
@@ -4755,7 +5188,11 @@ double player_t::composite_mitigation_versatility() const
 
 double player_t::composite_leech() const
 {
-  return apply_combat_rating_dr( RATING_LEECH, composite_leech_rating() / current.rating.leech );
+  double m = apply_combat_rating_dr( RATING_LEECH, composite_leech_rating() / current.rating.leech );
+
+  m *= get_aura_effects_value( parse_auras.leech_additive_auras, true );
+
+  return m;
 }
 
 double player_t::composite_run_speed() const
@@ -4794,7 +5231,12 @@ double player_t::composite_player_pet_damage_multiplier( const action_state_t*, 
 
   m *= 1.0 + racials.command->effectN(1).percent();
 
-  if (!guardian)
+  if ( guardian )
+  {
+    m *= get_aura_effects_value( parse_auras.guardian_damage_multiplier_auras );
+  }
+
+  else
   {
     if (buffs.coldhearted && buffs.coldhearted->check())
       m *= 1.0 + buffs.coldhearted->check_value();
@@ -4802,6 +5244,8 @@ double player_t::composite_player_pet_damage_multiplier( const action_state_t*, 
     // By default effect 1 is used for the player modifier, effect 2 is for the pet modifier
     if (buffs.battlefield_presence && buffs.battlefield_presence->check())
       m *= 1.0 + (buffs.battlefield_presence->data().effectN(2).percent() * buffs.battlefield_presence->current_stack);
+
+    m *= get_aura_effects_value( parse_auras.pet_damage_multiplier_auras );
   }
 
   return m;
@@ -4848,6 +5292,37 @@ double player_t::composite_player_multiplier( school_e school ) const
 
   if ( buffs.coldhearted && buffs.coldhearted->check() )
     m *= 1.0 + buffs.coldhearted->check_value();
+
+  m *= get_aura_effects_value( parse_auras.all_damage_multiplier_auras );
+
+  if (dbc::is_school( school, SCHOOL_PHYSICAL ))
+  {
+    m *= get_aura_effects_value( parse_auras.phys_damage_multiplier_auras );
+  }
+  if (dbc::is_school( school, SCHOOL_HOLY ))
+  {
+    m *= get_aura_effects_value( parse_auras.holy_damage_multiplier_auras );
+  }
+  if (dbc::is_school( school, SCHOOL_FIRE ))
+  {
+    m *= get_aura_effects_value( parse_auras.fire_damage_multiplier_auras );
+  }
+  if (dbc::is_school( school, SCHOOL_NATURE ))
+  {
+    m *= get_aura_effects_value( parse_auras.nature_damage_multiplier_auras );
+  }
+  if (dbc::is_school( school, SCHOOL_FROST ))
+  {
+    m *= get_aura_effects_value( parse_auras.frost_damage_multiplier_auras );
+  }
+  if (dbc::is_school( school, SCHOOL_SHADOW ))
+  {
+    m *= get_aura_effects_value( parse_auras.shadow_damage_multiplier_auras );
+  }
+  if (dbc::is_school( school, SCHOOL_ARCANE ))
+  {
+    m *= get_aura_effects_value( parse_auras.arcane_damage_multiplier_auras );
+  }
 
   return m;
 }
@@ -4961,6 +5436,8 @@ double player_t::composite_player_critical_damage_multiplier( const action_state
   // Critical hit damage buff from follower themed Benthic boots
   if ( buffs.fathom_hunter )
     m *= 1.0 + buffs.fathom_hunter->check_value();
+
+  m *= get_aura_effects_value( parse_auras.crit_damage_multiplier_auras );
 
   return m;
 }
@@ -5087,12 +5564,15 @@ double player_t::composite_attribute_multiplier( attribute_e attr ) const
   {
     case ATTR_STRENGTH:
       pct_type = STAT_PCT_BUFF_STRENGTH;
+      m *= get_aura_effects_value( parse_auras.strength_multiplier_auras );
       break;
     case ATTR_AGILITY:
       pct_type = STAT_PCT_BUFF_AGILITY;
+      m *= get_aura_effects_value( parse_auras.agility_multiplier_auras );
       break;
     case ATTR_INTELLECT:
       pct_type = STAT_PCT_BUFF_INTELLECT;
+      m *= get_aura_effects_value( parse_auras.intellect_multiplier_auras );
       if ( sim->auras.arcane_intellect->check() )
         m *= 1.0 + sim->auras.arcane_intellect->current_value;
       break;
@@ -5101,6 +5581,7 @@ double player_t::composite_attribute_multiplier( attribute_e attr ) const
       break;
     case ATTR_STAMINA:
       pct_type = STAT_PCT_BUFF_STAMINA;
+      m *= get_aura_effects_value( parse_auras.stamina_multiplier_auras );
       if ( sim->auras.power_word_fortitude->check() )
       {
         m *= 1.0 + sim->auras.power_word_fortitude->current_value;
@@ -5132,16 +5613,19 @@ double player_t::composite_rating_multiplier( rating_e rating ) const
       v *= 1.0 + passive_values.amplification_1;
       v *= 1.0 + passive_values.amplification_2;
       v *= 1.0 + racials.the_human_spirit->effectN( 1 ).percent();
+      v *= get_aura_effects_value( parse_auras.haste_rating_multiplier_auras );
       break;
     case RATING_MASTERY:
       v *= 1.0 + passive_values.amplification_1;
       v *= 1.0 + passive_values.amplification_2;
       v *= 1.0 + racials.the_human_spirit->effectN( 1 ).percent();
+      v *= get_aura_effects_value( parse_auras.mastery_rating_multiplier_auras );
       break;
     case RATING_SPELL_CRIT:
     case RATING_MELEE_CRIT:
     case RATING_RANGED_CRIT:
       v *= 1.0 + racials.the_human_spirit->effectN( 1 ).percent();
+      v *= get_aura_effects_value( parse_auras.crit_rating_multiplier_auras );
       break;
     case RATING_DAMAGE_VERSATILITY:
     case RATING_HEAL_VERSATILITY:
@@ -5149,6 +5633,7 @@ double player_t::composite_rating_multiplier( rating_e rating ) const
       v *= 1.0 + passive_values.amplification_1;
       v *= 1.0 + passive_values.amplification_2;
       v *= 1.0 + racials.the_human_spirit->effectN( 1 ).percent();
+      v *= get_aura_effects_value( parse_auras.versatility_rating_multiplier_auras );
       break;
     default:
       break;

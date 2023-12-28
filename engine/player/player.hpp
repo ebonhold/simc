@@ -69,6 +69,7 @@ struct spell_data_t;
 struct player_talent_points_t;
 struct uptime_t;
 struct ground_aoe_params_t;
+
 namespace azerite {
     class azerite_state_t;
     class azerite_essence_state_t;
@@ -667,6 +668,101 @@ struct player_t : public actor_t
     double amplification_2;
   } passive_values;
 
+  struct buff_effect_t
+  {
+    buff_t* buff;
+    double value;
+    bool mastery;
+    bool stacks;
+    const spelleffect_data_t& eff;
+
+    buff_effect_t( buff_t* b, double v, bool m = false, bool s = true, const spelleffect_data_t& e = spelleffect_data_t::nil() )
+      : buff( b ), value( v ), mastery( m ), eff( e ), stacks( s )
+    {}
+  };
+
+  double mod_spell_effects_value( const spell_data_t*, const spelleffect_data_t& e ) { return e.base_value(); }
+
+  template <typename T>
+  void parse_aura_effects_mods( double& val, bool& mastery, const spell_data_t* s_data, size_t idx, T mod );
+
+  void parse_aura_effects_mods( double&, bool&, const spell_data_t*, size_t ) {}
+
+  template <typename T, typename... Ts>
+  void parse_aura_effects_mods( double& val, bool& m, const spell_data_t* base, size_t idx, T mod, Ts... mods )
+  {
+    parse_aura_effects_mods( val, m, base, idx, mod );
+    parse_aura_effects_mods( val, m, base, idx, mods... );
+  }
+  template <typename T>
+  void apply_buff_aura( buff_t* buff, bool stacks, T mod );
+
+  template <typename T>
+  void apply_passive_aura( const spell_data_t* spell, T mod );
+
+  template <typename... Ts>
+  void apply_affecting_effect( buff_t* buff, const spelleffect_data_t& effect, const spell_data_t* spell, size_t i, bool mastery, util::string_view name, bool stacks, Ts... mods );
+
+  template <typename... Ts>
+  void apply_buff_auras( buff_t* buff, bool stacks, Ts... mods )
+  {
+    apply_buff_aura( buff, stacks, mods... );
+  }
+  template <typename... Ts>
+  void apply_buff_auras( buff_t* buff, Ts... mods )
+  {
+    apply_buff_aura( buff, true, mods... );
+  }
+
+  template <typename... Ts>
+  void apply_passive_auras( const spell_data_t* s, Ts... mods )
+  {
+    apply_passive_aura( s, mods... );
+  }
+
+  template <typename... Ts>
+  void parse_aura_modifiers( const spell_data_t* s_data, Ts... mods );
+
+  double get_aura_effects_value( const std::vector<buff_effect_t>& auras, bool flat, bool benefit ) const;
+
+  struct parse_auras_t
+  {
+    // Damage modifiers 
+    std::vector<buff_effect_t> pet_damage_multiplier_auras;
+    std::vector<buff_effect_t> guardian_damage_multiplier_auras;
+    std::vector<buff_effect_t> phys_damage_multiplier_auras;
+    std::vector<buff_effect_t> holy_damage_multiplier_auras;
+    std::vector<buff_effect_t> fire_damage_multiplier_auras;
+    std::vector<buff_effect_t> nature_damage_multiplier_auras;
+    std::vector<buff_effect_t> frost_damage_multiplier_auras;
+    std::vector<buff_effect_t> shadow_damage_multiplier_auras;
+    std::vector<buff_effect_t> arcane_damage_multiplier_auras;
+    std::vector<buff_effect_t> all_damage_multiplier_auras;
+    std::vector<buff_effect_t> crit_damage_multiplier_auras;
+    // Attribute modifiers
+    std::vector<buff_effect_t> strength_multiplier_auras;
+    std::vector<buff_effect_t> agility_multiplier_auras;
+    std::vector<buff_effect_t> intellect_multiplier_auras;
+    std::vector<buff_effect_t> stamina_multiplier_auras;
+    std::vector<buff_effect_t> leech_additive_auras;
+    std::vector<buff_effect_t> expertise_additive_auras;
+    std::vector<buff_effect_t> parry_additive_auras;
+    std::vector<buff_effect_t> attack_power_multiplier_auras;
+    std::vector<buff_effect_t> all_haste_multiplier_auras;
+    std::vector<buff_effect_t> all_attack_speed_multiplier_auras;
+    std::vector<buff_effect_t> melee_attack_speed_multiplier_auras;
+    std::vector<buff_effect_t> crit_chance_additive_auras;
+    std::vector<buff_effect_t> crit_avoidance_additive_auras;
+    std::vector<buff_effect_t> base_armor_multiplier_auras;
+    std::vector<buff_effect_t> dodge_additive_auras;
+    std::vector<buff_effect_t> versatility_additive_auras;
+    std::vector<buff_effect_t> mastery_additive_auras;
+    std::vector<buff_effect_t> crit_rating_multiplier_auras;
+    std::vector<buff_effect_t> haste_rating_multiplier_auras;
+    std::vector<buff_effect_t> mastery_rating_multiplier_auras;
+    std::vector<buff_effect_t> versatility_rating_multiplier_auras;
+  } parse_auras;
+
   bool active_during_iteration;
   const spell_data_t* spec_spell;
   const spelleffect_data_t* _mastery; // = find_mastery_spell( specialization() ) -> effectN( 1 );
@@ -1012,8 +1108,9 @@ public:
   virtual void init_finished();
   virtual void add_precombat_buff_state( buff_t* buff, int stacks, double value, timespan_t duration );
   virtual void add_precombat_cooldown_state( cooldown_t* cd, timespan_t duration );
-  virtual void apply_affecting_auras(action_t&);
-  virtual void action_init_finished(action_t&);
+  virtual void apply_player_auras();
+  virtual void apply_affecting_auras( action_t& );
+  virtual void action_init_finished( action_t& );
   virtual bool verify_use_items() const;
   virtual void reset();
   virtual void combat_begin();

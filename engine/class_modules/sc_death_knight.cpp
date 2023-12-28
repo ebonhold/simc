@@ -1366,6 +1366,7 @@ public:
   void      datacollection_end() override;
   void      analyze( sim_t& sim ) override;
   void      apply_affecting_auras( action_t& action ) override;
+  void      apply_player_auras() override;
 
   // Default consumables
   std::string default_flask() const override { return death_knight_apl::flask( this ); }
@@ -9874,7 +9875,7 @@ void death_knight_t::init_spells()
   spell.death_rot_debuff           = find_spell( 377540 );
   spell.coil_of_devastation_debuff = find_spell( 390271 );
   spell.feasting_strikes_gain      = find_spell( 390162 );
-  spell.ghoulish_frenzy_player     = find_spell( 377587 );
+  spell.ghoulish_frenzy_player     = find_spell( 377588 );
   spell.plaguebringer_buff         = find_spell( 390178 );
   spell.festermight_buff           = find_spell( 377591 );
   spell.ghoulish_infusion          = find_spell( 394899 );
@@ -9920,7 +9921,7 @@ void death_knight_t::init_spells()
   // Ruptured Viscera Talent
   pet_spell.ruptured_viscera        = find_spell( 390220 );
   // Ghoulish Frenzy
-  pet_spell.ghoulish_frenzy         = find_spell ( 377587 );
+  pet_spell.ghoulish_frenzy         = find_spell ( 377589 );
   // Vile Infusion
   pet_spell.vile_infusion           = find_spell ( 394863 );
   // DRW Spells
@@ -10839,11 +10840,6 @@ double death_knight_t::composite_player_pet_damage_multiplier( const action_stat
     m *= 1.0 + spell.vigorous_lifeblood_4pc -> effectN( 4 ).percent();
   }
 
-  if ( mastery.dreadblade->ok() )
-  {
-    m *= 1.0 + cache.mastery_value();
-  }
-
   if ( talent.unholy.unholy_aura.ok() )
   {
     if ( guardian )
@@ -10938,8 +10934,6 @@ double death_knight_t::composite_melee_crit_chance() const
 {
   double c = player_t::composite_melee_crit_chance();
 
-  c += talent.merciless_strikes->effectN( 1 ).percent();
-
   return c;
 }
 
@@ -10947,8 +10941,6 @@ double death_knight_t::composite_melee_crit_chance() const
 double death_knight_t::composite_spell_crit_chance() const
 {
   double c = player_t::composite_spell_crit_chance();
-
-  c += talent.merciless_strikes->effectN( 1 ).percent();
 
   return c;
 }
@@ -11097,6 +11089,30 @@ void death_knight_t::adjust_dynamic_cooldowns()
   player_t::adjust_dynamic_cooldowns();
 
   _runes.update_coefficient();
+}
+
+void death_knight_t::apply_player_auras()
+{
+  player_t::apply_player_auras();
+  // Shared
+  apply_passive_auras( spec.death_knight );
+  apply_passive_auras( talent.might_of_thassarian );
+  apply_passive_auras( talent.veteran_of_the_third_war );
+  apply_passive_auras( talent.merciless_strikes );
+  // Blood
+  if ( specialization() == DEATH_KNIGHT_BLOOD )
+  {
+  }
+  // Frost
+  if ( specialization() == DEATH_KNIGHT_FROST )
+  {
+  }
+  // Unholy
+  if ( specialization() == DEATH_KNIGHT_UNHOLY )
+  {
+    apply_passive_auras( mastery.dreadblade );
+    apply_buff_auras( buffs.ghoulish_frenzy, talent.unholy.ghoulish_frenzy );
+  }
 }
 
 void death_knight_t::apply_affecting_auras( action_t& action )
