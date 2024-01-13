@@ -2706,6 +2706,7 @@ struct risen_skulker_pet_t : public death_knight_pet_t
     resource_regeneration = regen_type::DISABLED;
     main_hand_weapon.type = WEAPON_BEAST_RANGED;
     main_hand_weapon.swing_time = 2.7_s;
+    precombat_spawn = true;
   }
 
   struct skulker_shot_t : public pet_spell_t<risen_skulker_pet_t>
@@ -2714,12 +2715,11 @@ struct risen_skulker_pet_t : public death_knight_pet_t
       pet_spell_t<risen_skulker_pet_t>( p, "skulker_shot", p -> dk() -> pet_spell.skulker_shot )
     {
       weapon = &( p -> main_hand_weapon );
-      background = true;
       // For some reason, Risen Skulker deals double damage to its main target, and normal damage to the other targets
       base_multiplier *= 2.0;
       aoe = -1;
       base_aoe_multiplier = 0.5;
-      repeating = true;
+      repeating = background = true;
     }
   };
 
@@ -2730,17 +2730,28 @@ struct risen_skulker_pet_t : public death_knight_pet_t
     owner_coeff.ap_from_ap = 1.0;
   }
 
+  void acquire_target( retarget_source event, player_t* context ) override
+  {
+    player_t::acquire_target(event, context);
+    reschedule_skulker(true);
+  }
+
   void create_actions() override
   {
     death_knight_pet_t::create_actions();
     skulker_shot = new skulker_shot_t( this );
   }
 
-  void reschedule_skulker()
+  void reschedule_skulker( bool retarget )
   {
     if ( executing || is_sleeping() || buffs.movement->check() || buffs.stunned->check() )
       return;
 
+    if ( retarget )
+    {
+      skulker_shot->interrupt_action();
+      skulker_shot->schedule_execute();
+    }
     else
     {
       skulker_shot->set_target( dk()->target );
@@ -2751,12 +2762,24 @@ struct risen_skulker_pet_t : public death_knight_pet_t
   void arise() override
   {
     death_knight_pet_t::arise();
-    reschedule_skulker();
+    timespan_t duration = dk() -> pet_spell.pet_stun -> duration();
+    if ( precombat_spawn_adjust > 0_s && precombat_spawn )
+    {
+      duration = duration - precombat_spawn_adjust;
+      buffs.stunned -> trigger( duration );
+      stun();
+    }
+    else if( !precombat_spawn )
+    {
+      buffs.stunned -> trigger( duration );
+      stun();
+    }
+    reschedule_skulker(false);
   }
 
   void schedule_ready( timespan_t /* delta_time */, bool /* waiting */ ) override
   {
-    reschedule_skulker();
+    reschedule_skulker(false);
   }
 };
 
