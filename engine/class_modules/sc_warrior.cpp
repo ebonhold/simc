@@ -2578,7 +2578,7 @@ struct bloodthirst_heal_t : public warrior_heal_t
   }
 };
 
-// Bloodthirst ==============================================================
+// Bloodthirst and Bloodbath ==================================================
 
 struct gushing_wound_dot_t : public warrior_attack_t
 {
@@ -2590,7 +2590,7 @@ struct gushing_wound_dot_t : public warrior_attack_t
   }
 };
 
-struct bloodthirst_t : public warrior_attack_t
+struct bloodthirst_base_t : public warrior_attack_t
 {
   bloodthirst_heal_t* bloodthirst_heal;
   warrior_attack_t* gushing_wound;
@@ -2600,8 +2600,9 @@ struct bloodthirst_t : public warrior_attack_t
   double rage_from_burst_of_power;
   action_t* reap_the_storm;
   bool unhinged;
-  bloodthirst_t( warrior_t* p, util::string_view options_str )
-    : warrior_attack_t( "bloodthirst", p, p->talents.fury.bloodthirst ),
+
+  bloodthirst_base_t( warrior_t* p, util::string_view name, const spell_data_t* spell )
+    : warrior_attack_t( name, p, spell ),
       bloodthirst_heal( nullptr ),
       gushing_wound( nullptr ),
       aoe_targets( as<int>( p->spell.whirlwind_buff->effectN( 1 ).base_value() ) ),
@@ -2610,106 +2611,43 @@ struct bloodthirst_t : public warrior_attack_t
       rage_from_burst_of_power( 0 ),
       reap_the_storm( nullptr ),
       unhinged( false )
-  {
-    parse_options( options_str );
+      {
+        weapon = &( p->main_hand_weapon );
+        radius = 5;
+        base_aoe_multiplier = p->spell.whirlwind_buff->effectN( 2 ).percent();
 
-    weapon = &( p->main_hand_weapon );
-    radius = 5;
-    if ( p->non_dps_mechanics )
-    {
-      bloodthirst_heal = new bloodthirst_heal_t( p );
-    }
-    if ( sim->dbc->wowv() < wowv_t{ 11, 1, 5 } )
-      base_aoe_multiplier = p->spell.whirlwind_buff->effectN( 3 ).percent();
-    else
-      base_aoe_multiplier = p->spell.whirlwind_buff->effectN( 2 ).percent();
+        if ( p->non_dps_mechanics )
+        {
+          bloodthirst_heal = new bloodthirst_heal_t( p );
+        }
 
-    if ( p->talents.fury.fresh_meat->ok() )
-    {
-      enrage_chance += p->talents.fury.fresh_meat->effectN( 1 ).percent();
-    }
+        if ( p->talents.fury.fresh_meat->ok() )
+          enrage_chance += p->talents.fury.fresh_meat->effectN( 1 ).percent();
 
-    if ( p->talents.fury.cold_steel_hot_blood.ok() )
-    {
-      gushing_wound = new gushing_wound_dot_t( p );
-    }
+        if ( p->talents.fury.cold_steel_hot_blood.ok() )
+          gushing_wound = new gushing_wound_dot_t( p );
 
-    if ( p->talents.fury.swift_strikes->ok() )
-    {
-      energize_amount += p->talents.fury.swift_strikes->effectN( 2 ).resource( RESOURCE_RAGE );
-    }
+        if ( p->talents.fury.swift_strikes->ok() )
+          energize_amount += p->talents.fury.swift_strikes->effectN( 2 ).resource( RESOURCE_RAGE );
 
-    if ( p->talents.slayer.reap_the_storm->ok() )
-    {
-      reap_the_storm = get_action<reap_the_storm_t>( "reap_the_storm_bloodthirst", p );
-      add_child( reap_the_storm );
-    }
+        if ( p->talents.slayer.reap_the_storm->ok() )
+        {
+          std::string s = "reap_the_storm_";
+          s += name;
+          reap_the_storm = get_action<reap_the_storm_t>( s, p );
+          add_child( reap_the_storm );
+        }
 
-    if ( p->talents.mountain_thane.burst_of_power->ok() )
-    {
-      rage_from_burst_of_power = p->talents.mountain_thane.burst_of_power->effectN( 1 ).trigger()->effectN( 3 ).resource( RESOURCE_RAGE );
-    }
-  }
+        if ( p->talents.mountain_thane.burst_of_power->ok() )
+          rage_from_burst_of_power = p->talents.mountain_thane.burst_of_power->effectN( 1 ).trigger()->effectN( 3 ).resource( RESOURCE_RAGE );
+      }
 
   // Background version for use with Unhinged
-  bloodthirst_t( util::string_view name, warrior_t* p )
-    : warrior_attack_t( name, p, p->talents.fury.bloodthirst ),
-      bloodthirst_heal( nullptr ),
-      gushing_wound( nullptr ),
-      aoe_targets( as<int>( p->spell.whirlwind_buff->effectN( 1 ).base_value() ) ),
-      enrage_chance( p->spec.enrage->effectN( 2 ).percent() ),
-      rage_from_cold_steel_hot_blood( p->find_spell( 383978 )->effectN( 1 ).base_value() / 10.0 ),
-      rage_from_burst_of_power( 0 ),
-      unhinged( false )
-  {
-    background = true;
-
-    weapon = &( p->main_hand_weapon );
-    radius = 5;
-    if ( p->non_dps_mechanics )
+  bloodthirst_base_t( util::string_view name, warrior_t* p, const spell_data_t* spell )
+    : bloodthirst_base_t( p, name, spell )
     {
-      bloodthirst_heal = new bloodthirst_heal_t( p );
+      background = true;
     }
-    if ( sim->dbc->wowv() < wowv_t{ 11, 1, 5 } )
-      base_aoe_multiplier = p->spell.whirlwind_buff->effectN( 3 ).percent();
-    else
-      base_aoe_multiplier = p->spell.whirlwind_buff->effectN( 2 ).percent();
-
-    if ( p->talents.fury.fresh_meat->ok() )
-    {
-      enrage_chance += p->talents.fury.fresh_meat->effectN( 1 ).percent();
-    }
-
-    if ( p->talents.fury.cold_steel_hot_blood.ok() )
-    {
-      gushing_wound = new gushing_wound_dot_t( p );
-    }
-
-    if ( p->talents.fury.swift_strikes->ok() )
-    {
-      energize_amount += p->talents.fury.swift_strikes->effectN( 2 ).resource( RESOURCE_RAGE );
-    }
-
-    if ( p->talents.slayer.reap_the_storm->ok() )
-    {
-      std::string s = "reap_the_storm_";
-      s += name;
-      reap_the_storm = get_action<reap_the_storm_t>( s, p );
-      add_child( reap_the_storm );
-    }
-
-    if ( p->talents.mountain_thane.burst_of_power->ok() )
-    {
-      rage_from_burst_of_power = p->talents.mountain_thane.burst_of_power->effectN( 1 ).trigger()->effectN( 3 ).resource( RESOURCE_RAGE );
-    }
-  }
-
-  // Constructor for unhinged specfic version, so we can disable sweeping strikes, as well as have a bool to check
-  bloodthirst_t( util::string_view name, warrior_t* p, bool unhinged )
-    : bloodthirst_t( name, p )
-  {
-    this->unhinged = unhinged;
-  }
 
   int n_targets() const override
   {
@@ -2735,15 +2673,12 @@ struct bloodthirst_t : public warrior_attack_t
   void impact( action_state_t* s ) override
   {
     warrior_attack_t::impact( s );
-
     // Delayed event to cancel the stack on any crit results
     if ( p()->talents.fury.bloodcraze->ok() && s->result == RESULT_CRIT )
       make_event( *p()->sim, [ this ] { p()->buff.bloodcraze->expire(); } );
 
     if ( gushing_wound && s->result == RESULT_CRIT )
-    {
       gushing_wound->execute_on_target( s->target );
-    }
 
     if ( p()->talents.fury.cold_steel_hot_blood.ok() && execute_state->result == RESULT_CRIT &&
          p()->cooldown.cold_steel_hot_blood_icd->up() )
@@ -2761,7 +2696,6 @@ struct bloodthirst_t : public warrior_attack_t
       p()->cooldown.burst_of_power_icd->start();
       p()->buff.burst_of_power->decrement();
       p()->resource_gain( RESOURCE_RAGE, rage_from_burst_of_power, p()->gain.burst_of_power );
-      // Reset CD after everything resolves
       make_event( *p()->sim, [ this ] { p()->cooldown.bloodbath->reset( true );
                                         p()->cooldown.bloodthirst->reset( true ); } );
     }
@@ -2794,46 +2728,37 @@ struct bloodthirst_t : public warrior_attack_t
       {
         p()->enrage();
       }
+
+      if ( p()->buff.enrage->up() )
+      {
+        p()->buff.enrage->extend_duration( p(), p()->talents.fury.deft_experience->effectN( 2 ).time_value() );
+      }
+
+      p()->buff.fierce_followthrough->expire();
+
+      if ( execute_state && result_is_hit( execute_state->result ) )
+        p()->buff.deep_thirst->expire();
+
+      if ( p()->sets->has_set_bonus( WARRIOR_FURY, TWW1, B2 ) )
+        p()->buff.bloody_rampage->trigger();
+
+      if ( p()->talents.mountain_thane.thunder_blast->ok() && rng().roll( p()->talents.mountain_thane.thunder_blast->effectN( 1 ).percent() ) )
+      {
+        p()->buff.thunder_blast->trigger();
+      }
+
+      if ( p()->buff.double_down_bt->up() )
+        p()->buff.double_down_bt->decrement();
     }
+
     if( execute_state && !td( execute_state->target )->hit_by_fresh_meat )
     {
       p()->buff.enrage->trigger();
       td( execute_state->target )->hit_by_fresh_meat = true;
     }
-
-    if ( p()->buff.enrage->up() )
-    {
-      p()->buff.enrage->extend_duration( p(), p()->talents.fury.deft_experience->effectN( 2 ).time_value() );
-    }
-
-    p()->buff.fierce_followthrough->expire();
-
-    if ( p()->sets->has_set_bonus( WARRIOR_FURY, TWW1, B2 ) )
-      p()->buff.bloody_rampage->trigger();
-
-    p()->buff.deep_thirst->expire();
-
-    if ( p()->talents.mountain_thane.thunder_blast->ok() && rng().roll( p()->talents.mountain_thane.thunder_blast->effectN( 1 ).percent() ) )
-    {
-      p()->buff.thunder_blast->trigger();
-    }
-
-    if ( p()->buff.double_down_bt->up() )
-      p()->buff.double_down_bt->decrement();
-  }
-
-  bool ready() override
-  {
-    if ( p()->talents.fury.reckless_abandon->ok() && p()->buff.recklessness->check() && !background )
-    {
-      return false;
-    }
-
-    return warrior_attack_t::ready();
   }
 };
 
-// Bloodbath ==============================================================
 struct bloodbath_dot_t : public warrior_attack_t
 {
   bloodbath_dot_t( warrior_t* p ) : warrior_attack_t( "bloodbath_dot", p, p->find_spell( 113344 ) )
@@ -2845,137 +2770,26 @@ struct bloodbath_dot_t : public warrior_attack_t
   }
 };
 
-struct bloodbath_t : public warrior_attack_t
+struct bloodbath_t : public bloodthirst_base_t
 {
-  bloodthirst_heal_t* bloodthirst_heal;
-  warrior_attack_t* gushing_wound;
   warrior_attack_t* bloodbath_dot;
-  int aoe_targets;
-  double enrage_chance;
-  double rage_from_cold_steel_hot_blood;
-  double rage_from_burst_of_power;
-  action_t* reap_the_storm;
-  bool unhinged;
   bloodbath_t( warrior_t* p, util::string_view options_str )
-    : warrior_attack_t( "bloodbath", p, p->spec.bloodbath ),
-      bloodthirst_heal( nullptr ),
-      gushing_wound( nullptr ),
-      bloodbath_dot( nullptr ),
-      aoe_targets( as<int>( p->spell.whirlwind_buff->effectN( 1 ).base_value() ) ),
-      enrage_chance( p->spec.enrage->effectN( 2 ).percent() ),
-      rage_from_cold_steel_hot_blood( p->find_spell( 383978 )->effectN( 1 ).base_value() / 10.0 ),
-      rage_from_burst_of_power( 0 ),
-      reap_the_storm( nullptr ),
-      unhinged( false )
+    : bloodthirst_base_t( p, "bloodbath", p->spec.bloodbath ),
+      bloodbath_dot( nullptr )
   {
     parse_options( options_str );
-
-    weapon = &( p->main_hand_weapon );
-    radius = 5;
     cooldown = p->cooldown.bloodthirst;
     track_cd_waste = true;
-    if ( p->non_dps_mechanics )
-    {
-      bloodthirst_heal = new bloodthirst_heal_t( p );
-    }
-    if ( sim->dbc->wowv() < wowv_t{ 11, 1, 5 } )
-      base_aoe_multiplier = p->spell.whirlwind_buff->effectN( 3 ).percent();
-    else
-      base_aoe_multiplier = p->spell.whirlwind_buff->effectN( 2 ).percent();
-
-    if ( p->talents.fury.deft_experience->ok() )
-    {
-      enrage_chance += p->talents.fury.deft_experience->effectN( 2 ).percent();
-    }
-
-    if ( p->talents.fury.fresh_meat->ok() )
-    {
-      enrage_chance += p->talents.fury.fresh_meat->effectN( 1 ).percent();
-    }
-
-    if ( p->talents.fury.cold_steel_hot_blood.ok() )
-    {
-      gushing_wound = new gushing_wound_dot_t( p );
-    }
 
     bloodbath_dot = new bloodbath_dot_t( p );
-
-    if ( p->talents.fury.swift_strikes->ok() )
-    {
-      energize_amount += p->talents.fury.swift_strikes->effectN( 2 ).resource( RESOURCE_RAGE );
-    }
-
-    if ( p->talents.slayer.reap_the_storm->ok() )
-    {
-      reap_the_storm = get_action<reap_the_storm_t>( "reap_the_storm_bloodbath", p );
-      add_child( reap_the_storm );
-    }
-
-    if ( p->talents.mountain_thane.burst_of_power->ok() )
-    {
-      rage_from_burst_of_power = p->talents.mountain_thane.burst_of_power->effectN( 1 ).trigger()->effectN( 3 ).resource( RESOURCE_RAGE );
-    }
   }
 
   // Background version for use with unhinged
   bloodbath_t( util::string_view name, warrior_t* p )
-    : warrior_attack_t( name, p, p->spec.bloodbath ),
-      bloodthirst_heal( nullptr ),
-      gushing_wound( nullptr ),
-      bloodbath_dot( nullptr ),
-      aoe_targets( as<int>( p->spell.whirlwind_buff->effectN( 1 ).base_value() ) ),
-      enrage_chance( p->spec.enrage->effectN( 2 ).percent() ),
-      rage_from_cold_steel_hot_blood( p->find_spell( 383978 )->effectN( 1 ).base_value() / 10.0 ),
-      rage_from_burst_of_power( 0 ),
-      unhinged( false )
+    : bloodthirst_base_t( name, p, p->spec.bloodbath ),
+      bloodbath_dot( nullptr )
   {
-    background = true;
-
-    weapon = &( p->main_hand_weapon );
-    radius = 5;
-    if ( p->non_dps_mechanics )
-    {
-      bloodthirst_heal = new bloodthirst_heal_t( p );
-    }
-    if ( sim->dbc->wowv() < wowv_t{ 11, 1, 5 } )
-      base_aoe_multiplier = p->spell.whirlwind_buff->effectN( 3 ).percent();
-    else
-      base_aoe_multiplier = p->spell.whirlwind_buff->effectN( 2 ).percent();
-
-    if ( p->talents.fury.deft_experience->ok() )
-    {
-      enrage_chance += p->talents.fury.deft_experience->effectN( 2 ).percent();
-    }
-
-    if ( p->talents.fury.fresh_meat->ok() )
-    {
-      enrage_chance += p->talents.fury.fresh_meat->effectN( 1 ).percent();
-    }
-
-    if ( p->talents.fury.cold_steel_hot_blood.ok() )
-    {
-      gushing_wound = new gushing_wound_dot_t( p );
-    }
-
     bloodbath_dot = new bloodbath_dot_t( p );
-
-    if ( p->talents.fury.swift_strikes->ok() )
-    {
-      energize_amount += p->talents.fury.swift_strikes->effectN( 2 ).resource( RESOURCE_RAGE );
-    }
-
-    if ( p->talents.slayer.reap_the_storm->ok() )
-    {
-      std::string s = "reap_the_storm_";
-      s += name;
-      reap_the_storm = get_action<reap_the_storm_t>( s, p );
-      add_child( reap_the_storm );
-    }
-
-    if ( p->talents.mountain_thane.burst_of_power->ok() )
-    {
-      rage_from_burst_of_power = p->talents.mountain_thane.burst_of_power->effectN( 1 ).trigger()->effectN( 3 ).resource( RESOURCE_RAGE );
-    }
   }
 
   // Constructor for unhinged specfic version, so we can disable sweeping strikes, as well as have a bool to check
@@ -2985,111 +2799,16 @@ struct bloodbath_t : public warrior_attack_t
     this->unhinged = unhinged;
   }
 
-  int n_targets() const override
+  void impact ( action_state_t* s )
   {
-    if ( !unhinged && p()->buff.meat_cleaver->check() )
-    {
-      return aoe_targets + 1;
-    }
-    return warrior_attack_t::n_targets();
-  }
-
-  double action_multiplier() const override
-  {
-    double am = warrior_attack_t::action_multiplier();
-
-    if ( p()->talents.fury.vicious_contempt->ok() && ( target->health_percentage() < 35 ) )
-    {
-      am *= 1.0 + ( p()->talents.fury.vicious_contempt->effectN( 1 ).percent() );
-    }
-
-    return am;
-  }
-
-  void impact( action_state_t* s ) override
-  {
-    warrior_attack_t::impact( s );
-
-    // Delayed event to cancel the stack on any crit results
-    if ( p()->talents.fury.bloodcraze->ok() && s->result == RESULT_CRIT )
-      make_event( *p()->sim, [ this ] { p()->buff.bloodcraze->expire(); } );
-
-
-    if ( gushing_wound && s->result == RESULT_CRIT )
-    {
-      gushing_wound->set_target( s->target );
-      gushing_wound->execute();
-    }
-
+    bloodthirst_base_t::impact( s );
     if ( bloodbath_dot )
-    {
       bloodbath_dot->execute_on_target( s->target );
-    }
-
-    if ( p()->talents.fury.cold_steel_hot_blood.ok() && execute_state->result == RESULT_CRIT &&
-         p()->cooldown.cold_steel_hot_blood_icd->up() )
-    {
-      p()->resource_gain( RESOURCE_RAGE, rage_from_cold_steel_hot_blood, p()->gain.cold_steel_hot_blood );
-      p()->cooldown.cold_steel_hot_blood_icd->start();
-    }
-
-    // We schedule this one to trigger after the action fully resolves, as we need to expire the buff if it already exists
-    if ( p()->talents.slayer.fierce_followthrough->ok() && s->result == RESULT_CRIT && s->chain_target == 0 )
-      make_event( sim, [ this ] { p()->buff.fierce_followthrough->trigger(); } );
-
-    if ( p()->talents.mountain_thane.burst_of_power->ok() && p()->buff.burst_of_power->up() && p()->cooldown.burst_of_power_icd->up() )
-    {
-      p()->cooldown.burst_of_power_icd->start();
-      p()->buff.burst_of_power->decrement();
-      p()->resource_gain( RESOURCE_RAGE, rage_from_burst_of_power, p()->gain.burst_of_power );
-      make_event( *p()->sim, [ this ] { p()->cooldown.bloodbath->reset( true );
-                                        p()->cooldown.bloodthirst->reset( true ); } );
-    }
-
-    if ( p()->talents.slayer.reap_the_storm->ok() )
-    {
-      if ( p()->cooldown.reap_the_storm_icd->is_ready() && rng().roll( p()->talents.slayer.reap_the_storm->proc_chance() ) )
-      {
-        reap_the_storm->execute();
-        p()->cooldown.reap_the_storm_icd->start();
-      }
-    }
   }
 
   void execute() override
   {
-    warrior_attack_t::execute();
-
-    if ( !unhinged )
-      p()->buff.meat_cleaver->decrement();
-
-    if ( execute_state && result_is_hit( execute_state->result ) )
-    {
-      if ( bloodthirst_heal )
-      {
-        bloodthirst_heal->execute();
-      }
-
-      if ( rng().roll( enrage_chance ) )
-      {
-        p()->enrage();
-      }
-
-      p()->buff.deep_thirst->expire();
-    }
-
-    p()->buff.fierce_followthrough->expire();
-
-    if ( p()->sets->has_set_bonus( WARRIOR_FURY, TWW1, B2 ) )
-      p()->buff.bloody_rampage->trigger();
-
-    if ( p()->talents.mountain_thane.thunder_blast->ok() && rng().roll( p()->talents.mountain_thane.thunder_blast->effectN( 1 ).percent() ) )
-    {
-      p()->buff.thunder_blast->trigger();
-    }
-
-    if ( p()->buff.double_down_bt->up() )
-      p()->buff.double_down_bt->decrement();
+    bloodthirst_base_t::execute(); 
   }
 
   bool ready() override
@@ -3099,6 +2818,57 @@ struct bloodbath_t : public warrior_attack_t
     if ( !p()->buff.recklessness->check() )
       return false;
     return warrior_attack_t::ready();
+  }
+};
+
+struct bloodthirst_t : public bloodthirst_base_t
+{
+  action_t* bloodbath;
+  bloodthirst_t( warrior_t* p, util::string_view options_str )
+    : bloodthirst_base_t( p, "bloodthirst", p->talents.fury.bloodthirst )
+  {
+    parse_options( options_str );
+    if ( p->talents.fury.reckless_abandon->ok() )
+    {
+        bloodbath = new bloodbath_t( "bloodbath", p );
+    }
+  }
+
+  // Background version for use with unhinged
+  bloodthirst_t( util::string_view bloodthirst_name, util::string_view bloodbath_name, warrior_t* p )
+    : bloodthirst_base_t( bloodthirst_name, p, p->talents.fury.bloodthirst )
+  {
+    if ( p->talents.fury.reckless_abandon->ok() )
+    {
+      std::string s = "reap_the_storm_";
+      s += bloodthirst_name;
+      reap_the_storm = get_action<reap_the_storm_t>( s, p );
+      add_child( reap_the_storm );
+
+      if ( p->talents.fury.reckless_abandon->ok() )
+        bloodbath = new bloodbath_t( bloodbath_name, p, true );
+      //add_child( bloodbath );
+    }
+  }
+
+  // Constructor for unhinged specfic version, so we can disable sweeping strikes, as well as have a bool to check
+  bloodthirst_t( util::string_view bloodthirst_name, util::string_view bloodbath_name, warrior_t* p, bool unhinged )
+    : bloodthirst_t( bloodthirst_name, bloodbath_name, p )
+  {
+    this->unhinged = unhinged;
+    if ( p->talents.fury.reckless_abandon->ok() )
+      debug_cast<bloodbath_t*>(bloodbath)->unhinged = unhinged;
+  }
+
+  void execute() override
+  {
+    if ( p()->talents.fury.reckless_abandon->ok() && p()->buff.recklessness->check() )
+    {
+      bloodbath->execute_on_target( target );
+      stats->add_execute( 0_ms, target );
+      return;
+    }
+    bloodthirst_base_t::execute();
   }
 };
 
@@ -3344,15 +3114,13 @@ struct bladestorm_t : public warrior_attack_t
   attack_t *bladestorm_mh, *bladestorm_oh;
   mortal_strike_t* mortal_strike;
   bloodthirst_t* bloodthirst;
-  bloodbath_t* bloodbath;
 
   bladestorm_t( warrior_t* p, util::string_view options_str, util::string_view n, const spell_data_t* spell )
     : warrior_attack_t( n, p, spell ),
     bladestorm_mh( new bladestorm_tick_t( p, fmt::format( "{}_mh", n ), spell->effectN( 1 ).trigger() ) ),
       bladestorm_oh( nullptr ),
       mortal_strike( nullptr ),
-      bloodthirst( nullptr ),
-      bloodbath( nullptr )
+      bloodthirst( nullptr )
   {
     parse_options( options_str );
     channeled = false;
@@ -3379,14 +3147,10 @@ struct bladestorm_t : public warrior_attack_t
 
     if ( p->talents.fury.unhinged->ok() )
     {
-      bloodthirst = new bloodthirst_t( "bloodthirst_bladestorm_unhinged", p, true );
+      bloodthirst = new bloodthirst_t( "bloodthirst_bladestorm_unhinged", "bloodbath_bladestorm_unhinged", p, true );
       add_child( bloodthirst );
-
       if ( p->talents.fury.reckless_abandon->ok() )
-      {
-        bloodbath = new bloodbath_t( "bloodbath_bladestorm_unhinged", p, true );
-        add_child( bloodbath );
-      }
+        add_child( bloodthirst->bloodbath );
     }
   }
 
@@ -3434,7 +3198,7 @@ struct bladestorm_t : public warrior_attack_t
 
     warrior_attack_t::tick( d );
     // As of TWW, since bladestorm has an initial tick, unhinged procs on odd ticks
-    if ( ( mortal_strike || bloodthirst || bloodbath ) && ( d->current_tick % 2 == 1 ) )
+    if ( ( mortal_strike || bloodthirst ) && ( d->current_tick % 2 == 1 ) )
     {
       auto t = p() -> target;
       if ( ! p() -> target || p() -> target->is_sleeping() )
@@ -3444,13 +3208,8 @@ struct bladestorm_t : public warrior_attack_t
       {
         if ( mortal_strike )
           mortal_strike->execute_on_target( t );
-        if ( bloodthirst || bloodbath )
-        {
-          if ( bloodbath && p()->talents.fury.reckless_abandon->ok() && p()->buff.recklessness->check() )
-            bloodbath->execute_on_target( t );
-          else
+        if ( bloodthirst )
             bloodthirst->execute_on_target( t );
-        }
       }
     }
 
@@ -6240,13 +5999,11 @@ struct ravager_t : public warrior_attack_t
   ravager_tick_t* ravager;
   mortal_strike_t* mortal_strike;
   bloodthirst_t* bloodthirst;
-  bloodbath_t* bloodbath;
   ravager_t( warrior_t* p, util::string_view options_str )
     : warrior_attack_t( "ravager", p, p->talents.shared.ravager ),
       ravager( new ravager_tick_t( p, "ravager_tick" ) ),
       mortal_strike( nullptr ),
-      bloodthirst( nullptr ),
-      bloodbath( nullptr )
+      bloodthirst( nullptr )
   {
     parse_options( options_str );
     ignore_false_positive   = true;
@@ -6266,14 +6023,10 @@ struct ravager_t : public warrior_attack_t
 
     if ( p->talents.fury.unhinged->ok() )
     {
-      bloodthirst = new bloodthirst_t( "bloodthirst_ravager_unhinged", p, true );
+      bloodthirst = new bloodthirst_t( "bloodthirst_ravager_unhinged", "bloodbath_ravager_unhinged", p, true );
       add_child( bloodthirst );
-
       if ( p->talents.fury.reckless_abandon->ok() )
-      {
-        bloodbath = new bloodbath_t( "bloodbath_ravager_unhinged", p, true );
-        add_child( bloodbath );
-      }
+        add_child( bloodthirst->bloodbath );
     }
   }
 
@@ -6320,7 +6073,7 @@ struct ravager_t : public warrior_attack_t
                 p()->buff.merciless_bonegrinder->expire();
                 break;
               case ground_aoe_params_t::EVENT_DESTRUCTED:
-                if ( ( mortal_strike || bloodthirst || bloodbath ) && ( event->current_pulse % 2 == 0 ) )
+                if ( ( mortal_strike || bloodthirst ) && ( event->current_pulse % 2 == 0 ) )
                 {
                   auto t = p() -> target;
                   if ( ! p() -> target || p() -> target->is_sleeping() )
@@ -6330,13 +6083,8 @@ struct ravager_t : public warrior_attack_t
                   {
                     if ( mortal_strike )
                       mortal_strike->execute_on_target( t );
-                    if ( bloodthirst || bloodbath )
-                    {
-                      if ( bloodbath && p()->talents.fury.reckless_abandon->ok() && p()->buff.recklessness->check() )
-                        bloodbath->execute_on_target( t );
-                      else
-                        bloodthirst->execute_on_target( t );
-                    }
+                    if ( bloodthirst )
+                      bloodthirst->execute_on_target( t );
                   }
                 }
                 break;
