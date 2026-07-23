@@ -1,4 +1,4 @@
-SimulationCraft 1205-01 for World of Warcraft 12.1.0.68301 PTR
+SimulationCraft 1205-01 for World of Warcraft 12.1.0.68824 PTR
 Name             : Chi Torpedo (id=115008) [Spell Family (53)] 
 Talent Entry     : Generic [tree=class, row=5, col=6, max_rank=1, req_points=8, select_idx=200, replace="Roll" (id=109132)]
 Class            : Monk, Evoker
@@ -391,12 +391,12 @@ Labels           : 16: Class Spells
                  : 2706: Spatial Paradox (406732 effect#11), Spatial Paradox (406789 effect#10)
 Proc Chance      : 100%
 Proc Flags       : Helpful Periodic Taken
-Affecting Spells : Devastation Evoker (356809 effects: #5, #6), Preservation Evoker (356810 effects: #1, #2), Initial Evoker (356816 effects: #5, #6), Temporal Compression (362877 effect#2), Honed Aggression (371038 effect#1), Renewing Breath (371257 effects: #1, #2), Call of Ysera (373834 effects: #1, #3), Attuned to the Dream (376930 effects: #1, #2), Boon of the Covenants (387169 effects: #1, #2), Augmentation Evoker (396186 effects: #5, #6), Evoker Preservation 10.1 Class Set 2pc (405520 effects: #2, #3), Expanded Lungs (444845 effect#1), Arcane Reach (454983 effect#1), Fulminous Roar (1218447 effect#1), Unshakable (1239581 effects: #1, #2), Inner Flame (1242747 effect#1), Merithra's Blessing (1256689 effects: #1, #3), Preservation Evoker (1256944 effects: #1, #2), Deep Exhalation (1264321 effect#2), Evoker - Midnight PrePatch - 11.2 Class Set 2pc - Healing (1283653 effects: #1, #2), Evoker - Midnight PrePatch - 11.2 Class Set 4pc - Healing (1283654 effects: #1, #2)
+Affecting Spells : Devastation Evoker (356809 effects: #5, #6), Preservation Evoker (356810 effects: #1, #2), Initial Evoker (356816 effects: #5, #6), Temporal Compression (362877 effect#2), Honed Aggression (371038 effect#1), Renewing Breath (371257 effects: #1, #2), Call of Ysera (373834 effects: #1, #3), Attuned to the Dream (376930 effects: #1, #2), Boon of the Covenants (387169 effects: #1, #2), Augmentation Evoker (396186 effects: #5, #6), Evoker Preservation 10.1 Class Set 2pc (405520 effects: #2, #3), Expanded Lungs (444845 effect#2), Arcane Reach (454983 effect#1), Fulminous Roar (1218447 effect#1), Unshakable (1239581 effects: #1, #2), Inner Flame (1242747 effect#1), Merithra's Blessing (1256689 effects: #1, #3), Preservation Evoker (1256944 effects: #1, #2), Deep Exhalation (1264321 effect#2), Evoker - Midnight PrePatch - 11.2 Class Set 2pc - Healing (1283653 effects: #1, #2), Evoker - Midnight PrePatch - 11.2 Class Set 4pc - Healing (1283654 effects: #1, #2)
 Family Flags     : 1, 21
-Attributes       : Not a Proc (105), Do Not Display Range (126), Not In Spellbook (143), Allow While Stunned (163), Spell Haste Affects Periodic (173), Allow While Fleeing (177), Allow While Confused (178), Allow While Charmed (261), Periodic Can Crit (265), Aura Points On Client (268), Do Not Log on Learn (355), Allow Class Ability Procs (416), Periodic Refresh Extends Duration (436), Non-secret Aura (506)
+Attributes       : Not a Proc (105), Do Not Display Range (126), Not In Spellbook (143), Allow While Stunned (163), Spell Haste Affects Periodic (173), Allow While Fleeing (177), Allow While Confused (178), Allow While Charmed (261), Periodic Can Crit (265), Aura Points On Client (268), Do Not Log on Learn (355), Allow Class Ability Procs (416), Periodic Refresh Extends Duration (436)
 Effects          :
 #1 (id=889437)   : Apply Aura (6) | Periodic Heal (8): every 2 seconds
-                   Base Value: 0 | Scaled Value: 0 | SP Coefficient: 0.669 | PvP Coefficient: 1.2 | Radius: 41 yards | Target: Allies in Cone (59) -> At Ally in Area (31)
+                   Base Value: 0 | Scaled Value: 0 | SP Coefficient: 0.5352 | PvP Coefficient: 1.2 | Radius: 41 yards | Target: Allies in Cone (59) -> At Ally in Area (31)
 #2 (id=983057)   : Dummy (3)
                    Base Value: 6 | Scaled Value: 6
 #3 (id=1037451)  : Direct Heal (10)
@@ -414,17 +414,17 @@ Labels           : 16: Class Spells
 Attributes       : Is Ability (4), Passive (6), Do Not Display (Spellbook, Aura Icon, Combat Log) (7), Do Not Log (8), Allow Class Ability Procs (416)
 Effects          :
 #1 (id=890885)   : Apply Aura (6) | Add Percent Modifier (108): Spell Direct Amount (0)
-                   Base Value: -4 | Scaled Value: -4 | Target: Self (1)
+                   Base Value: -1 | Scaled Value: -1 | Target: Self (1)
                    Affected Spells: Deep Breath (353759), Disintegrate (356995), Fire Breath (357209), Pyre (357212), Eternity Surge (359077), Living Flame (361500), Azure Strike (362969), Firestorm (369374), Eruption (395160), Upheaval (396288), Eruption (424428), Eruption (438653), Melt Armor (441172), Fire Breath (444249), Firestorm (456657), Disintegrate (1236949), Pyre (1236970), Eruption (1259172), Unravel (1264379), Shattering Star (1265804), Azure Sweep (1265872), Twin Flame (1265980), Unbound Flame (1292322)
                    Family Flags: 0
 #2 (id=910332)   : Apply Aura (6) | Add Percent Modifier (108): Spell Periodic Amount (22)
-                   Base Value: -4 | Scaled Value: -4 | Misc Value: 22 | Target: Self (1)
+                   Base Value: -1 | Scaled Value: -1 | Misc Value: 22 | Target: Self (1)
                    Affected Spells: Deep Breath (353759), Disintegrate (356995), Fire Breath (357209), Pyre (357212), Eternity Surge (359077), Living Flame (361500), Azure Strike (362969), Firestorm (369374), Eruption (395160), Upheaval (396288), Eruption (424428), Eruption (438653), Melt Armor (441172), Fire Breath (444249), Firestorm (456657), Disintegrate (1236949), Pyre (1236970), Eruption (1259172), Unravel (1264379), Shattering Star (1265804), Azure Sweep (1265872), Twin Flame (1265980), Unbound Flame (1292322)
                    Family Flags: 0
 #3 (id=910333)   : Apply Aura (6) | Modify Pet Damage Done% (429)
-                   Base Value: -4 | Scaled Value: -4 | Target: Self (1)
+                   Base Value: -1 | Scaled Value: -1 | Target: Self (1)
 #4 (id=910446)   : Apply Aura (6) | Modify Guardian Damage Done% (531)
-                   Base Value: -4 | Scaled Value: -4 | Target: Self (1)
+                   Base Value: -1 | Scaled Value: -1 | Target: Self (1)
 #5 (id=1031848)  : Apply Aura (6) | Add Percent Modifier (108): Spell Direct Amount (0)
                    Base Value: 15 | Scaled Value: 15 | Target: Self (1)
                    Affected Spells: Emerald Blossom (355916), Dream Breath (355941), Verdant Embrace (361195), Fluttering Seedlings (361361), Living Flame (361509), Dream Flight (363502), Echo (364343), Reversion (366155), Spiritbloom (367230), Spiritbloom (367231), Reversion (367364), Lifebind (373267), Lifebind (373268), Emerald Blossom (373766), Temporal Anomaly (373862), Dream Breath (376788), Panacea (387763), Defy Fate (404381), Spiritbloom (409894), Verdant Embrace (409895), Molten Blood (410651), Insurance! (1215550), Insurance! (1215553), Merithra's Blessing (1256581), Twin Flame (1265991)
@@ -1315,7 +1315,7 @@ Proc Chance      : 100%
 Proc Flags       : White Melee Taken, Yellow Melee Taken
 Affecting Spells : Hover (358267 effect#5), Hover (393271 effect#1), Mastery: Timewalker (406380 effect#2), Spatial Paradox (406732 effect#3), Spatial Paradox (406789 effect#3), Regenerative Chitin (406907 effect#1), Evoker Augmentation 10.0 Class Set 2pc (415222 effects: #1, #2), Arcane Reach (454983 effect#1)
 Family Flags     : 2, 67, 68
-Attributes       : Combo on Block (Mainline: Dispel All Stacks) (62), DoT Stacking Rule (103), Can Proc From Procs (122), Cannot Be Stolen (134), Allow Proc While Sitting (147), Limit N (165), Implied Targeting (171), Vehicle Immunity Category (218), Aura Points On Client (268), Allow Class Ability Procs (416), Non-secret Aura (506)
+Attributes       : Combo on Block (Mainline: Dispel All Stacks) (62), DoT Stacking Rule (103), Can Proc From Procs (122), Cannot Be Stolen (134), Allow Proc While Sitting (147), Limit N (165), Implied Targeting (171), Vehicle Immunity Category (218), Aura Points On Client (268), Allow Class Ability Procs (416)
 Aura Interrupt   : Leave World (19), Enter World (22), Change Specialization (38)
 Effects          :
 #1 (id=898191)   : Apply Aura (6) | Resistance (22) | Attributes: Suppress Points Stacking (6)
@@ -1470,7 +1470,7 @@ Family Flags     : 1, 36
 Attributes       : Do Not Sheath (18), Allow While Mounted (24), Allow While Sitting (27), Allow While Stealthed (37), Ignore Line of Sight (66), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), Do Not Display Range (126), Allow Cast While Casting (135), Allow Proc While Sitting (147), Allow Actions During Channel (160), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Allow On Charmed Targets (201), Allow While Riding Vehicle (204), Allow Equip While Casting (209), Allow While Charmed (261), Allow While Banished Aura State (299), Allow Cast While Channeling (308), Allow While Stunned By Horror Mechanic (342), Allow While Stunned by Stun Mechanic (378), Don't close loot window (379), Allow Class Ability Procs (416), Allow While Feared By Fear Mechanic (417)
 Effects          :
 #1 (id=898900)   : Direct Heal (10)
-                   Base Value: 0 | Scaled Value: 0 | SP Coefficient: 10.58 | Target: Targeted Ally (21)
+                   Base Value: 0 | Scaled Value: 0 | SP Coefficient: 13.754 | Target: Targeted Ally (21)
 Description      : $@spelldesc360995
 
 Name             : Fluttering Seedlings (id=361361) [Spell Family (224)] 
@@ -1559,7 +1559,7 @@ Family Flags     : 1, 7, 22
 Attributes       : Active Threat (94), DoT Stacking Rule (103), Do Not Display Range (126), Spell Haste Affects Periodic (173), Periodic Can Crit (265), Aura Points On Client (268), Allow Class Ability Procs (416), Do Not Display Cast Time (441)
 Effects          :
 #1 (id=899463)   : Direct Heal (10)
-                   Base Value: 0 | Scaled Value: 0 (delta=0.05) | SP Coefficient: 6 | Chain Multiplier: 1 | Chain Targets: 1 | Target: Targeted Ally (21)
+                   Base Value: 0 | Scaled Value: 0 (delta=0.05) | SP Coefficient: 7.8 | Chain Multiplier: 1 | Chain Targets: 1 | Target: Targeted Ally (21)
 #2 (id=907224)   : Apply Aura (6) | Periodic Heal (8): every 3 seconds
                    Base Value: 0 | Scaled Value: 0 (delta=0.05) | SP Coefficient: 0.13 | Chain Multiplier: 1 | Chain Targets: 1 | Target: Targeted Ally (21)
 Description      : $@spelldesc361469
@@ -1831,7 +1831,7 @@ Labels           : 16: Class Spells
                  : 1466: Green Evoker Spells
 Affecting Spells : Devastation Evoker (356809 effects: #5, #6), Preservation Evoker (356810 effects: #1, #2), Initial Evoker (356816 effects: #5, #6), Honed Aggression (371038 effect#1), Attuned to the Dream (376930 effects: #1, #2), Boon of the Covenants (387169 effects: #1, #2), Augmentation Evoker (396186 effects: #5, #6), Arcane Reach (454983 effect#1), Inner Flame (1242747 effect#1), Preservation Evoker (1256944 effects: #1, #2), Evoker - Midnight PrePatch - 11.2 Class Set 2pc - Healing (1283653 effects: #1, #2), Evoker - Midnight PrePatch - 11.2 Class Set 4pc - Healing (1283654 effects: #1, #2)
 Family Flags     : 1
-Attributes       : DoT Stacking Rule (103), Do Not Display Range (126), Spell Haste Affects Periodic (173), Periodic Can Crit (265), Aura Points On Client (268), Allow Class Ability Procs (416), Non-secret Aura (506)
+Attributes       : DoT Stacking Rule (103), Do Not Display Range (126), Spell Haste Affects Periodic (173), Periodic Can Crit (265), Aura Points On Client (268), Allow Class Ability Procs (416)
 Effects          :
 #1 (id=902905)   : Apply Aura (6) | Periodic Heal (8): every 3 seconds
                    Base Value: 0 | Scaled Value: 0 (delta=0.05) | SP Coefficient: 2 | Radius: 8 yards | Target: At Ally in Area (31)
@@ -2010,7 +2010,7 @@ Labels           : 16: Class Spells
                  : 1467: Bronze Evoker Spells
 Affecting Spells : Devastation Evoker (356809 effects: #5, #6), Preservation Evoker (356810 effects: #1, #2), Initial Evoker (356816 effects: #5, #6), Hover (358267 effect#5), Essence Burst (369299 effects: #1, #2, #3), Honed Aggression (371038 effect#1), Time Lord (372527 effect#1), Timeless Magic (376240 effects: #1, #3), Attuned to the Dream (376930 effects: #1, #2), Boon of the Covenants (387169 effects: #1, #2), Hover (393271 effect#1), Augmentation Evoker (396186 effects: #5, #6), Spatial Paradox (406732 effect#3), Spatial Paradox (406789 effect#3), Temporal Burst (431698 effect#15), Golden Opportunity (432004 effect#1), Melt Armor (441172 effect#2), Arcane Reach (454983 effect#1), Tempo Charged (1237978 effect#1), Inner Flame (1242747 effect#1), Preservation Evoker (1256944 effects: #1, #2), Evoker - Midnight PrePatch - 11.2 Class Set 2pc - Healing (1283653 effects: #1, #2), Evoker - Midnight PrePatch - 11.2 Class Set 4pc - Healing (1283654 effects: #1, #2)
 Family Flags     : 1, 2, 3, 11, 38
-Attributes       : Not Shapeshifted (16), Aura Expires Offline (130), Aura Points On Client (268), Heal Prediction (280), Allow Class Ability Procs (416), Unknown (456), Non-secret Aura (506)
+Attributes       : Not Shapeshifted (16), Aura Expires Offline (130), Aura Points On Client (268), Heal Prediction (280), Allow Class Ability Procs (416), Unknown (456)
 Effects          :
 #1 (id=904256)   : Direct Heal (10)
                    Base Value: 0 | Scaled Value: 0 | SP Coefficient: 2.4 | Target: Targeted Ally (21)
@@ -2143,7 +2143,7 @@ Proc Chance      : 100%
 Proc Flags       : Helpful Periodic Taken
 Affecting Spells : Devastation Evoker (356809 effects: #5, #6), Preservation Evoker (356810 effects: #1, #2), Initial Evoker (356816 effects: #5, #6), Honed Aggression (371038 effect#1), Grace Period (376239 effect#1), Timeless Magic (376240 effects: #1, #2), Attuned to the Dream (376930 effects: #1, #2), Boon of the Covenants (387169 effects: #1, #2), Time Bender (394544 effect#1), Augmentation Evoker (396186 effects: #5, #6), Evoker Preservation 11.0 Class Set 2pc (453673 effect#1), Arcane Reach (454983 effect#1), Tempo Charged (1237978 effects: #1, #2), Inner Flame (1242747 effect#1), Preservation Evoker (1256944 effects: #1, #2), Evoker - Midnight PrePatch - 11.2 Class Set 2pc - Healing (1283653 effects: #1, #2), Evoker - Midnight PrePatch - 11.2 Class Set 4pc - Healing (1283654 effects: #1, #2)
 Family Flags     : 1, 8
-Attributes       : Not Shapeshifted (16), Spell Haste Affects Periodic (173), Periodic Can Crit (265), Aura Points On Client (268), Allow Class Ability Procs (416), Periodic Refresh Extends Duration (436), Non-secret Aura (506)
+Attributes       : Not Shapeshifted (16), Spell Haste Affects Periodic (173), Periodic Can Crit (265), Aura Points On Client (268), Allow Class Ability Procs (416), Periodic Refresh Extends Duration (436)
 Effects          :
 #1 (id=907578)   : Apply Aura (6) | Periodic Heal (8): every 2 seconds | Attributes: Suppress Points Stacking (6)
                    Base Value: 0 | Scaled Value: 0 | SP Coefficient: 0.4275 | Target: Targeted Ally (21)
@@ -2327,7 +2327,7 @@ Proc Chance      : 100%
 Proc Flags       : Helpful Periodic Taken
 Affecting Spells : Devastation Evoker (356809 effects: #5, #6), Preservation Evoker (356810 effects: #1, #2), Initial Evoker (356816 effects: #5, #6), Honed Aggression (371038 effect#1), Grace Period (376239 effect#1), Timeless Magic (376240 effects: #1, #2), Attuned to the Dream (376930 effects: #1, #2), Boon of the Covenants (387169 effects: #1, #2), Time Bender (394544 effect#1), Augmentation Evoker (396186 effects: #5, #6), Evoker Preservation 11.0 Class Set 2pc (453673 effect#1), Arcane Reach (454983 effect#1), Tempo Charged (1237978 effects: #1, #2), Inner Flame (1242747 effect#1), Preservation Evoker (1256944 effects: #1, #2), Evoker - Midnight PrePatch - 11.2 Class Set 2pc - Healing (1283653 effects: #1, #2), Evoker - Midnight PrePatch - 11.2 Class Set 4pc - Healing (1283654 effects: #1, #2)
 Family Flags     : 1, 8
-Attributes       : Spell Haste Affects Periodic (173), Periodic Can Crit (265), Aura Points On Client (268), Allow Class Ability Procs (416), Periodic Refresh Extends Duration (436), Non-secret Aura (506)
+Attributes       : Spell Haste Affects Periodic (173), Periodic Can Crit (265), Aura Points On Client (268), Allow Class Ability Procs (416), Periodic Refresh Extends Duration (436)
 Effects          :
 #1 (id=911002)   : Apply Aura (6) | Periodic Heal (8): every 2 seconds | Attributes: Suppress Points Stacking (6)
                    Base Value: 0 | Scaled Value: 0 | SP Coefficient: 0.4275 | Target: Targeted Ally (21)
@@ -3654,7 +3654,7 @@ Proc Chance      : 100%
 Proc Flags       : Generic Helpful Taken, Magic Heal Taken, Helpful Periodic Taken
 Affecting Spells : Devastation Evoker (356809 effects: #5, #6), Preservation Evoker (356810 effects: #1, #2), Initial Evoker (356816 effects: #5, #6), Honed Aggression (371038 effect#1), Attuned to the Dream (376930 effects: #1, #2), Boon of the Covenants (387169 effects: #1, #2), Augmentation Evoker (396186 effects: #5, #6), Arcane Reach (454983 effect#1), Inner Flame (1242747 effect#1), Preservation Evoker (1256944 effects: #1, #2), Evoker - Midnight PrePatch - 11.2 Class Set 2pc - Healing (1283653 effects: #1, #2), Evoker - Midnight PrePatch - 11.2 Class Set 4pc - Healing (1283654 effects: #1, #2)
 Family Flags     : 1
-Attributes       : Do Not Sheath (18), DoT Stacking Rule (103), Can Proc From Procs (122), Do Not Display Range (126), Aura Points On Client (268), Allow Class Ability Procs (416), Do Not Consume Aura Stack On Proc (428), Non-secret Aura (506)
+Attributes       : Do Not Sheath (18), DoT Stacking Rule (103), Can Proc From Procs (122), Do Not Display Range (126), Aura Points On Client (268), Allow Class Ability Procs (416), Do Not Consume Aura Stack On Proc (428)
 Effects          :
 #1 (id=998368)   : Apply Aura (6) | Periodic Dummy (226): every 0.2 seconds
                    Base Value: 60 | Scaled Value: 60 | Target: Targeted Ally (21) -> Self (1)
@@ -4759,7 +4759,7 @@ Labels           : 16: Class Spells
 Attributes       : Passive (6), Not In Spellbook (143), Do Not Log on Learn (355), Allow Class Ability Procs (416)
 Effects          :
 #1 (id=1003006)  : Apply Aura (6) | Modify Recharge Time (Category) (453)
-                   Base Value: -10000 | Scaled Value: -10000 | Misc Value: 2054 (Category) | Target: Self (1)
+                   Base Value: -6000 | Scaled Value: -6000 | Misc Value: 2054 (Category) | Target: Self (1)
                    Affected Spells (Category): Dream Breath (355936), Dream Breath (382614)
 Description      : Dream Breath's cooldown is reduced by ${$s1/-1000} sec.
 
@@ -4920,12 +4920,12 @@ Labels           : 16: Class Spells
                  : 1466: Green Evoker Spells
 Proc Chance      : 101%
 Proc Flags       : Helpful Periodic Taken
-Affecting Spells : Devastation Evoker (356809 effects: #5, #6), Preservation Evoker (356810 effects: #1, #2), Initial Evoker (356816 effects: #5, #6), Temporal Compression (362877 effect#2), Honed Aggression (371038 effect#1), Renewing Breath (371257 effects: #1, #2), Call of Ysera (373834 effects: #1, #3), Attuned to the Dream (376930 effects: #1, #2), Boon of the Covenants (387169 effects: #1, #2), Augmentation Evoker (396186 effects: #5, #6), Evoker Preservation 10.1 Class Set 2pc (405520 effects: #2, #3), Expanded Lungs (444845 effect#1), Arcane Reach (454983 effect#1), Fulminous Roar (1218447 effect#1), Unshakable (1239581 effects: #1, #2), Inner Flame (1242747 effect#1), Merithra's Blessing (1256689 effects: #1, #3), Preservation Evoker (1256944 effects: #1, #2), Deep Exhalation (1264321 effect#2), Evoker - Midnight PrePatch - 11.2 Class Set 2pc - Healing (1283653 effects: #1, #2), Evoker - Midnight PrePatch - 11.2 Class Set 4pc - Healing (1283654 effects: #1, #2)
+Affecting Spells : Devastation Evoker (356809 effects: #5, #6), Preservation Evoker (356810 effects: #1, #2), Initial Evoker (356816 effects: #5, #6), Temporal Compression (362877 effect#2), Honed Aggression (371038 effect#1), Renewing Breath (371257 effects: #1, #2), Call of Ysera (373834 effects: #1, #3), Attuned to the Dream (376930 effects: #1, #2), Boon of the Covenants (387169 effects: #1, #2), Augmentation Evoker (396186 effects: #5, #6), Evoker Preservation 10.1 Class Set 2pc (405520 effects: #2, #3), Expanded Lungs (444845 effect#2), Arcane Reach (454983 effect#1), Fulminous Roar (1218447 effect#1), Unshakable (1239581 effects: #1, #2), Inner Flame (1242747 effect#1), Merithra's Blessing (1256689 effects: #1, #3), Preservation Evoker (1256944 effects: #1, #2), Deep Exhalation (1264321 effect#2), Evoker - Midnight PrePatch - 11.2 Class Set 2pc - Healing (1283653 effects: #1, #2), Evoker - Midnight PrePatch - 11.2 Class Set 4pc - Healing (1283654 effects: #1, #2)
 Family Flags     : 1, 21
-Attributes       : Do Not Display Range (126), Not In Spellbook (143), Spell Haste Affects Periodic (173), Treat as Area Effect (175), Periodic Can Crit (265), Aura Points On Client (268), Do Not Log on Learn (355), Allow Class Ability Procs (416), Periodic Refresh Extends Duration (436), Non-secret Aura (506)
+Attributes       : Do Not Display Range (126), Not In Spellbook (143), Spell Haste Affects Periodic (173), Treat as Area Effect (175), Periodic Can Crit (265), Aura Points On Client (268), Do Not Log on Learn (355), Allow Class Ability Procs (416), Periodic Refresh Extends Duration (436)
 Effects          :
 #1 (id=1003976)  : Apply Aura (6) | Periodic Heal (8): every 2 seconds
-                   Base Value: 0 | Scaled Value: 0 | SP Coefficient: 0.669 | PvP Coefficient: 1.2 | Target: Targeted Ally (21)
+                   Base Value: 0 | Scaled Value: 0 | SP Coefficient: 0.5352 | PvP Coefficient: 1.2 | Target: Targeted Ally (21)
 #2 (id=1037759)  : Dummy (3)
                    Base Value: 0 | Scaled Value: 0
 #3 (id=1037768)  : Direct Heal (10)
@@ -6335,7 +6335,7 @@ Labels           : 16: Class Spells
                  : 1468: Black Evoker Spells
 Affecting Spells : Hover (358267 effect#5), Hover (393271 effect#1), Close as Clutchmates (396043 effects: #1, #2), Mastery: Timewalker (406380 effect#2), Spatial Paradox (406732 effect#3), Spatial Paradox (406789 effect#3), Evoker Augmentation 10.1 Class Set 4pc (414878 effect#1), Arcane Reach (454983 effect#4)
 Family Flags     : 2, 56, 65, 67
-Attributes       : No Aura Cancel (31), Exclude Caster (51), Ignore Line of Sight (66), Only On Player (104), Limit N (165), Aura Points On Client (268), Allow Class Ability Procs (416), Periodic Refresh Extends Duration (436), Non-secret Aura (506)
+Attributes       : No Aura Cancel (31), Exclude Caster (51), Ignore Line of Sight (66), Only On Player (104), Limit N (165), Aura Points On Client (268), Allow Class Ability Procs (416), Periodic Refresh Extends Duration (436)
 Aura Interrupt   : Leave World (19), Change Specialization (38), Raid Encounter Start or M+ Start (40), Change Talent (46), Change Glyph (47)
 Effects          :
 #1 (id=1035393)  : Apply Aura (6) | Periodic Dummy (226): every 1 seconds
@@ -6364,13 +6364,11 @@ Labels           : 16: Class Spells
                  : 1216: Evoker Spells
 Proc Chance      : 100%
 Proc Flags       : Cast Successful
-Affecting Spells : Evoker Augmentation 12.0 Class Set 2pc (1264819 effect#2)
 Family Flags     : 88
 Attributes       : Passive (6), Can Proc From Procs (122), Allow Class Ability Procs (416)
 Effects          :
 #1 (id=1035395)  : Apply Aura (6) | Dummy (4)
                    Base Value: 1000 | Scaled Value: 1000 | Target: Self (1)
-                   Modified By: Evoker Augmentation 12.0 Class Set 2pc (1264819 effect#2)
 #2 (id=1035396)  : Apply Aura (6) | Dummy (4)
                    Base Value: 2000 | Scaled Value: 2000 | Target: Self (1)
 #3 (id=1075759)  : Apply Aura (6) | Dummy (4)
@@ -6418,7 +6416,7 @@ Labels           : 16: Class Spells
                  : 1216: Evoker Spells
 Affecting Spells : Close as Clutchmates (396043 effects: #1, #2), Mastery: Timewalker (406380 effect#2), Evoker Augmentation 10.1 Class Set 2pc (414877 effects: #1, #2), Arcane Reach (454983 effect#4), Evoker Augmentation 12.0 Class Set 4pc (1264820 effects: #1, #2, #3, #4)
 Family Flags     : 56, 66, 67
-Attributes       : No Aura Cancel (31), Aura Points On Client (268), Allow Class Ability Procs (416), Nameplate Personal Buffs/Debuffs (423), Periodic Refresh Extends Duration (436), Non-secret Aura (506)
+Attributes       : No Aura Cancel (31), Aura Points On Client (268), Allow Class Ability Procs (416), Nameplate Personal Buffs/Debuffs (423), Periodic Refresh Extends Duration (436)
 Aura Interrupt   : Leave World (19), Change Specialization (38), Raid Encounter Start or M+ Start (40), Change Talent (46), Change Glyph (47)
 Effects          :
 #1 (id=1035680)  : Apply Aura (6) | Add Percent Modifier (108): Spell Direct Amount (0)
@@ -6484,17 +6482,17 @@ Labels           : 16: Class Spells
 Attributes       : Is Ability (4), Passive (6), Do Not Display (Spellbook, Aura Icon, Combat Log) (7), Do Not Log (8), Allow Class Ability Procs (416)
 Effects          :
 #1 (id=1037188)  : Apply Aura (6) | Add Percent Modifier (108): Spell Direct Amount (0)
-                   Base Value: 23 | Scaled Value: 23 | Target: Self (1)
+                   Base Value: 27 | Scaled Value: 27 | Target: Self (1)
                    Affected Spells: Deep Breath (353759), Disintegrate (356995), Fire Breath (357209), Pyre (357212), Eternity Surge (359077), Living Flame (361500), Azure Strike (362969), Firestorm (369374), Eruption (395160), Upheaval (396288), Eruption (424428), Eruption (438653), Melt Armor (441172), Fire Breath (444249), Firestorm (456657), Disintegrate (1236949), Pyre (1236970), Eruption (1259172), Unravel (1264379), Shattering Star (1265804), Azure Sweep (1265872), Twin Flame (1265980), Unbound Flame (1292322)
                    Family Flags: 0
 #2 (id=1037189)  : Apply Aura (6) | Add Percent Modifier (108): Spell Periodic Amount (22)
-                   Base Value: 23 | Scaled Value: 23 | Misc Value: 22 | Target: Self (1)
+                   Base Value: 27 | Scaled Value: 27 | Misc Value: 22 | Target: Self (1)
                    Affected Spells: Deep Breath (353759), Disintegrate (356995), Fire Breath (357209), Pyre (357212), Eternity Surge (359077), Living Flame (361500), Azure Strike (362969), Firestorm (369374), Eruption (395160), Upheaval (396288), Eruption (424428), Eruption (438653), Melt Armor (441172), Fire Breath (444249), Firestorm (456657), Disintegrate (1236949), Pyre (1236970), Eruption (1259172), Unravel (1264379), Shattering Star (1265804), Azure Sweep (1265872), Twin Flame (1265980), Unbound Flame (1292322)
                    Family Flags: 0
 #3 (id=1037190)  : Apply Aura (6) | Modify Pet Damage Done% (429)
-                   Base Value: 23 | Scaled Value: 23 | Target: Self (1)
+                   Base Value: 27 | Scaled Value: 27 | Target: Self (1)
 #4 (id=1037191)  : Apply Aura (6) | Modify Guardian Damage Done% (531)
-                   Base Value: 23 | Scaled Value: 23 | Target: Self (1)
+                   Base Value: 27 | Scaled Value: 27 | Target: Self (1)
 #5 (id=1037192)  : Apply Aura (6) | Add Percent Modifier (108): Spell Direct Amount (0)
                    Base Value: 0 | Scaled Value: 0 | Target: Self (1)
                    Affected Spells: Emerald Blossom (355916), Dream Breath (355941), Verdant Embrace (361195), Fluttering Seedlings (361361), Living Flame (361509), Dream Flight (363502), Echo (364343), Reversion (366155), Spiritbloom (367230), Spiritbloom (367231), Reversion (367364), Lifebind (373267), Lifebind (373268), Emerald Blossom (373766), Temporal Anomaly (373862), Dream Breath (376788), Panacea (387763), Defy Fate (404381), Spiritbloom (409894), Verdant Embrace (409895), Molten Blood (410651), Insurance! (1215550), Insurance! (1215553), Merithra's Blessing (1256581), Twin Flame (1265991)
@@ -7245,7 +7243,7 @@ Effects          :
                    Base Value: 0 | Scaled Value: 0 | SP Coefficient: 0.272 | Target: Self (1)
 #2 (id=1082679)  : Apply Aura (6) | Add Percent Modifier (108): Spell Duration (1)
                    Base Value: 0 | Scaled Value: 0 | SP Coefficient: 0.5 | Misc Value: 1 | Target: Self (1)
-                   Affected Spells: Blistering Scales (360827), Obsidian Scales (363916), Source of Magic (369459), Twin Guardian (370889), Leaping Flames (370901), Zephyr (374227), Renewing Blaze (374348), Time Spiral (375234), Essence Burst (392268), Ebon Might (395152), Ebon Might (395296), Nourishing Sands (406043), Spatial Paradox (406732), Spatial Paradox (406789), Bronze Aspect's Favor (407244), Black Aspect's Favor (407254), Momentum Shift (408005), Prescience (409311), Temporal Wound (409560), Chrono Ward (409678), Prescience (410089), Reactive Hide (410256), Inferno's Blessing (410263), Molten Blood (410651), Symbiotic Bloom (410686), Timelessness (412710), Shifting Sands (413984), Ebon Might (426404), Perilous Fate (439606), Double-time (460688)
+                   Affected Spells: Blistering Scales (360827), Obsidian Scales (363916), Source of Magic (369459), Twin Guardian (370889), Leaping Flames (370901), Zephyr (374227), Renewing Blaze (374348), Time Spiral (375234), Essence Burst (392268), Ebon Might (395152), Ebon Might (395296), Nourishing Sands (406043), Spatial Paradox (406732), Spatial Paradox (406789), Bronze Aspect's Favor (407244), Black Aspect's Favor (407254), Momentum Shift (408005), Prescience (409311), Temporal Wound (409560), Chrono Ward (409678), Prescience (410089), Reactive Hide (410256), Inferno's Blessing (410263), Molten Blood (410651), Symbiotic Bloom (410686), Timelessness (412710), Shifting Sands (413984), Ebon Might (426404), Perilous Fate (439606)
                    Family Flags: 67
 #3 (id=1083344)  : Apply Aura (6) | Dummy (4)
                    Base Value: 1 | Scaled Value: 1 | Trigger Spell: 413984 | Target: Self (1)
@@ -8008,7 +8006,7 @@ Labels           : 16: Class Spells
                  : 1466: Green Evoker Spells
 Affecting Spells : Devastation Evoker (356809 effects: #5, #6), Preservation Evoker (356810 effects: #1, #2), Initial Evoker (356816 effects: #5, #6), Honed Aggression (371038 effect#1), Attuned to the Dream (376930 effects: #1, #2), Boon of the Covenants (387169 effects: #1, #2), Augmentation Evoker (396186 effects: #5, #6), Arcane Reach (454983 effect#1), Inner Flame (1242747 effect#1), Preservation Evoker (1256944 effects: #1, #2), Evoker - Midnight PrePatch - 11.2 Class Set 2pc - Healing (1283653 effects: #1, #2), Evoker - Midnight PrePatch - 11.2 Class Set 4pc - Healing (1283654 effects: #1, #2)
 Family Flags     : 1
-Attributes       : DoT Stacking Rule (103), Ignore Healing Modifiers (219), Aura Points On Client (268), Rolling Periodic (334), Allow Class Ability Procs (416), Non-secret Aura (506)
+Attributes       : DoT Stacking Rule (103), Ignore Healing Modifiers (219), Aura Points On Client (268), Rolling Periodic (334), Allow Class Ability Procs (416)
 Effects          :
 #1 (id=1075114)  : Apply Aura (6) | Periodic Heal (8): every 2 seconds
                    Base Value: 0 | Scaled Value: 0 | Target: Targeted Ally (21)
@@ -8132,7 +8130,7 @@ Proc Chance      : 25%
 Proc Flags       : White Melee, Yellow Melee, White Ranged, Yellow Ranged, Generic Helpful, Generic Hostile Spell, Magic Heal, Magic Hostile Spell, Periodic, Helpful Periodic
 Affecting Spells : Mastery: Timewalker (406380 effect#2)
 Family Flags     : 67
-Attributes       : Can Proc From Procs (122), Do Not Display Range (126), Can Target Untargetable (216), Aura Points On Client (268), Allow Class Ability Procs (416), Non-secret Aura (506)
+Attributes       : Can Proc From Procs (122), Do Not Display Range (126), Can Target Untargetable (216), Aura Points On Client (268), Allow Class Ability Procs (416)
 Aura Interrupt   : Leave World (19), Raid Encounter Start or M+ Start (40)
 Effects          :
 #1 (id=1075415)  : Apply Aura (6) | Modify Stat With Support Triggers (540)
@@ -8229,7 +8227,7 @@ Real PPM         : 10 (Haste multiplier)
 Proc Flags       : White Melee, Yellow Melee, White Ranged, Yellow Ranged, Generic Hostile Spell, Magic Hostile Spell, Periodic
 Affecting Spells : Mastery: Timewalker (406380 effect#2)
 Family Flags     : 67
-Attributes       : Can Proc From Procs (122), Limit N (165), Only Proc From Class Abilities (415), Allow Class Ability Procs (416), Do Not Consume Aura Stack On Proc (428), Non-secret Aura (506)
+Attributes       : Can Proc From Procs (122), Limit N (165), Only Proc From Class Abilities (415), Allow Class Ability Procs (416), Do Not Consume Aura Stack On Proc (428)
 Effects          :
 #1 (id=1075749)  : Apply Aura (6) | Dummy (4) | Attributes: Compute Points Only At Cast Time (15)
                    Base Value: 0 | Scaled Value: 0 | Radius: 0 - 100 yards | Target: at Self (18) -> At Ally in Area (31)
@@ -8481,7 +8479,7 @@ Labels           : 16: Class Spells
                  : 2663: Symbiotic Bloom (410685 effect#1)
 Affecting Spells : Mastery: Timewalker (406380 effect#2)
 Family Flags     : 67
-Attributes       : Aura Points On Client (268), Allow Class Ability Procs (416), Nameplate Personal Buffs/Debuffs (423), Non-secret Aura (506)
+Attributes       : Aura Points On Client (268), Allow Class Ability Procs (416), Nameplate Personal Buffs/Debuffs (423)
 Effects          :
 #1 (id=1076573)  : Apply Aura (6) | Modify Healing Received% (118)
                    Base Value: 0 | Scaled Value: 0 | Misc Value: 0x7f | Target: Targeted Ally (21)
@@ -8865,7 +8863,7 @@ Labels           : 16: Class Spells
 Affecting Spells : Mastery: Timewalker (406380 effect#2)
 Triggered By     : Mastery: Timewalker (406380)
 Family Flags     : 67
-Attributes       : Only On Player (104), Do Not Display Range (126), Aura Points On Client (268), Mastery Affects Points (285), Allow Class Ability Procs (416), Non-secret Aura (506)
+Attributes       : Only On Player (104), Do Not Display Range (126), Aura Points On Client (268), Mastery Affects Points (285), Allow Class Ability Procs (416)
 Aura Interrupt   : Leave World (19), Enter World (22), Change Specialization (38)
 Effects          :
 #1 (id=1082678)  : Apply Aura (6) | Modify Stat With Support Triggers (540) | Attributes: Compute Points Only At Cast Time (15)
@@ -9724,7 +9722,7 @@ Proc Flags       : Magic Heal, Magic Hostile Spell
 Attributes       : Passive (6), Can Proc From Procs (122), Do Not Display Range (126), Not In Spellbook (143), Spellcast Override In Spellbook (310), Do Not Log on Learn (355)
 Effects          :
 #1 (id=1119510)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 60 | Scaled Value: 60 | Target: Self (1)
+                   Base Value: 40 | Scaled Value: 40 | Target: Self (1)
 #2 (id=1165092)  : Apply Aura (6) | Dummy (4)
                    Base Value: 50 | Scaled Value: 50 | Target: Self (1)
 Description      : $?c2[Verdant Embrace heals for an additional $s1% over $409895d.][Upheaval deals $s2% additional damage over $431620d.]
@@ -9811,29 +9809,29 @@ Attributes       : Can Proc From Procs (122), Do Not Log on Learn (355), Allow C
 Aura Interrupt   : Change Specialization (38), Change Talent (46)
 Effects          :
 #1 (id=1119630)  : Apply Aura (6) | Increase Movement Speed% (Stacking) (129)
-                   Base Value: 1 | Scaled Value: 1 | Target: Self (1)
+                   Base Value: 1 | Scaled Value: 1 | PvP Coefficient: 0.5 | Target: Self (1)
 #2 (id=1119631)  : Apply Aura (6) | Modify All Haste% (193)
-                   Base Value: 1 | Scaled Value: 1 | Target: Self (1)
+                   Base Value: 1 | Scaled Value: 1 | PvP Coefficient: 0.5 | Target: Self (1)
 #3 (id=1119632)  : Apply Aura (6) | Modify Cooldown Recharge Rate% (Label) (143)
-                   Base Value: 1 | Scaled Value: 1 | Misc Value: 1216 (Label) | Target: Self (1)
+                   Base Value: 1 | Scaled Value: 1 | PvP Coefficient: 0.5 | Misc Value: 1216 (Label) | Target: Self (1)
                    Affected Spells (Label): Evoker Spells (1216)
 #4 (id=1119633)  : Apply Aura (6) | Modify Charge Cooldown Recharge Rate% (Category) (148)
-                   Base Value: 1 | Scaled Value: 1 | Misc Value: 1948 (Category) | Target: Self (1)
+                   Base Value: 1 | Scaled Value: 1 | PvP Coefficient: 0.5 | Misc Value: 1948 (Category) | Target: Self (1)
                    Affected Spells (Category): Hover (358267), Spatial Paradox (406732)
 #5 (id=1119634)  : Apply Aura (6) | Modify Charge Cooldown Recharge Rate% (Category) (148)
-                   Base Value: 1 | Scaled Value: 1 | Misc Value: 2100 (Category) | Target: Self (1)
+                   Base Value: 1 | Scaled Value: 1 | PvP Coefficient: 0.5 | Misc Value: 2100 (Category) | Target: Self (1)
                    Affected Spells (Category): Obsidian Scales (363916)
 #6 (id=1119635)  : Apply Aura (6) | Modify Charge Cooldown Recharge Rate% (Category) (148)
-                   Base Value: 1 | Scaled Value: 1 | Misc Value: 2010 (Category) | Target: Self (1)
+                   Base Value: 1 | Scaled Value: 1 | PvP Coefficient: 0.5 | Misc Value: 2010 (Category) | Target: Self (1)
                    Affected Spells (Category): Reversion (366155)
 #7 (id=1119636)  : Apply Aura (6) | Modify Charge Cooldown Recharge Rate% (Category) (148)
-                   Base Value: 1 | Scaled Value: 1 | Misc Value: 2035 (Category) | Target: Self (1)
+                   Base Value: 1 | Scaled Value: 1 | PvP Coefficient: 0.5 | Misc Value: 2035 (Category) | Target: Self (1)
                    Affected Spells (Category): Rewind (363534)
 #8 (id=1119637)  : Apply Aura (6) | Modify Cooldown Recharge Rate% (Label) (143)
-                   Base Value: 1 | Scaled Value: 1 | Misc Value: 1425 (Label) | Target: Self (1)
+                   Base Value: 1 | Scaled Value: 1 | PvP Coefficient: 0.5 | Misc Value: 1425 (Label) | Target: Self (1)
                    Affected Spells (Label): Wing Buffet (357214)
 #9 (id=1119638)  : Apply Aura (6) | Modify Cooldown Recharge Rate% (Label) (143)
-                   Base Value: 1 | Scaled Value: 1 | Misc Value: 1523 (Label) | Target: Self (1)
+                   Base Value: 1 | Scaled Value: 1 | PvP Coefficient: 0.5 | Misc Value: 1523 (Label) | Target: Self (1)
                    Affected Spells (Label): Tail Swipe (368970)
 #10 (id=1119652) : Apply Aura (6) | Periodic Dummy (226): every 1 seconds
                    Base Value: 1 | Scaled Value: 1 | Target: Self (1)
@@ -9844,7 +9842,7 @@ Effects          :
                    Base Value: 15 | Scaled Value: 15 | Misc Value: 23 | Misc Value 2: 5137 (Label) | Trigger Spell: 431442 | Target: Self (1)
                    Affected Spells (Label): Chrono Flame (431442)
 #13 (id=1237463) : Apply Aura (6) | Modify Charge Cooldown Recharge Rate% (Category) (148)
-                   Base Value: 1 | Scaled Value: 1 | Misc Value: 2411 (Category) | Target: Self (1)
+                   Base Value: 1 | Scaled Value: 1 | PvP Coefficient: 0.5 | Misc Value: 2411 (Category) | Target: Self (1)
                    Affected Spells (Category): Time Dilation (357170)
 #14 (id=1254731) : Apply Aura (6) | Apply Flat Modifier w/ Label (219): Spell Effect 1 (3) | Attributes: Suppress Points Stacking (6)
                    Base Value: 2 | Scaled Value: 2 | Misc Value: 3 | Misc Value 2: 5459 (Label) | Target: Self (1)
@@ -9854,13 +9852,13 @@ Effects          :
                    Affected Spells: Emerald Blossom (355916), Fluttering Seedlings (361361), Echo (364343), Eruption (395160), Eruption (438653), Eruption (1259172)
                    Family Flags: 11, 49, 54
 #16 (id=1308692) : Apply Aura (6) | Modify Charge Cooldown Recharge Rate% (Category) (148)
-                   Base Value: 1 | Scaled Value: 1 | Misc Value: 2054 (Category) | Target: Self (1)
+                   Base Value: 1 | Scaled Value: 1 | PvP Coefficient: 0.5 | Misc Value: 2054 (Category) | Target: Self (1)
                    Affected Spells (Category): Dream Breath (355936), Dream Breath (382614)
 #17 (id=1308693) : Apply Aura (6) | Modify Charge Cooldown Recharge Rate% (Category) (148)
-                   Base Value: 1 | Scaled Value: 1 | Misc Value: 2456 (Category) | Target: Self (1)
+                   Base Value: 1 | Scaled Value: 1 | PvP Coefficient: 0.5 | Misc Value: 2456 (Category) | Target: Self (1)
                    Affected Spells (Category): Fire Breath (357208), Fire Breath (382266)
 #18 (id=1308694) : Apply Aura (6) | Modify Charge Cooldown Recharge Rate% (Category) (148)
-                   Base Value: 1 | Scaled Value: 1 | Misc Value: 2471 (Category) | Target: Self (1)
+                   Base Value: 1 | Scaled Value: 1 | PvP Coefficient: 0.5 | Misc Value: 2471 (Category) | Target: Self (1)
                    Affected Spells (Category): Verdant Embrace (360995)
 Description      : $@spelldesc431695
 Tooltip          : Haste, movement speed, and cooldown recovery rate increased by $s1%.
@@ -9962,7 +9960,8 @@ Effects          :
                    Base Value: 50 | Scaled Value: 50 | Target: Self (1)
 #3 (id=1168563)  : Apply Aura (6) | Dummy (4)
                    Base Value: 10 | Scaled Value: 10 | Target: Self (1)
-Description      : $?c2[When Dream Breath or Fire Breath critically strike, their duration is extended by $s1 sec, up to a maximum of ${$s1*6} sec.][Ebon Might and Prescience gain a chance equal to your critical strike chance to grant $s2% additional stats. For Ebon Might, this increase lasts $460688d.]
+Description      : $?c2[When Dream Breath or Fire Breath critically strike, their duration is extended by $s1 sec, up to a maximum of ${$s1*6} sec.][Ebon Might and Prescience gain a chance equal to your critical strike chance to grant $s2% additional stats. For Ebon Might, this increase lasts $<dura> sec.]
+Variables        : $dura=$?a406380[${$460688d*(1+$406380s2/100)}.1][${$460688d}.1]
 
 Name             : Afterimage (desc=Bronze) (id=431875) [Spell Family (224), Passive] 
 Talent Entry     : Chronowarden (Preservation) [tree=hero, row=5, col=3, max_rank=1, req_points=1]
@@ -10565,7 +10564,7 @@ Family Flags     : 0, 34
 Attributes       : DoT Stacking Rule (103), Spell Haste Affects Periodic (173), Periodic Can Crit (265), Aura Points On Client (268), Allow Class Ability Procs (416)
 Effects          :
 #1 (id=1135460)  : Apply Aura (6) | Periodic Damage (3): firestorm every 2 seconds
-                   Base Value: 0 | Scaled Value: 0 | SP Coefficient: 1 | Target: Targeted Enemy (6)
+                   Base Value: 0 | Scaled Value: 0 | SP Coefficient: 1.4 | Target: Targeted Enemy (6)
 #2 (id=1135463)  : Apply Aura (6) | Modify Damage Taken% from Caster's Spells (271)
                    Base Value: 20 | Scaled Value: 20 | Target: Targeted Enemy (6)
                    Affected Spells: Emerald Blossom (355916), Disintegrate (356995), Pyre (357212), Echo (364343), Emerald Blossom (373766), Eruption (395160), Eruption (438653), Pyre (1236970), Eruption (1259172)
@@ -10657,14 +10656,10 @@ Labels           : 16: Class Spells
 Attributes       : Passive (6), Not In Spellbook (143), Do Not Log on Learn (355)
 Effects          :
 #1 (id=1135533)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 500 | Scaled Value: 500 | Target: Self (1)
+                   Base Value: 1000 | Scaled Value: 1000 | Target: Self (1)
 #2 (id=1135534)  : Apply Aura (6) | Dummy (4)
                    Base Value: 1500 | Scaled Value: 1500 | Target: Self (1)
-#3 (id=1302605)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 1000 | Scaled Value: 1000 | Target: Self (1)
-#4 (id=1302606)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 3000 | Scaled Value: 3000 | Target: Self (1)
-Description      : Bombardments reduce the cooldown of $?c1[Deep Breath by ${$s1/1000}.1 sec for each target struck, up to ${$s2/1000}.1 sec.][Breath of Eons by ${$s3/1000}.1 sec for each target struck, up to ${$s4/1000}.1 sec.]
+Description      : $?c1[Mass Disintegrate][Mass Eruption] reduces the remaining cooldown of $?c1[Deep Breath][Breath of Eons] by $?c1[${$s1/1000}.1][${$s2/1000}.1] sec for each target struck.
 
 Name             : Extended Battle (desc=Black) (id=441212) [Spell Family (224), Passive] 
 Talent Entry     : Scalecommander (Devastation) [tree=hero, row=4, col=2, max_rank=1, req_points=0, select_idx=100]
@@ -10928,7 +10923,7 @@ Effects          :
                    Affected Spells: Living Flame (361469), Chrono Flames (431443)
                    Family Flags: 52
 #2 (id=1138906)  : Apply Aura (6) | Add Percent Modifier (108): Spell Direct Amount (0) | Attributes: Suppress Points Stacking (6)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+                   Base Value: 100 | Scaled Value: 100 | PvP Coefficient: 0.5 | Target: Self (1)
                    Affected Spells: Living Flame (361500), Living Flame (361509)
                    Family Flags: 22, 50
 #3 (id=1138907)  : Apply Aura (6) | Apply Percent Modifier w/ Label (218): Spell Effect 2 (12) | Attributes: Suppress Points Stacking (6)
@@ -10952,7 +10947,7 @@ Effects          :
 #1 (id=1138908)  : Apply Aura (6) | Dummy (4)
                    Base Value: 100 | Scaled Value: 100 | Trigger Spell: 394552 | Target: Self (1)
 #2 (id=1138909)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+                   Base Value: 100 | Scaled Value: 100 | Target: Self (1)
 Description      : Reversion healing has a chance to cause your next Living Flame to cast instantly and deal $s2% increased healing or damage. Stacks up to $394552u charges.
 
 Name             : Titan's Gift (id=443264) [Spell Family (224), Passive] 
@@ -11072,14 +11067,14 @@ Effects          :
 #5 (id=1275591)  : Apply Aura (6) | Dummy (4)
                    Base Value: 4000 | Scaled Value: 4000 | Target: Self (1)
 #6 (id=1278179)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 200 | Scaled Value: 200 | Target: Self (1)
+                   Base Value: 300 | Scaled Value: 300 | Target: Self (1)
 #7 (id=1317269)  : Apply Aura (6) | Dummy (4)
                    Base Value: 115 | Scaled Value: 115 | Target: Self (1)
-Description      : $?c1[Disintegrate damage consumes ${$s2/1000}.1 sec of Fire Breath from enemies it damages, detonating it for $s4% of the amount consumed.
+Description      : $?c1[Disintegrate consumes ${$s2/1000}.1 sec of Fire Breath from enemies it damages, detonating it for $s4% of the amount consumed.
 
-Pyre damage consumes ${$s3/1000} sec of Fire Breath from enemies it damages, detonating it for $s7% of the amount consumed.][Verdant Embrace healing consumes ${$s5/1000} sec of Dream Breath from allies it heals, detonating it and healing them for $s6% of the amount consumed.
+Pyre consumes ${$s3/1000} sec of Fire Breath from enemies it damages, detonating it for $s7% of the amount consumed.][Verdant Embrace consumes ${$s5/1000} sec of Dream Breath from allies it heals, detonating it and healing them for $s6% of the amount consumed.
 
-Emerald Blossom healing consumes ${$s1/1000} sec of Dream Breath from allies it heals, detonating it and healing them for $s6% of the amount consumed.]
+Emerald Blossom and Fluttering Seedlings consume ${$s1/1000} sec of Dream Breath from allies they heal, detonating it and healing them for $s6% of the amount consumed.]
 
 Name             : Consume Flame (desc=Red) (id=444089) [Spell Family (224)] 
 Class            : Evoker
@@ -11174,12 +11169,11 @@ Labels           : 16: Class Spells
                  : 292
                  : 1216: Evoker Spells
                  : 3022
-                 : 6457: Devastation Evoker (1286123 effect#16)
+                 : 6457
 Attributes       : Passive (6), Do Not Display (Spellbook, Aura Icon, Combat Log) (7), Allow Aura While Dead (116), Can Proc From Procs (122), Not In Spellbook (143), Allow Entering Arena (149), Disable Aura While Dead (226), Allow Class Ability Procs (416)
 Effects          :
 #1 (id=1141482)  : Apply Aura (6) | Unknown(183)
-                   Base Value: 15 | Scaled Value: 15 | Misc Value 2: 50 | Target: Self (1)
-                   Modified By: Devastation Evoker (1286123 effect#16)
+                   Base Value: 10 | Scaled Value: 10 | Misc Value 2: 50 | Target: Self (1)
 #2 (id=1141483)  : None (0)
                    Base Value: 50 | Scaled Value: 50
 Description      : Critical strike chance against targets above $s2% health increased by $s1%.
@@ -11197,9 +11191,13 @@ Attributes       : Passive (6), Do Not Display (Spellbook, Aura Icon, Combat Log
 Effects          :
 #1 (id=1141486)  : Apply Aura (6) | Add Percent Modifier (108): Spell Periodic Amount (22)
                    Base Value: 30 | Scaled Value: 30 | Misc Value: 22 | Target: Self (1)
-                   Affected Spells: Dream Breath (355941), Fire Breath (357209), Dream Breath (376788), Full Belly (377087), Fire Breath (444249)
-                   Family Flags: 21, 35
-Description      : Fire Breath's damage over time is increased by $s1%. Dream Breath's heal over time is increased by $s1%.
+                   Affected Spells: Fire Breath (357209), Full Belly (377087), Fire Breath (444249)
+                   Family Flags: 35
+#2 (id=1339599)  : Apply Aura (6) | Add Percent Modifier (108): Spell Periodic Amount (22)
+                   Base Value: 20 | Scaled Value: 20 | Misc Value: 22 | Target: Self (1)
+                   Affected Spells: Dream Breath (355941), Dream Breath (376788)
+                   Family Flags: 21
+Description      : Fire Breath's damage over time is increased by $s1%. Dream Breath's heal over time is increased by $s2%.
 
 Name             : Trailblazer (desc=Red) (id=444849) [Spell Family (224), Passive, Hidden] 
 Talent Entry     : Flameshaper (Devastation, Preservation) [tree=hero, row=2, col=1, max_rank=1, req_points=0, select_idx=100]
@@ -11702,8 +11700,6 @@ Duration         : 15 seconds
 Labels           : 16: Class Spells
                  : 292
                  : 1216: Evoker Spells
-Affecting Spells : Mastery: Timewalker (406380 effect#2)
-Family Flags     : 67
 Attributes       : Suppress Caster Procs (112), Suppress Target Procs (113), Do Not Display Range (126), Suppress Weapon Procs (151), Allow Class Ability Procs (416)
 Effects          :
 #1 (id=1168564)  : Apply Aura (6) | Dummy (4)
@@ -11969,14 +11965,13 @@ Labels           : 16: Class Spells
                  : 292
                  : 1216: Evoker Spells
                  : 3022
-                 : 6458: Devastation Evoker (1286123 effect#17)
+                 : 6458
 Attributes       : Passive (6), Do Not Display (Spellbook, Aura Icon, Combat Log) (7), Allow Aura While Dead (116), Can Proc From Procs (122), Not In Spellbook (143), Allow Entering Arena (149), Allow Class Ability Procs (416)
 Effects          :
 #1 (id=1203322)  : Apply Aura (6) | Add Percent Modifier (108): Spell Tick Time (19)
-                   Base Value: -20 | Scaled Value: -20 | Misc Value: 19 | Target: Self (1)
+                   Base Value: -15 | Scaled Value: -15 | Misc Value: 19 | Target: Self (1)
                    Affected Spells: Dream Breath (355941), Fire Breath (357209), Dream Breath (376788), Full Belly (377087), Fire Breath (444249)
                    Family Flags: 21, 35
-                   Modified By: Devastation Evoker (1286123 effect#17)
 Description      : $?c1[Fire Breath deals its damage][Fire Breath and Dream Breath deal their damage and healing] $s1% more often.
 
 Name             : Upheaval (id=1219253) [Spell Family (224), Hidden] 
@@ -12209,7 +12204,7 @@ Family Flags     : 0, 5, 38
 Attributes       : Do Not Display Range (126), Allow Cast While Casting (135), Allow Cast While Channeling (308), Use Spell Base Level For Scaling (332), Allow Class Ability Procs (416)
 Effects          :
 #1 (id=1233435)  : School Damage (2): fire | Attributes: Always AOE Line of Sight (5)
-                   Base Value: 0 | Scaled Value: 0 (delta=0.05) | SP Coefficient: 1.8 | PvP Coefficient: 0.33 | Radius: 0 - 8 yards | Target: At Enemy (53) -> at Enemy in Area (16)
+                   Base Value: 0 | Scaled Value: 0 (delta=0.05) | SP Coefficient: 2.52 | PvP Coefficient: 0.33 | Radius: 0 - 8 yards | Target: At Enemy (53) -> at Enemy in Area (16)
 Description      : $@spelldesc357211
 
 Name             : Temporal Cycle (desc=Bronze) (id=1237269) [Spell Family (224)] 
@@ -12434,7 +12429,7 @@ Attributes       : Allow Class Ability Procs (416)
 Aura Interrupt   : Change Specialization (38)
 Effects          :
 #1 (id=1242430)  : Apply Aura (6) | Add Percent Modifier (108): Spell Periodic Amount (22)
-                   Base Value: 60 | Scaled Value: 60 | Misc Value: 22 | Target: Self (1)
+                   Base Value: 50 | Scaled Value: 50 | Misc Value: 22 | Target: Self (1)
                    Affected Spells: Emerald Blossom (355916), Dream Breath (355941), Verdant Embrace (361195), Fluttering Seedlings (361361), Living Flame (361509), Dream Flight (363502), Echo (364343), Reversion (366155), Spiritbloom (367230), Spiritbloom (367231), Reversion (367364), Lifebind (373267), Lifebind (373268), Emerald Blossom (373766), Temporal Anomaly (373862), Dream Breath (376788), Panacea (387763), Defy Fate (404381), Spiritbloom (409894), Verdant Embrace (409895), Molten Blood (410651), Insurance! (1215550), Insurance! (1215553), Merithra's Blessing (1256581), Twin Flame (1265991)
                    Family Flags: 1
 #2 (id=1242431)  : Apply Aura (6) | Dummy (4)
@@ -12561,7 +12556,7 @@ Effects          :
 #1 (id=1264151)  : Dummy (3)
                    Base Value: 0 | Scaled Value: 0
 #2 (id=1264152)  : Direct Heal (10)
-                   Base Value: 0 | Scaled Value: 0 | SP Coefficient: 2.5 | PvP Coefficient: 1.4 | Chain Multiplier: 1 | Chain Targets: 5 | Target: Chain Heal Ally (45)
+                   Base Value: 0 | Scaled Value: 0 | SP Coefficient: 2.25 | PvP Coefficient: 1.4 | Chain Multiplier: 1 | Chain Targets: 5 | Target: Chain Heal Ally (45)
 #3 (id=1308097)  : Dummy (3)
                    Base Value: 30 | Scaled Value: 30
 Description      : Spring a bloom of life from your target, healing them and up to ${$x2-1} other allies within $s3 yards for $s2. Blooms may heal your primary target multiple times if no nearby injured allies are present.
@@ -12628,11 +12623,11 @@ Labels           : 16: Class Spells
 Attributes       : Is Ability (4), Passive (6), Do Not Display (Spellbook, Aura Icon, Combat Log) (7), Do Not Log (8), Allow Class Ability Procs (416)
 Effects          :
 #1 (id=1264707)  : Apply Aura (6) | Modify Percent PVP Multiplier (647): Direct Amount (0)
-                   Base Value: 9 | Scaled Value: 9 | Target: Self (1)
+                   Base Value: 18 | Scaled Value: 18 | Target: Self (1)
                    Affected Spells: Deep Breath (353759), Disintegrate (356995), Fire Breath (357209), Pyre (357212), Eternity Surge (359077), Living Flame (361500), Azure Strike (362969), Firestorm (369374), Eruption (395160), Upheaval (396288), Eruption (424428), Eruption (438653), Melt Armor (441172), Fire Breath (444249), Firestorm (456657), Disintegrate (1236949), Pyre (1236970), Eruption (1259172), Unravel (1264379), Shattering Star (1265804), Azure Sweep (1265872), Twin Flame (1265980), Unbound Flame (1292322)
                    Family Flags: 0
 #2 (id=1266465)  : Apply Aura (6) | Modify Percent PVP Multiplier (647): Periodic Amount (1)
-                   Base Value: 9 | Scaled Value: 9 | Misc Value: 1 | Target: Self (1)
+                   Base Value: 18 | Scaled Value: 18 | Misc Value: 1 | Target: Self (1)
                    Affected Spells: Deep Breath (353759), Disintegrate (356995), Fire Breath (357209), Pyre (357212), Eternity Surge (359077), Living Flame (361500), Azure Strike (362969), Firestorm (369374), Eruption (395160), Upheaval (396288), Eruption (424428), Eruption (438653), Melt Armor (441172), Fire Breath (444249), Firestorm (456657), Disintegrate (1236949), Pyre (1236970), Eruption (1259172), Unravel (1264379), Shattering Star (1265804), Azure Sweep (1265872), Twin Flame (1265980), Unbound Flame (1292322)
                    Family Flags: 0
 #3 (id=1266466)  : Apply Aura (6) | Apply Percent Modifier w/ Label (218): Spell Direct Amount (0)
@@ -12991,11 +12986,7 @@ Effects          :
                    Base Value: 10 | Scaled Value: 10 | PvP Coefficient: 0.5 | Target: Self (1)
                    Affected Spells: Eruption (395160), Eruption (438653), Eruption (1259172)
                    Family Flags: 54
-#2 (id=1282504)  : Apply Aura (6) | Add Flat Modifier (107): Spell Effect 1 (3)
-                   Base Value: 100 | Scaled Value: 100 | PvP Coefficient: 0.5 | Misc Value: 3 | Target: Self (1)
-                   Affected Spells: Sands of Time (395153)
-                   Family Flags: 88
-Description      : Eruption damage increased by $s1% and it extends Ebon Might by an additional ${$s2/1000}.1 sec.
+Description      : Eruption damage increased by $s1%.
 
 Name             : Evoker Augmentation 12.0 Class Set 4pc (id=1264820) [Spell Family (224), Passive, Hidden] 
 Class            : Evoker
@@ -13715,12 +13706,6 @@ Effects          :
 #15 (id=1302721) : Apply Aura (6) | Apply Flat Modifier w/ Label (219): Spell Effect 2 (12)
                    Base Value: 0 | Scaled Value: 0 | Misc Value: 12 | Misc Value 2: 6370 (Label) | Target: Self (1)
                    Affected Spells (Label): Might of the Black Dragonflight (441705)
-#16 (id=1307236) : Apply Aura (6) | Apply Flat Modifier w/ Label (219): Spell Effect 1 (3)
-                   Base Value: -5 | Scaled Value: -5 | Misc Value: 3 | Misc Value 2: 6457 (Label) | Target: Self (1)
-                   Affected Spells (Label): Conduit of Flame (444843)
-#17 (id=1307237) : Apply Aura (6) | Apply Flat Modifier w/ Label (219): Spell Effect 1 (3)
-                   Base Value: 5 | Scaled Value: 5 | Misc Value: 3 | Misc Value 2: 6458 (Label) | Target: Self (1)
-                   Affected Spells (Label): Fulminous Roar (1218447)
 
 Name             : Mighty Inferno (id=1291457) [Spell Family (224), Passive] 
 Talent Entry     : Augmentation [tree=spec, row=10, col=7, max_rank=1, req_points=20]
@@ -13953,7 +13938,7 @@ Labels           : 16: Class Spells
 Attributes       : Passive (6), Do Not Display (Spellbook, Aura Icon, Combat Log) (7), Allow Aura While Dead (116), Allow Entering Arena (149), Disable Aura While Dead (226)
 Effects          :
 #1 (id=1319311)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 150 | Scaled Value: 150 | PvP Coefficient: 0.5 | Target: Self (1)
+                   Base Value: 100 | Scaled Value: 100 | PvP Coefficient: 0.5 | Target: Self (1)
 Description      : Consuming Essence Burst sends forth a Living Flame at your target at $s1% effectiveness, or a nearby injured target if they are full health.
 
 Name             : Evoker Preservation 12.1 Class Set 4pc (id=1296642) [Spell Family (224), Passive, Hidden] 
@@ -13990,7 +13975,7 @@ Labels           : 16: Class Spells
 Attributes       : Aura Points On Client (268), Allow Class Ability Procs (416)
 Effects          :
 #1 (id=1321065)  : Apply Aura (6) | Apply Flat Modifier w/ Label (219): Spell Effect 1 (3)
-                   Base Value: 30 | Scaled Value: 30 | Misc Value: 3 | Misc Value 2: 6674 (Label) | Target: Self (1)
+                   Base Value: 30 | Scaled Value: 30 | PvP Coefficient: 0.5 | Misc Value: 3 | Misc Value 2: 6674 (Label) | Target: Self (1)
                    Affected Spells (Label): Fate Mirror (412774)
 Description      : $@spelldesc1296638
 Tooltip          : Fate Mirror echoes $1296638s1% of damage.

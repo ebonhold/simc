@@ -86,6 +86,7 @@ constexpr unsigned MAX_SOUL_FRAGMENTS          = 6;
 constexpr unsigned HAVOC_MAX_SOUL_FRAGMENTS    = 5;
 constexpr unsigned DEVOURER_MAX_SOUL_FRAGMENTS = 10;
 constexpr double VENGEFUL_RETREAT_DISTANCE     = 20.0;
+constexpr double THE_HUNT_LEAP_SPEED = 25.0;  // yd/s, approximate The Hunt charge speed (no velocity in spell data)
 
 enum class soul_fragment : unsigned
 {
@@ -366,6 +367,9 @@ public:
     buff_t* empowered_eye_beam;
     buff_t* eternal_hunt;
     buff_t* serrated_glaive;
+    buff_t* never_say_die_driver;
+    buff_t* never_say_die_damage;
+    buff_t* never_say_die_leech;
 
     movement_buff_t* fel_rush_move;
     movement_buff_t* vengeful_retreat_move;
@@ -547,7 +551,7 @@ public:
       player_talent_t burning_hatred;
 
       player_talent_t dash_of_chaos;  // NYI
-      player_talent_t never_say_die;  // NYI
+      player_talent_t never_say_die;
       player_talent_t improved_chaos_strike;
       player_talent_t first_blood;
       player_talent_t accelerated_blade;
@@ -1415,9 +1419,11 @@ public:
     int drain_stacks;
     demon_hunter_t* actor;
     double meta_drain_multiplier = 1.0;
-    double initial_drain         = 15.0;
-    double exp_factor            = 1.455;
-    double exp_power             = 0.075;
+    // Fit against per-tick drain event schedules from logs (matches cumulative drain
+    // timing through end of meta, not just instantaneous rates); see PR #11549.
+    double initial_drain = 15.0;
+    double exp_factor    = 1.40;
+    double exp_power     = 0.0775;
 
     fury_state_t( demon_hunter_t* a )
       : start_time( timespan_t::min() ), next_drain_event( nullptr ), drain_stacks( 0 ), actor( a )
@@ -1447,8 +1453,6 @@ public:
     void clear_state();
 
     void stop();
-
-    void reschedule_drain();
 
     void reset();
 
@@ -1480,9 +1484,7 @@ public:
     struct drain_event_t : public event_t
     {
       demon_hunter_t* dh;
-      timespan_t delta;
-      drain_event_t( demon_hunter_t* p, timespan_t delta_time )
-        : event_t( *p, delta_time ), dh( p ), delta( delta_time )
+      drain_event_t( demon_hunter_t* p, timespan_t delta_time ) : event_t( *p, delta_time ), dh( p )
       {
       }
 
@@ -2174,6 +2176,9 @@ public:
     ab::parse_effects( dh()->buff.inertia );
     ab::parse_effects( dh()->buff.empowered_eye_beam );
     ab::parse_effects( dh()->buff.serrated_glaive, dh()->talent.havoc.serrated_glaive );
+    // Never Say Die damage uses effects 4 + 5 and uses the value from effect 1
+    ab::parse_effects( dh()->buff.never_say_die_damage, dh()->talent.havoc.never_say_die->effectN( 1 ).percent(),
+                       effect_mask_t( false ).enable( 4, 5 ) );
 
     // Vengeance
 
@@ -3337,10 +3342,17 @@ struct otherworldly_focus_benefit_t : public BASE
 {
   using base_t = otherworldly_focus_benefit_t<BASE>;
 
+  double increase_percent;
+
   otherworldly_focus_benefit_t( util::string_view n, demon_hunter_t* p, const spell_data_t* s = spell_data_t::nil(),
                                 util::string_view o = {} )
     : BASE( n, p, s, o )
   {
+    increase_percent = p->talent.annihilator.otherworldly_focus->effectN( 1 ).percent();
+    if ( p->is_ptr() && p->specialization() == DEMON_HUNTER_DEVOURER )
+    {
+      increase_percent = p->talent.annihilator.otherworldly_focus->effectN( 3 ).percent();
+    }
   }
 
   double composite_da_multiplier( const action_state_t* s ) const override
@@ -3355,8 +3367,7 @@ struct otherworldly_focus_benefit_t : public BASE
       // etc until reaching 0 benefit
       auto num_target_reduction_percent = BASE::dh()->talent.annihilator.otherworldly_focus->effectN( 2 ).percent() *
                                           ( std::max( std::min( s->n_targets - 1, 10U ), 0U ) );
-      m *= 1.0 + std::max( 0.0, BASE::dh()->talent.annihilator.otherworldly_focus->effectN( 1 ).percent() -
-                                    num_target_reduction_percent );
+      m *= 1.0 + std::max( 0.0, increase_percent - num_target_reduction_percent );
     }
 
     return m;
@@ -3412,6 +3423,29 @@ struct shattered_souls_trigger_t : public BASE
   {
     // 2026-06-09 -- Seems to be +1% from what the spell data indicates
     return shattered_souls_base_chance + 0.01;
+  }
+};
+
+template <typename BASE>
+struct soulburst_trigger_t : public BASE
+{
+  using base_t = soulburst_trigger_t<BASE>;
+
+  soulburst_trigger_t( util::string_view n, demon_hunter_t* p, const spell_data_t* s = spell_data_t::nil(),
+                       util::string_view o = {} )
+    : BASE( n, p, s, o )
+  {
+  }
+
+  void trigger_soulburst( unsigned fragments_consumed )
+  {
+    // TOCHECK: Is this instant?
+    if ( BASE::dh()->set_bonuses.mid2_devourer_2pc->ok() &&
+         fragments_consumed >= BASE::dh()->set_bonuses.mid2_devourer_2pc->effectN( 1 ).base_value() &&
+         BASE::rng().roll( BASE::dh()->set_bonuses.mid2_devourer_2pc->effectN( 2 ).percent() ) )
+    {
+      BASE::dh()->buff.soulburst->trigger();
+    }
   }
 };
 
@@ -5043,8 +5077,11 @@ struct pick_up_fragment_t : public demon_hunter_spell_t
 
     void execute() override
     {
-      // Evaluate if_expr to make sure the actor still wants to consume.
-      if ( frag && frag->active() && ( !expr || expr->eval() ) && dh->active.consume_soul_greater )
+      // The targeted fragment may have been consumed (and deleted) by another effect during the
+      // pick up movement (see soul_fragment_t::remove()); check that it is still tracked before
+      // dereferencing. Evaluate if_expr to make sure the actor still wants to consume.
+      if ( frag && range::contains( dh->soul_fragments, frag ) && frag->active() && ( !expr || expr->eval() ) &&
+           dh->active.consume_soul_greater )
       {
         frag->consume( false );
       }
@@ -5490,6 +5527,15 @@ struct the_hunt_base_t
 
   timespan_t travel_time() const override
   {
+    // The Hunt charges to its target, so the leap scales with distance. A Devourer that opens
+    // distance with Vengeful Retreat first stays airborne long enough to enter Metamorphosis
+    // mid-leap, so the impact lands during Meta and is empowered by Demonic Intensity just like
+    // Predator's Wake. In melee, and for other specs, the flat short travel is kept.
+    if ( dh()->specialization() == DEMON_HUNTER_DEVOURER && dh()->buff.vengeful_retreat_move->check() )
+    {
+      const double distance = dh()->buff.vengeful_retreat_move->distance_moved;
+      return std::max( 100_ms, timespan_t::from_seconds( distance / THE_HUNT_LEAP_SPEED ) );
+    }
     return 100_ms;
   }
 };
@@ -5852,7 +5898,8 @@ struct soul_immolation_heal_t : public demon_hunter_heal_t
   }
 };
 
-struct reap_base_t : public voidfall_spending_trigger_t<meteoric_fall_trigger_t<demon_hunter_spell_t>>
+struct reap_base_t
+  : public soulburst_trigger_t<voidfall_spending_trigger_t<meteoric_fall_trigger_t<demon_hunter_spell_t>>>
 {
   struct reap_damage_t : public shattered_souls_trigger_t<demon_hunter_spell_t>
   {
@@ -5907,13 +5954,7 @@ struct reap_base_t : public voidfall_spending_trigger_t<meteoric_fall_trigger_t<
   {
     unsigned fragments_consumed = dh()->consume_soul_fragments( soul_fragment::LESSER, false, souls_to_consume() );
 
-    // TOCHECK: Is this instant?
-    if ( dh()->set_bonuses.mid2_devourer_2pc->ok() &&
-         fragments_consumed >= dh()->set_bonuses.mid2_devourer_2pc->effectN( 1 ).base_value() &&
-         rng().roll( dh()->set_bonuses.mid2_devourer_2pc->effectN( 2 ).percent() ) )
-    {
-      dh()->buff.soulburst->trigger();
-    }
+    trigger_soulburst( fragments_consumed );
 
     dh()->buff.reap->trigger();
 
@@ -5938,7 +5979,8 @@ struct reap_base_t : public voidfall_spending_trigger_t<meteoric_fall_trigger_t<
   }
 };
 
-struct eradicate_t : public voidfall_spending_trigger_t<meteoric_fall_trigger_t<demon_hunter_spell_t>>
+struct eradicate_t
+  : public soulburst_trigger_t<voidfall_spending_trigger_t<meteoric_fall_trigger_t<demon_hunter_spell_t>>>
 {
   struct eradicate_damage_t : public shattered_souls_trigger_t<demon_hunter_spell_t>
   {
@@ -5958,7 +6000,7 @@ struct eradicate_t : public voidfall_spending_trigger_t<meteoric_fall_trigger_t<
 
     damage_action      = p->get_background_action<eradicate_damage_t>( "eradicate_reap", p->spec.eradicate_damage );
     damage_action->aoe = -1;
-    damage_action->reduced_aoe_targets = p->spec.eradicate->effectN( 1 ).base_value();
+    damage_action->reduced_aoe_targets = p->talent.devourer.eradicate->effectN( 1 ).base_value();
     add_child( damage_action );
 
     if ( p->talent.devourer.void_metamorphosis->ok() )
@@ -5966,7 +6008,7 @@ struct eradicate_t : public voidfall_spending_trigger_t<meteoric_fall_trigger_t<
       damage_action_meta =
           p->get_background_action<eradicate_damage_t>( "eradicate_cull", p->spec.eradicate_damage_meta );
       damage_action_meta->aoe                 = -1;
-      damage_action_meta->reduced_aoe_targets = p->spec.eradicate->effectN( 1 ).base_value();
+      damage_action_meta->reduced_aoe_targets = p->talent.devourer.eradicate->effectN( 1 ).base_value();
       add_child( damage_action_meta );
     }
 
@@ -6003,6 +6045,8 @@ struct eradicate_t : public voidfall_spending_trigger_t<meteoric_fall_trigger_t<
   void execute() override
   {
     unsigned fragments_consumed = dh()->consume_soul_fragments( soul_fragment::LESSER, false, souls_to_consume() );
+
+    trigger_soulburst( fragments_consumed );
 
     dh()->buff.reap->trigger();
 
@@ -6194,8 +6238,6 @@ struct void_ray_t
         dh()->buff.voidfall_building->trigger();
       }
     }
-
-    dh()->devourer_fury_state.reschedule_drain();
   }
 
   void execute() override
@@ -6206,7 +6248,6 @@ struct void_ray_t
                                                         : dh()->talent.devourer.void_ray->cooldown();
 
     base_t::execute();
-    dh()->devourer_fury_state.reschedule_drain();
   }
 
   bool action_ready() override
@@ -8374,10 +8415,13 @@ struct vengeful_retreat_t
     add_child( execute_action );
 
     // TODO: Remove or modify when category cooldowns are implemented/fixed
-    cooldown->duration = data().category_cooldown();
-    if ( data().affected_by( p->talent.havoc.tactical_retreat->effectN( 1 ) ) )
+    if ( !p->is_ptr() )
     {
-      cooldown->duration += p->talent.havoc.tactical_retreat->effectN( 1 ).time_value();
+      cooldown->duration = data().category_cooldown();
+      if ( data().affected_by( p->talent.havoc.tactical_retreat->effectN( 1 ) ) )
+      {
+        cooldown->duration += p->talent.havoc.tactical_retreat->effectN( 1 ).time_value();
+      }
     }
 
     base_teleport_distance                        = VENGEFUL_RETREAT_DISTANCE;
@@ -9618,8 +9662,6 @@ void demon_hunter_t::activate()
   base_t::activate();
   if ( specialization() == DEMON_HUNTER_DEVOURER )
   {
-    register_on_combat_state_callback( [ this ]( player_t*, bool ) { devourer_fury_state.reschedule_drain(); } );
-
     if ( talent.devourer.entropy->ok() )
     {
       register_precombat_begin( [ this ]( player_t* ) {
@@ -9740,11 +9782,9 @@ void demon_hunter_t::create_buffs()
   buff.voidstep->reactable = true;
 
   // TODO: Measure this slow duration instead of guessing.
-  buff.voidrush =
-      make_buff( this, "voidrush", talent.devourer.voidrush )
-          ->set_duration( 0.5_s )
-          ->set_refresh_behavior( buff_refresh_behavior::DURATION )
-          ->add_stack_change_callback( [ this ]( buff_t*, int, int ) { devourer_fury_state.reschedule_drain(); } );
+  buff.voidrush = make_buff( this, "voidrush", talent.devourer.voidrush )
+                      ->set_duration( 0.5_s )
+                      ->set_refresh_behavior( buff_refresh_behavior::DURATION );
 
   buff.entropy_out_of_combat =
       make_buff( this, "entropy_out_of_combat" )
@@ -9845,6 +9885,33 @@ void demon_hunter_t::create_buffs()
   buff.eternal_hunt = make_buff( this, "eternal_hunt", spec.eternal_hunt_buff );
 
   buff.serrated_glaive = make_buff( this, "serrated_glaive", spec.serrated_glaive_buff );
+
+  buff.never_say_die_driver = make_buff( this, "never_say_die_driver", talent.havoc.never_say_die )
+                                  ->set_quiet( true )
+                                  ->set_tick_callback( [ this ]( buff_t*, int, timespan_t ) {
+                                    if ( health_percentage() >= talent.havoc.never_say_die->effectN( 3 ).percent() )
+                                    {
+                                      if ( !buff.never_say_die_damage->up() )
+                                      {
+                                        buff.never_say_die_leech->expire();
+                                        buff.never_say_die_damage->trigger();
+                                      }
+                                    }
+                                    else
+                                    {
+                                      if ( !buff.never_say_die_damage->up() )
+                                      {
+                                        buff.never_say_die_damage->expire();
+                                        buff.never_say_die_leech->trigger();
+                                      }
+                                    }
+                                  } );
+
+  buff.never_say_die_damage =
+      make_buff( this, "never_say_die_damage", talent.havoc.never_say_die )->disable_ticking( true );
+
+  buff.never_say_die_leech =
+      make_buff( this, "never_say_die_leech", talent.havoc.never_say_die )->disable_ticking( true );
 
   // Vengeance ==============================================================
 
@@ -10490,8 +10557,8 @@ void demon_hunter_t::init_rng()
   }
 
   // Accumulated proc objects
-  accumulated_rng.voidfall = get_accumulated_rng(
-      "voidfall", prd::find_constant( talent.annihilator.voidfall->effectN( 3 ).percent() ) );
+  accumulated_rng.voidfall =
+      get_accumulated_rng( "voidfall", prd::find_constant( talent.annihilator.voidfall->effectN( 3 ).percent() ) );
 
   player_t::init_rng();
 }
@@ -11232,7 +11299,10 @@ void demon_hunter_t::init_spells()
 
   // TODO: Check if this still behaves as described in `composite_player_critical_damage_multiplier`
   deregister_passive_spell( talent.havoc.know_your_enemy );
-  deregister_passive_spell( talent.havoc.tactical_retreat );
+  if ( !is_ptr() )
+  {
+    deregister_passive_spell( talent.havoc.tactical_retreat );
+  }
 
   // conditional passive, yippee
   deregister_passive_spell( talent.havoc.never_say_die );
@@ -11903,6 +11973,12 @@ void demon_hunter_t::arise()
   {
     buff.pursuit_of_angryness->trigger();
   }
+
+  if ( talent.havoc.never_say_die->ok() )
+  {
+    buff.never_say_die_driver->trigger();
+    buff.never_say_die_damage->trigger();
+  }
 }
 
 // demon_hunter_t::regen ====================================================
@@ -12226,14 +12302,14 @@ double demon_hunter_t::fury_state_t::fury_drain_per_second( int stacks ) const
 
   if ( has_reduced_drain )
   {
-    // Guess
-    drain *= 0.15;
+    // Reduced while casting Collapsing Star / channeling Void Ray. Measured ~0.127 from logs.
+    drain *= 0.127;
   }
 
   if ( drain_stacks < 1 )
   {
-    // Slow after meta cast
-    drain = 15;
+    // Slow first second after meta cast. Measured ~10/s from logs.
+    drain = 10;
   }
 
   return drain;
@@ -12241,29 +12317,13 @@ double demon_hunter_t::fury_state_t::fury_drain_per_second( int stacks ) const
 
 timespan_t demon_hunter_t::fury_state_t::time_to_next_tick( int stacks ) const
 {
+  // The drain is a periodic event. A tick schedules the next one at the rate in force when it fires,
+  // and a change to the reduced-drain state does not re-time the tick already pending: that tick runs
+  // to term at the interval it was scheduled with, and only the tick after it picks up the new rate.
+
   // 2 as it currently drains 2 per event.
   // TODO: Don't hardcode this.
   return 2.0_s / fury_drain_per_second( stacks );
-}
-
-void demon_hunter_t::fury_state_t::reschedule_drain()
-{
-  if ( !next_drain_event )
-    return;
-
-  double percent_remaining = 1.0 - next_drain_event->remains() / static_cast<drain_event_t*>( next_drain_event )->delta;
-
-  auto new_time = time_to_next_tick( drain_stacks ) * percent_remaining;
-
-  if ( new_time < next_drain_event->remains() )
-  {
-    event_t::cancel( next_drain_event );
-    next_drain_event = make_event<drain_event_t>( *actor->sim, actor, new_time );
-  }
-  else
-  {
-    next_drain_event->reschedule( new_time );
-  }
 }
 
 void demon_hunter_t::fury_state_t::clear_state()
@@ -12492,6 +12552,9 @@ void demon_hunter_t::parse_player_effects()
   {
     parse_effects( buff.metamorphosis );
     parse_effects( buff.blur );
+    // Never Say Die leech uses effect 6 and uses the value from effect 2
+    parse_effects( buff.never_say_die_leech, talent.havoc.never_say_die->effectN( 2 ).percent(),
+                   effect_mask_t( false ).enable( 6 ) );
   }
 
   // Vengeance

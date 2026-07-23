@@ -250,6 +250,11 @@ public:
       params.push_back( fmt::format( "crafted-stats={}", fmt::join( m_item->parsed.crafted_stat_mod, ":" ) ) );
     }
 
+    if ( m_item->parsed.redirect_item_id != 0 )
+    {
+      params.push_back( fmt::format( "original-item={}", m_item->parsed.redirect_item_id ) );
+    }
+
     params.push_back( fmt::format( "ilvl={}", m_item->item_level() ) );
   }
 
@@ -422,7 +427,7 @@ std::string decoration_domain( const sim_t& sim )
 #if SC_BETA == 0
   if ( maybe_ptr( sim.dbc->ptr ) )
   {
-    return "ptr2";
+    return "ptr";
   }
   else
   {
