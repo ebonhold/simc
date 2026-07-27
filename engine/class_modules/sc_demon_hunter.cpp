@@ -5110,6 +5110,8 @@ struct pick_up_fragment_t : public demon_hunter_spell_t
     // use_off_gcd = true;
     may_miss = callbacks = harmful = false;
     range                          = 5.0;  // Disallow use outside of melee.
+    // Consume and Devour are castable while moving; fragments can be collected during those casts.
+    usable_while_casting = use_while_casting = true;
   }
 
   void parse_mode( util::string_view value )
@@ -5277,6 +5279,13 @@ struct pick_up_fragment_t : public demon_hunter_spell_t
   bool ready() override
   {
     if ( dh()->soul_fragment_pick_up )
+    {
+      return false;
+    }
+
+    // Only Consume and Devour can be cast while moving; any other cast or channel blocks the pick up.
+    action_t* casting = dh()->executing ? dh()->executing : dh()->channeling;
+    if ( casting && casting->id != dh()->spec.consume->id() && casting->id != dh()->spec.devour->id() )
     {
       return false;
     }
@@ -5631,10 +5640,10 @@ struct voidsurge_t : public surge_base_t
 
 struct consume_base_t : public shattered_souls_trigger_t<voidfall_building_trigger_t<demon_hunter_spell_t>>
 {
-  struct soulburst_t : public demon_hunter_spell_t
+  struct soulburst_t : public shattered_souls_trigger_t<demon_hunter_spell_t>
   {
     soulburst_t( util::string_view n, demon_hunter_t* p )
-      : demon_hunter_spell_t( n, p, p->set_bonuses.soulburst_damage )
+      : base_t( n, p, p->set_bonuses.soulburst_damage )
     {
       background = dual = true;
       aoe               = -1;
@@ -5648,10 +5657,11 @@ struct consume_base_t : public shattered_souls_trigger_t<voidfall_building_trigg
       {
         dh()->buff.moment_of_craving->trigger();
         dh()->cooldown.reap->reset( true );
-        dh()->buff.soulburst->expire();
         dh()->spawn_soul_fragment( dh()->proc.soul_fragment_from_soulburst, soul_fragment::LESSER,
                                    as<unsigned int>( dh()->set_bonuses.mid2_devourer_4pc->effectN( 1 ).base_value() ) );
       }
+
+      dh()->buff.soulburst->expire();
     }
   };
 

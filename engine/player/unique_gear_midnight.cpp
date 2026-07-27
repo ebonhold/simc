@@ -1008,6 +1008,62 @@ void b1p_scorcher_of_souls( special_effect_t& effect )
 
   effect.execute_action = create_proc_action<b1p_scorcher_of_souls_t>( "b1p_scorcher_of_souls", effect );
 }
+
+// 1296982 Driver
+// 1301037 RPPM
+// 1301039 Buff
+// 1301049 Damage
+void polished_ammolite( special_effect_t& effect )
+{
+  effect.player->sim->error(
+      UNVERIFIED_IMPLEMENTATION,
+      "Polished Ammolite: Implementation currently assumes that the stat effect cannot trigger while at five stacks. "
+      "This has not be verified in-game." );
+
+  auto damage = create_proc_action<generic_proc_t>( "ammolitic_burst", effect, 1301049 );
+  damage->base_dd_min += effect.driver()->effectN( 2 ).average( effect );
+  damage->base_dd_max += effect.driver()->effectN( 2 ).average( effect );
+
+  auto stat_amount = effect.driver()->effectN( 1 ).average( effect );
+  auto buff        = create_buff<stat_buff_t>( effect.player, effect.player->find_spell( 1301039 ) )
+                         ->add_stat_from_effect_type( A_MOD_RATING, stat_amount );
+
+  // skip setup if callback has been created by already having another copy of the embellishment
+  if ( find_special_effect( effect.player, effect.trigger()->id() ) )
+    return;
+
+  damage->base_multiplier *= role_mult( effect );
+  damage->base_crit = 1.0;
+
+  struct polished_ammolite_cb_t final : public dbc_proc_callback_t
+  {
+    buff_t* buff;
+    action_t* damage;
+
+    polished_ammolite_cb_t( const special_effect_t& e, buff_t* triggered_buff, action_t* triggered_damage )
+      : dbc_proc_callback_t( e.player, e ), buff( triggered_buff ), damage( triggered_damage )
+    {
+    }
+
+    void execute( const spell_data_t*, player_t* t, action_state_t* ) override
+    {
+      if ( buff->at_max_stacks() )
+      {
+        damage->execute_on_target( t );
+      }
+      else
+      {
+        // Currently assumed this cannot re-trigger while at maximum stacks.
+        buff->trigger();
+      }
+    }
+  };
+
+  effect.spell_id     = effect.trigger()->id();
+  effect.proc_flags2_ = PF2_CRIT;
+
+  new polished_ammolite_cb_t( effect, buff, damage );
+}
 }  // namespace embellishments
 
 namespace darkmoon
@@ -3490,6 +3546,64 @@ void keepers_seething_core( special_effect_t& effect )
   new dbc_proc_callback_t( effect.player, effect );
 }
 
+// Hex Lord's Dooming Idol
+// 1295884 equip driver
+//  e1: int drain per stack
+//  e2: on-use int per stack
+// 1295885 on-use driver & buff
+// 1307470 stacking int drain
+void hex_lords_dooming_idol( special_effect_t& effect )
+{
+  if ( unique_gear::create_fallback_buffs( effect, { "hex_lords_dooming_idol", "hex_lords_doom" } ) )
+    return;
+
+  unsigned equip_id = 1295884;
+  auto equip = find_special_effect( effect.player, equip_id );
+  assert( equip && "Hex Lord's Dooming Idol missing equip effect" );
+
+  auto equip_data = equip->driver();
+
+  auto doom = create_buff<stat_buff_t>( effect.player, equip->trigger() )
+    ->set_stat_from_effect_type( A_MOD_STAT, -equip_data->effectN( 1 ).average( effect ) )
+    ->set_constant_behavior( buff_constant_behavior::NEVER_CONSTANT );
+
+  equip->custom_buff = doom;
+
+  new dbc_proc_callback_t( effect.player, *equip );
+
+  auto use_buff = create_buff<stat_buff_t>( effect.player, "hex_lords_dooming_idol", effect.driver() )
+    ->set_stat_from_effect_type( A_MOD_STAT, equip_data->effectN( 2 ).average( effect ) )
+    ->set_max_stack( doom->max_stack() )
+    ->set_cooldown( 0_ms );
+
+  struct hex_lords_dooming_idol_t : public generic_proc_t
+  {
+    buff_t* doom;
+    buff_t* use_buff;
+
+    hex_lords_dooming_idol_t( const special_effect_t& e, buff_t* doom, buff_t* use )
+      : generic_proc_t( e, "hex_lords_dooming_idol", e.driver() ), doom( doom ), use_buff( use )
+    {}
+
+    void execute() override
+    {
+      generic_proc_t::execute();
+
+      if ( !doom->check() )
+        return;
+
+      use_buff->expire();
+      use_buff->trigger( doom->check() );
+      doom->expire();
+    }
+  };
+
+  effect.disable_buff();
+  effect.has_use_buff_override = true;
+  effect.execute_action =
+      create_proc_action<hex_lords_dooming_idol_t>( "hex_lords_dooming_idol", effect, doom, use_buff );
+}
+  
 // Vashnik's Sanguine Rancor
 // 1295553 Driver
 // 1303479 Sanguine Rancor (stack buff)
@@ -4477,6 +4591,113 @@ void rune_of_voidtouched_orbs( special_effect_t& effect )
 }
 }  // namespace omnium
 
+namespace bite_of_zuljan
+{
+struct venomfang_t : public generic_proc_t
+{
+  action_t* venomfang_burst;
+
+  venomfang_t( const special_effect_t& effect )
+    : generic_proc_t( effect, "venomfang", effect.player->find_spell( 1306635 ) ), venomfang_burst( nullptr )
+  {
+    base_td = effect.driver()->effectN( 1 ).average( effect );
+    base_td_multiplier *= role_mult( effect );
+    dot_max_stack                = 1;  // Override Max Stacks to 1, this behavior is handled by the asyncronous debuff
+    venomfang_burst              = create_proc_action<generic_proc_t>( "venomfang_burst", effect, 1306639 );
+    venomfang_burst->base_dd_min = venomfang_burst->base_dd_max = effect.driver()->effectN( 2 ).average( effect );
+    venomfang_burst->base_multiplier *= role_mult( effect );
+    add_child( venomfang_burst );
+  }
+
+  double composite_ta_multiplier( const action_state_t* s ) const override
+  {
+    double m = generic_proc_t::composite_ta_multiplier( s );
+
+    if ( auto debuff = find_debuff( s->target ) )
+      m *= debuff->check();
+    else
+      m = 0.0;
+
+    return m;
+  }
+
+  buff_t* create_debuff( player_t* t ) override
+  {
+    return make_buff<buff_t>( actor_pair_t( t, player ), "venomfang_debuff", &data() )
+        ->set_activated( true )
+        ->set_duration( data().duration() + 1_ms )  // Extra 1ms to avoid expiration before next tick
+        ->set_stack_change_callback( [ & ]( buff_t* b, int old_, int new_ ) {
+          if ( old_ > new_ )
+            venomfang_burst->execute_on_target( b->player );
+        } );
+  }
+
+  void execute() override
+  {
+    generic_proc_t::execute();
+    get_debuff( execute_state->target )->trigger();
+  }
+};
+
+// Zul'jin's Guillotine Technique
+// 1291728 Driver
+// 1306604 Damage
+// 1306624 Perfected Guillotine
+void zuljins_guillotine_technique( special_effect_t& effect )
+{
+  struct guillotine_t : public generic_proc_t
+  {
+    const special_effect_t& effect;
+
+    guillotine_t( const special_effect_t& e, std::string_view n, const spell_data_t* s )
+      : generic_proc_t( e, n, s ), effect( e )
+    {
+      base_dd_min = base_dd_max = e.driver()->effectN( 1 ).average( e );
+      base_multiplier *= role_mult( e );
+      if ( e.player->sets->has_set_bonus( e.player->specialization(), MID_BOZ, B2 ) )
+      {
+        auto bite_of_zuljan_driver        = find_special_effect( e.player, 1291726 );
+        // Currently set to 100% of the base damage of the original proc, but wiring the spell data in case this changes. 
+        base_dd_min *= bite_of_zuljan_driver->driver()->effectN( 2 ).percent();
+        base_dd_max *= bite_of_zuljan_driver->driver()->effectN( 2 ).percent();
+
+        // Venomfang
+        auto venomfang_driver               = find_special_effect( e.player, 1291718 );
+        auto venomfang                      = create_proc_action<venomfang_t>( "venomfang", *venomfang_driver );
+        impact_action                       = venomfang;
+      }
+    }
+
+    double composite_target_multiplier( player_t* target ) const override
+    {
+      double m = generic_proc_t::composite_target_multiplier( target );
+      
+      m *= 1.0 + effect.driver()->effectN( 2 ).percent() * ( 100 - target->health_percentage() );
+
+      return m;
+    }
+  };
+
+  std::string_view name = "guillotine";
+  const spell_data_t* spell = effect.player->find_spell( 1306604 );
+  if ( effect.player->sets->has_set_bonus( effect.player->specialization(), MID_BOZ, B2 ) )
+  {
+    name = "perfected_guillotine";
+    spell = effect.player->find_spell( 1306624 );
+  }
+
+  effect.execute_action = create_proc_action<guillotine_t>( name, effect, spell );
+  new dbc_proc_callback_t( effect.player, effect );
+}
+
+void venomfang( special_effect_t& effect )
+{
+  effect.execute_action = create_proc_action<venomfang_t>( "venomfang", effect );
+  new dbc_proc_callback_t( effect.player, effect );
+}
+
+}  // namespace bite_of_zuljan
+
 void register_special_effects()
 {
   // NOTE: use unique_gear:: namespace for static consumables so we don't activate them with enable_all_item_effects
@@ -4548,6 +4769,10 @@ void register_special_effects()
   register_special_effect( 1251904, embellishments::loa_worshipers_band );
   register_special_effect( 1261968, embellishments::b0p_curator_of_booms );
   register_special_effect( 1246309, embellishments::b1p_scorcher_of_souls );
+  set_min_version( wowv_t( 12, 1, 0 ) );
+  register_special_effect( 1296982, embellishments::polished_ammolite );
+  reset_version_check();
+  
   // Darkmoon Trinkets & Embellishments
   register_special_effect( { 1245001, 1245053 }, darkmoon::blood );
   register_special_effect( { 1245055, 1245051 }, darkmoon::rot );
@@ -4625,7 +4850,10 @@ void register_special_effects()
   register_special_effect( 1295275, trinkets::stormbound_emblem_of_dazar );
   register_special_effect( 1294744, DISABLED_EFFECT );  // Stormbound Emblem of Dazar equip driver
   register_special_effect( 1292065, trinkets::keepers_seething_core );
+  register_special_effect( 1295885, trinkets::hex_lords_dooming_idol, true );
+  register_special_effect( 1295884, DISABLED_EFFECT );  // Hex Lord's Dooming Idol equip driver
   register_special_effect( 1295553, trinkets::vashniks_sanguine_rancor );
+  register_special_effect( 1291728, bite_of_zuljan::zuljins_guillotine_technique );
   reset_version_check();
   // Weapons
   register_special_effect( { 1253357, 1253359 }, weapons::torments_duality );  // umbral sabre & radiant foil
@@ -4634,6 +4862,7 @@ void register_special_effects()
   set_min_version( wowv_t( 12, 1, 0 ) );
   register_special_effect( 1296874, weapons::polished_lightwood_channeler );
   register_special_effect( 1298085, weapons::janthrazet_the_soul_fang );
+  register_special_effect( 1291718, bite_of_zuljan::venomfang );
   reset_version_check();
   // Armor
   register_special_effect( 1271211, armors::eternal_voidsong_chain );
@@ -4660,6 +4889,7 @@ void register_special_effects()
   register_special_effect( 1253358, DISABLED_EFFECT );  // torments duality
   register_special_effect( 253819, sets::umbral_shift );
   register_special_effect( 1290152, DISABLED_EFFECT ); // umbral shift equip effect
+  register_special_effect( 1291726, DISABLED_EFFECT ); // bite of zuljan set bonus, handled by bite_of_zuljan::zuljins_guillotine_technique
   // Omnium Folio
   set_min_version( wowv_t( 12, 0, 7 ) );
   register_special_effect( 1279599, omnium::rune_of_unleashed_fire );
