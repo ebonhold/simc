@@ -1075,7 +1075,8 @@ void save_output_data( profile_set_t& profileset, const player_t* parent_player,
       {
         profile_output_data_item_t saved_item{ item.slot_name(), item.parsed.data.id, item.item_level() };
 
-        // saved_item.bonus_id( item.parsed.bonus_id );
+        saved_item.bonus_id( item.parsed.bonus_id );
+        saved_item.enchant_id( item.parsed.enchant_id );
 
         saved_gear.push_back( saved_item );
       }

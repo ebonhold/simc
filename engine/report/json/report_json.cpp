@@ -944,6 +944,8 @@ void profileset_fetch_output_data( const profileset::profile_output_data_t& outp
       auto ovr_slot = ovr_gear[ item.slot_name() ];
       ovr_slot[ "item_id" ] = item.item_id();
       ovr_slot[ "item_level" ] = item.item_level();
+      ovr_slot[ "bonus_id" ]   = item.bonus_id();
+      ovr_slot[ "enchant_id" ] = item.enchant_id();
     }
   }
   if ( output_data.agility() )
