@@ -36,7 +36,7 @@ paladin_t::paladin_t( sim_t* sim, util::string_view name, race_e r )
     random_weapon_target( nullptr ),
     random_bulwark_target( nullptr ),
     divine_inspiration_next( -1 ),
-    reflection_of_radiance_proc_chance( .05 ) // ToDo Fluttershy: Find out real proc chance - Please Blizz bring back the log event for Grand Crusader
+    reflection_of_radiance_proc_chance( .001 ) // ToDo Fluttershy: Find out real proc chance - Currently something very, very low
 {
   active_consecration = nullptr;
   active_boj_cons = nullptr;
@@ -392,7 +392,8 @@ struct divine_guidance_heal_t : public paladin_heal_t
     proc = may_crit         = true;
     may_miss                = false;
     attack_power_mod.direct = p->talents.lightsmith.divine_guidance->effectN( 1 ).base_value() / 10.0;
-    aoe                     = 1;
+    aoe                     = 3;
+    base_multiplier         = .3;
   }
 
   double action_multiplier() const override
@@ -550,69 +551,15 @@ struct consecration_t : public paladin_spell_t
       p()->all_active_consecrations.erase( p()->active_boj_cons );
       event_t::cancel( p()->active_boj_cons );
     }
-
-    /*
-      Divine Guidance seems to function as follows:
-      Try to heal as many injured people (and pets!) as possible inside your Consecration, up to 5 (max_dg_heal_targets)
-      If you cannot heal 5 (max_dg_heal_targets) targets, deal the rest in damage to other targets inside the Consecration
-      Damage and Healing is divided by target count, up to 5 (max_dg_heal_targets), damage is then further divided by amount of mobs hit
-    */
-    // Divine Guidance seems to prioritise Healing, so count healing targets first
-    std::vector<player_t*> healingAllies;
-    int totalTargets = 0;
-    if ( dg_damage && dg_heal && p()->buffs.lightsmith.divine_guidance->up() )
-    {
-      for (auto friendly : sim->player_non_sleeping_list)
-      {
-        if ( friendly == p() )  // Always heal ourselves to avoid oversim
-          healingAllies.push_back( friendly );
-        else if ( friendly->health_percentage() < 100 ) // Allies are only healed when they're not full HP
-          healingAllies.push_back( friendly );
-        if ( healingAllies.size() == as<size_t>( p()->options.max_dg_heal_targets ) )
-          break;
-      }
-      // If we hit less than 5 (max_dg_heal_targets) healing targets, we can fill the rest with damage targets
-      int healingAlliesSize = as<int>( healingAllies.size() );
-
-      if ( healingAlliesSize > p()->options.min_dg_heal_targets )
-        healingAlliesSize = p()->options.min_dg_heal_targets;
-
-      totalTargets          = healingAlliesSize;
-
-      if ( healingAlliesSize < 5 )
-      {
-        totalTargets = as<int>( sim->target_non_sleeping_list.size() ) + healingAlliesSize;
-      }
-
-      if ( healingAlliesSize > 0 )
-      {
-        dg_heal->base_dd_multiplier = 1.0 / totalTargets;
-        // Healing events come before Consecration cast
-        for ( auto friendly : healingAllies )
-        {
-          dg_heal->set_target( friendly );
-          dg_heal->execute();
-        }
-      }
-      dg_damage->base_dd_multiplier =
-          ( as<double>( totalTargets - healingAlliesSize ) / totalTargets );
-
-      // DG always deals full damage on the PTR. Full rewrite once 12.1 is live.
-      if ( p()->is_ptr() )
-        dg_damage->base_dd_multiplier = 1.0;
-    }
-
     paladin_spell_t::execute();
 
     // Damage events come after Consecration cast
     if ( dg_damage && p()->buffs.lightsmith.divine_guidance->up() )
     {
-      // Only create damage events when we're dealing damage, so not to proc stuff accidentally
-      if ( dg_damage->base_dd_multiplier > 0 )
-      {
-        dg_damage->set_target( target );
-        dg_damage->execute();
-      }
+      dg_damage->set_target( target );
+      dg_damage->execute();
+      dg_heal->set_target( player );
+      dg_heal->execute();
       p()->buffs.lightsmith.divine_guidance->expire();
     }
 
@@ -1042,7 +989,7 @@ struct melee_t : public paladin_melee_attack_t
     {
       if ( p()->specialization() == PALADIN_RETRIBUTION )
       {
-        if ( p()->talents.art_of_war->ok() && p()->cooldowns.art_of_war->up() && ( !p()->is_ptr() || repeating ) )
+        if ( p()->talents.art_of_war->ok() && p()->cooldowns.art_of_war->up() && repeating )
         {
           // Check for BoW procs
           double aow_proc_chance = p()->talents.art_of_war->effectN( 1 ).percent();
@@ -2635,6 +2582,9 @@ struct holy_armaments_t : public paladin_spell_t
     harmful            = false;
     name_str_reporting = "Holy Armaments";
     background = !p->lightsmith();
+    // Protection does not gain Holy Power from this, only Holy does
+    if ( p->specialization() == PALADIN_PROTECTION )
+      energize_amount = 0;
   }
 
   timespan_t execute_time() const override
@@ -2973,14 +2923,6 @@ struct shield_of_the_righteous_t : public holy_power_consumer_t<paladin_melee_at
     if (p()->sets->has_set_bonus(PALADIN_PROTECTION, MID1, B4))
     {
       p()->buffs.light_blessed_shield->trigger();
-    }
-
-    // You will lose 2 Holy Power when using SotR with IotD talented when DP is up
-    // Fixed on PTR
-    if ( p()->bugs && p()->talents.instrument_of_the_divine->ok() && hasDpUp && !p()->is_ptr() )
-    {
-      p()->resources.current[ RESOURCE_HOLY_POWER ] =
-          std::max( p()->resources.current[ RESOURCE_HOLY_POWER ] - 2.0, 0.0 );
     }
   }
 
@@ -3664,7 +3606,8 @@ void paladin_t::create_buffs()
   buffs.divine_arbiter_hammer_of_light =
       make_buff( this, "divine_arbiter_hammer_of_light", spells.divine_arbiter_hammer_of_light );
   buffs.divine_arbiter_verdict = make_buff( this, "divine_arbiter_verdict", spells.divine_arbiter_verdict );
-  buffs.divine_power   = make_buff( this, "divine_power", spells.divine_power );
+  buffs.divine_power = make_buff( this, "divine_power", spells.divine_power )
+                           ->add_invalidate( CACHE_PLAYER_DAMAGE_MULTIPLIER );
   buffs.divine_purpose = make_buff( this, "divine_purpose", spells.divine_purpose_buff );
   buffs.divine_shield  = make_buff( this, "divine_shield", find_class_spell( "Divine Shield" ) )
                             ->set_cooldown( 0_ms );  // Let the ability handle the CD
@@ -3704,15 +3647,7 @@ void paladin_t::create_buffs()
           ->set_refresh_duration_callback( [ this ]( const buff_t* b, timespan_t d ) {
             if ( b->remains().total_millis() > 0 )
               trigger_laying_down_arms();
-            if ( is_ptr() )
-            {
-              return std::min( b->remains() + d, d * 2 );
-            }
-            else
-            {
-              timespan_t residual = std::min( d * 0.3, b->remains() );
-              return residual + d;
-            }
+            return std::min( b->remains() + d, d * 2 );
           } )
           ->set_expire_callback( [ this ]( buff_t*, double, timespan_t ) { trigger_laying_down_arms(); } );
   buffs.lightsmith.sacred_weapon =
@@ -3720,15 +3655,7 @@ void paladin_t::create_buffs()
           ->set_refresh_duration_callback( [ this ]( const buff_t* b, timespan_t d ) {
             if ( b->remains().total_millis() > 0 )
               trigger_laying_down_arms();
-            if ( is_ptr() )
-            {
-              return std::min( b->remains() + d, d * 2 );
-            }
-            else
-            {
-              timespan_t residual = std::min( d * 0.3, b->remains() );
-              return residual + d;
-            }
+            return std::min( b->remains() + d, d * 2 );
           } )
           ->set_expire_callback( [ this ]( buff_t*, double, timespan_t ) { trigger_laying_down_arms(); } );
   buffs.lightsmith.masterwork_weapon = make_buff( this, "masterwork_weapon", find_spell( 1271436 ) );
@@ -3931,9 +3858,7 @@ void paladin_t::apply_action_effects( action_t* a ) {
   if ( !talents.crusade->ok() )
     aw_effect_mask.disable( 11 );
 
-  if ( !is_ptr() || talents.sentinel->ok() )
-    action->parse_effects( buffs.avenging_wrath, aw_effect_mask, IGNORE_STACKS );
-  action->parse_effects( buffs.divine_power );
+  action->parse_effects( buffs.avenging_wrath, aw_effect_mask, IGNORE_STACKS );
   // TODO: add in Divine Purpose - logic here is going to be complex
 
   // Hero talents
@@ -4487,6 +4412,9 @@ double paladin_t::composite_player_multiplier( school_e school ) const
 {
   double m = player_t::composite_player_multiplier( school );
 
+  if ( buffs.divine_power->check() && dbc::is_school( school, SCHOOL_HOLY ) )
+    m *= 1.0 + buffs.divine_power->data().effectN( 1 ).percent();
+
   return m;
 }
 
@@ -4945,8 +4873,6 @@ void paladin_t::create_options()
 {
   // TODO: figure out a better solution for this.
   add_option( opt_bool( "paladin_fake_sov", options.fake_sov ) );
-  add_option( opt_int( "min_dg_heal_targets", options.min_dg_heal_targets, 0, 5 ) );
-  add_option( opt_int( "max_dg_heal_targets", options.max_dg_heal_targets, 0, 5 ) );
   add_option( opt_bool( "fake_solidarity", options.fake_solidarity ) );
   add_option( opt_float( "blessed_hammer_strikes", options.blessed_hammer_strikes, 1, 3 ) );
   add_option( opt_float( "ror_bulwark_additional_proc_chance", options.ror_bulwark_additional_proc_chance, 0, 1 ) );

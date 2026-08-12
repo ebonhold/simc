@@ -108,7 +108,6 @@ struct mage_td_t final : public actor_target_data_t
     buff_t* controlled_destruction;
     buff_t* freezing;
     buff_t* freezing_winds;
-    buff_t* molten_fury;
     buff_t* touch_of_the_magi;
   } debuffs;
 
@@ -301,6 +300,7 @@ public:
     buff_t* freezing_rain;
     buff_t* glacial_spike;
     buff_t* hand_of_frost;
+    buff_t* icicles;
     buff_t* permafrost_lances;
     buff_t* rapid_refreezing;
     buff_t* thermal_void;
@@ -412,10 +412,11 @@ public:
 
   struct accumulated_rngs_t
   {
-    accumulated_rng_t* pyromaniac;
-    accumulated_rng_t* clearcasting;
-    accumulated_rng_t* spellfire_spheres;
     accumulated_rng_t* augury_abounds;
+    accumulated_rng_t* clearcasting;
+    accumulated_rng_t* pyromaniac;
+    accumulated_rng_t* rapid_refreezing;
+    accumulated_rng_t* spellfire_spheres;
   } accumulated_rng;
 
   // Sample data
@@ -457,7 +458,6 @@ public:
     timespan_t last_random_clearcasting; // Brainstorm cannot be triggered twice if a singular spell/action triggers Clearcasting twice.
     bool thermal_void_active;
     int glorious_incandescence_snapshot;
-    int icicles;
     int fired_up_count; // number of Fired Up procs in this Combustion
   } state;
 
@@ -1554,7 +1554,6 @@ struct mage_spell_t : public spell_t
     bool freeze_and_shatter_1 = false;
     bool freeze_and_shatter_2 = false;
     bool hand_of_frost = true;
-    bool molten_fury = true;
     bool savant = false;
     bool spellfire_sphere = true;
 
@@ -1712,19 +1711,6 @@ public:
 
     if ( affected_by.savant )
       m *= 1.0 + p()->cache.mastery() * p()->spec.savant->effectN( 5 ).mastery_value();
-
-    return m;
-  }
-
-  double composite_target_multiplier( player_t* target ) const override
-  {
-    double m = spell_t::composite_target_multiplier( target );
-
-    if ( auto td = find_td( target ) )
-    {
-      if ( affected_by.molten_fury )
-        m *= 1.0 + td->debuffs.molten_fury->check_value();
-    }
 
     return m;
   }
@@ -1909,15 +1895,6 @@ public:
 
     if ( p()->talents.fevered_incantation.ok() && s->result_type == result_amount_type::DMG_DIRECT )
       p()->trigger_merged_buff( p()->buffs.fevered_incantation, s->result == RESULT_CRIT );
-
-    // TODO: Test the exact behavior of the hidden Molten Fury debuff.
-    if ( p()->talents.molten_fury.ok() )
-    {
-      if ( target->health_percentage() <= p()->talents.molten_fury->effectN( 1 ).base_value() )
-        get_td( s->target )->debuffs.molten_fury->trigger();
-      else
-        get_td( s->target )->debuffs.molten_fury->expire();
-    }
   }
 
   void assess_damage( result_amount_type rt, action_state_t* s ) override
@@ -2936,7 +2913,8 @@ struct prismatic_bolt_t final : public arcane_mage_spell_t
     arcane_mage_spell_t( n, p, p->find_spell( 1295924 ) )
   {
     parse_options( options_str );
-    triggers.clearcasting = triggers.spellfire_sphere = triggers.mana_cascade = true;
+    // TODO: Check if this can trigger clearcasting randomly when only the first rank of the talent is known.
+    triggers.spellfire_sphere = triggers.mana_cascade = true;
 
     impact_action = get_action<prismatic_bolt_aoe_t>( "prismatic_bolt_aoe", p );
     add_child( impact_action );
@@ -4283,13 +4261,11 @@ struct glacial_spike_t final : public frost_mage_spell_t
   {
     frost_mage_spell_t::execute();
     p()->buffs.glacial_spike->decrement();
-    p()->state.icicles = 0;
+    p()->buffs.icicles->expire();
 
-    // 12.1 4-set bonus
-    p()->buffs.rapid_refreezing->trigger();
     p()->trigger_brain_freeze( bf_chance, proc_brain_freeze, 150_ms );
-    p()->trigger_fof( fof_chance, proc_fof );
     p()->trigger_fof( p()->talents.flash_freeze->effectN( 1 ).percent(), proc_fof );
+    p()->trigger_fof( fof_chance, proc_fof );
     p()->trigger_splinter( p()->target );
     p()->trigger_splinter( p()->target, as<int>( p()->talents.signature_spell->effectN( 2 ).base_value() ) );
 
@@ -4301,6 +4277,9 @@ struct glacial_spike_t final : public frost_mage_spell_t
       p()->buffs.frostfire_empowerment->trigger();
       p()->buffs.frostfire_empowerment->predict();
     }
+
+    if ( p()->accumulated_rng.rapid_refreezing->trigger() )
+      p()->buffs.rapid_refreezing->trigger();
   }
 
   void impact( action_state_t* s ) override
@@ -4431,7 +4410,10 @@ struct ice_lance_t final : public frost_mage_spell_t
     enable_calculate_on_impact( 228598 );
 
     if ( p->talents.fractured_frost.ok() )
+    {
       aoe = 1 + as<int>( p->talents.fractured_frost->effectN( 1 ).base_value() );
+      chain_multiplier = p->talents.fractured_frost->effectN( 2 ).percent();
+    }
 
     if ( p->spec.shatter->ok() )
       add_child( p->action.shatter.ice_lance );
@@ -4768,7 +4750,7 @@ struct meteorite_impact_t final : public mage_spell_t
     if ( p()->specialization() == MAGE_FIRE )
       // TODO: Double check apply_recharge_rate
       p()->cooldowns.fire_blast->adjust( -p()->talents.pyrocosm->effectN( 4 ).time_value(), true, false );
-    else if ( !p()->bugs )
+    else
       // TODO: Interactions with CC proc chance increases?
       p()->trigger_clearcasting( p()->talents.pyrocosm->effectN( 5 ).percent() );
   }
@@ -5607,9 +5589,6 @@ mage_td_t::mage_td_t( player_t* target, mage_t* mage ) :
   debuffs.freezing_winds         = make_buff( *this, "recently_damaged_by_blizzard", mage->find_spell( 1216988 ) )
                                      ->set_chance( mage->talents.freezing_winds.ok() )
                                      ->set_quiet( true );
-  debuffs.molten_fury            = make_buff( *this, "molten_fury", mage->find_spell( 458910 ) )
-                                     ->set_default_value_from_effect( 1 )
-                                     ->set_chance( mage->talents.molten_fury.ok() );
   debuffs.touch_of_the_magi      = make_buff<buffs::touch_of_the_magi_t>( this );
 }
 
@@ -6403,14 +6382,15 @@ void mage_t::create_buffs()
                                ->add_invalidate( CACHE_PET_DAMAGE_MULTIPLIER )
                                ->add_invalidate( CACHE_GUARDIAN_DAMAGE_MULTIPLIER )
                                ->set_chance( talents.hand_of_frost_2.ok() );
+  buffs.icicles            = make_buff( this, "icicles", find_spell( 205473 ) )
+                               ->set_chance( talents.icicles.ok() );
   buffs.permafrost_lances  = make_buff( this, "permafrost_lances", find_spell( 455122 ) )
                                ->set_default_value_from_effect( 1 )
                                ->set_chance( talents.permafrost_lances.ok() );
   buffs.rapid_refreezing   = make_buff( this, "rapid_refreezing", find_spell( 1310248 ) )
                                ->set_tick_callback( [ this ] ( buff_t*, int, timespan_t )
                                  { trigger_icicle(); } )
-                                // We collect RPPM data from parent spell
-                               ->set_trigger_spell( sets->set( MAGE_FROST, MID2, B4 ) );
+                               ->set_chance( sets->has_set_bonus( MAGE_FROST, MID2, B4 ) );
   buffs.thermal_void       = make_buff( this, "thermal_void", find_spell( 1247730 ) )
                                ->set_chance( talents.thermal_void->effectN( 1 ).percent() );
 
@@ -6439,7 +6419,6 @@ void mage_t::create_buffs()
   buffs.mana_cascade           = make_buff( this, "mana_cascade", find_spell( specialization() == MAGE_FIRE ? 449314 : 449322 ) )
                                    ->set_default_value_from_effect( 2, 0.001 )
                                    ->set_pct_buff_type( STAT_PCT_BUFF_HASTE )
-                                   ->set_disable_async_expire_events_removal( bugs )
                                    ->set_activated( true )
                                    ->set_chance( talents.mana_cascade.ok() );
   buffs.spellfire_sphere       = make_buff( this, "spellfire_sphere", find_spell( 448604 ) )
@@ -6452,7 +6431,6 @@ void mage_t::create_buffs()
   buffs.brainstorm         = make_buff( this, "brainstorm", find_spell( 461531 ) )
                                ->set_default_value_from_effect( 1 )
                                ->set_pct_buff_type( STAT_PCT_BUFF_INTELLECT )
-                               ->set_disable_async_expire_events_removal( bugs )
                                ->set_chance( talents.brainstorm.ok() );
   buffs.overflowing_energy = make_buff( this, "overflowing_energy", find_spell( 394195 ) )
                                // TODO: ABar value?
@@ -6582,6 +6560,10 @@ void mage_t::init_rng()
   accumulated_rng.augury_abounds = get_accumulated_rng(
     "augury_abounds", prd::find_constant( augury_chance, options.augury_blp_threshold ),
     options.augury_blp_threshold );
+
+  // If Blizz uses this sort of RNG elsewhere, it might be worth adding to the core
+  auto rr_chance = [] ( double c, unsigned i, action_state_t* ) { return 0.2 + ( i - 1 ) * c; };
+  accumulated_rng.rapid_refreezing = get_accumulated_rng( "rapid_refreezing", 0.020116149192034555, 0, rr_chance );
 }
 
 void mage_t::init_finished()
@@ -6746,12 +6728,17 @@ double mage_t::composite_player_target_multiplier( player_t* target, school_e sc
 {
   double m = player_t::composite_player_target_multiplier( target, school );
 
+  // TODO: Remove this? With old apex gone, this is always 0%
   if ( auto td = find_target_data( target ) )
   {
     auto totm = td->debuffs.touch_of_the_magi;
     if ( totm->check() && totm->has_common_school( school ) )
       m *= 1.0 + totm->data().effectN( 2 ).percent();
   }
+
+  // TODO: this still technically points to 458910's value (but the debuff is likely no longer used)
+  if ( talents.molten_fury.ok() && target->health_percentage() <= talents.molten_fury->effectN( 1 ).base_value() )
+    m *= 1.0 + talents.molten_fury->effectN( 2 ).percent();
 
   return m;
 }
@@ -6938,10 +6925,12 @@ std::unique_ptr<expr_t> mage_t::create_expression( std::string_view name )
     } );
   }
 
+  // TODO: remove later
   if ( util::str_compare_ci( name, "icicles" ) )
   {
+    sim->error( error_level_e::TRIVIAL, "The 'icicles' expression is deprecated, use buff.icicles.stack/react instead." );
     return make_fn_expr( name, [ this ]
-    { return state.icicles; } );
+    { return buffs.icicles->check(); } );
   }
 
   auto splits = util::string_split<std::string_view>( name, "." );
@@ -7113,12 +7102,11 @@ void mage_t::trigger_icicle( int count, bool grant_buff )
   if ( !talents.icicles.ok() || count <= 0 )
     return;
 
-  int max_icicles = as<int>( talents.icicles->effectN( 2 ).base_value() );
-  int old_icicles = state.icicles;
-  state.icicles = std::min( state.icicles + count, max_icicles );
-  if ( grant_buff && state.icicles == max_icicles )
+  int old_icicles = buffs.icicles->check();
+  buffs.icicles->trigger( count );
+  if ( grant_buff && buffs.icicles->at_max_stacks() )
     buffs.glacial_spike->trigger();
-  int overflow = old_icicles + count - state.icicles;
+  int overflow = old_icicles + count - buffs.icicles->check();
   for ( int i = 0; i < overflow; i++ )
     procs.icicle_overflow->occur();
 }
@@ -7129,7 +7117,7 @@ void mage_t::trigger_fired_up()
     return;
 
   // TODO: Fit an equation or get more accurate numbers here. This list of probabilities is from logged data on target dummies.
-  constexpr std::array<double, 6> combustion_chance = { 0.889, 0.764, 0.483, 0.241, 0.0957, 0.027 };
+  constexpr std::array<double, 6> combustion_chance = { 0.897, 0.616, 0.373, 0.201, 0.109, 0.0728 };
   double chance;
   // TODO: This is bugged and seems to apply its changes to the proc chance during Combustion even when the talent is not learned.
   if ( buffs.combustion->check() && ( bugs || talents.fired_up_3.ok() ) )
@@ -7537,12 +7525,6 @@ public:
       .operation( hotfix::HOTFIX_SET )
       .modifier( 30.0 )
       .verification_value( 0.0 );
-
-    hotfix::register_spell( "Mage", "2026-07-10", "Remove unused RPPM from Frost's 4pc", 1310248 )
-      .field( "rppm" )
-      .operation( hotfix::HOTFIX_SET )
-      .modifier( 0.0 )
-      .verification_value( 5.0 );
   }
 
   bool valid() const override { return true; }

@@ -10847,6 +10847,33 @@ struct retarget_auto_attack_t : public action_t
   }
 };
 
+// Player Retargeting ==================================================
+
+struct retarget_t : public action_t
+{
+  retarget_t( player_t* player, util::string_view options_str )
+    : action_t( ACTION_OTHER, "retarget", player )
+  {
+    parse_options( options_str );
+    quiet = true;
+    trigger_gcd = timespan_t::zero();
+  }
+
+  void execute() override
+  {
+    player->target = target;
+    for ( auto action : player->action_list )
+      action->acquire_target( retarget_source::SELF_RETARGET, player, target );
+
+    for ( auto pet : player->pet_list )
+    {
+      pet->target = target;
+      for ( auto action : pet->action_list )
+        action->acquire_target( retarget_source::SELF_RETARGET, player, target );
+    }
+  }
+};
+
 // Invoke External Buff ==================================================
 
 struct invoke_external_buff_t : public action_t
@@ -11087,6 +11114,8 @@ action_t* player_t::create_action( util::string_view name, util::string_view opt
     return new cycling_variable_t( this, options_str );
   if ( name == "wait_for_cooldown" )
     return new wait_for_cooldown_t( this, options_str );
+  if ( name == "retarget" )
+    return new retarget_t( this, options_str );
   if ( name == "retarget_auto_attack" )
     return new retarget_auto_attack_t( this, options_str );
 
@@ -13622,12 +13651,14 @@ void player_t::create_options()
                             midnight_opts.crucible_of_erratic_energies_predation ) );
   add_option(    opt_float( "midnight.vessel_of_tortured_souls_miss_chance",
                             midnight_opts.vessel_of_tortured_souls_miss_chance, 0, 1 ) );
-  add_option(
-      opt_float( "midnight.arcanoweave_trappings_uptime", midnight_opts.arcanoweave_trappings_uptime, 0.0, 1.0 ) );
+  add_option(    opt_float( "midnight.arcanoweave_trappings_uptime",
+                            midnight_opts.arcanoweave_trappings_uptime, 0.0, 1.0 ) );
   add_option( opt_timespan( "midnight.arcanoweave_trappings_update_interval",
                             midnight_opts.arcanoweave_trappings_update_interval, 1_s, timespan_t::max() ) );
   add_option( opt_timespan( "midnight.arcanoweave_trappings_update_interval_stddev",
                             midnight_opts.arcanoweave_trappings_update_interval_stddev, 1_s, timespan_t::max() ) );
+  add_option(    opt_float( "midnight.lightspire_core_duration_multiplier",
+                            midnight_opts.lightspire_core_duration_multiplier, 0.0, 1.0 ) );
 }
 
 player_t* player_t::create( sim_t*, const player_description_t& )

@@ -1528,6 +1528,7 @@ class SpellDataGenerator(DataGenerator):
          1246637, 1246649, 1246851, # Chaotic Nethergate
          1242344, # Attuned to the Aether
          # Midnight 12.X.X
+         1266182, 1266184, 1266197, # Lost Idol of the Hash'ey
          1229746, # Arcanoweave embellishment buff
          1259130, # Primal Spore Binding embellishment heal
          1232321, 1232324, 1219182, 1232086, 1232087, 1232313, 1232318, 1232325, 1232490, 1232491, 1232493, 1232498, 1232582, 1232585, 1233400, 1233401, 1233403, 1233404, 1233406, 1219183, 1219184, 1219185, 1232089, 1232091, 1232316, 1232317, 1232320, 1232492, 1232496, 1232500, 1232501, 1232584, 1233402, 1233405, 1233407, 1233408, # Midnight Food Buffs
@@ -1538,10 +1539,10 @@ class SpellDataGenerator(DataGenerator):
          1263768, # Lightspire Core
          1263614, # Wraps of Cosmic Madness
          1255685, 1255687, 1255688, # crucible of erratic energies
-         1292299, 1292300, 1306870, 1308012, 1308013, 1308014, # Gebbo's Bottomless Bag
          # 12.1
+         1292299, 1292300, 1306870, 1308012, 1308013, 1308014, # Gebbo's Bottomless Bag
          1305376, # Voracious Heart of Ula'tek
-         1266182, 1266184, 1266197, # Lost Idol of the Hash'ey
+         1295898, 1295899, 1295900, 1295901, # Hunter's Ritual Stone
         ),
 
         # Warrior:
@@ -2425,6 +2426,7 @@ class SpellDataGenerator(DataGenerator):
           ( 106829, 0 ), ( 106899, 0 ), # Bear Form override
           ( 429438, 0 ), # Blooming Infusion buff
           ( 1269186, 0 ), # HOTW caster form?
+          ( 1301638, 0 ), # Symbiotic Relationship?
           # Balance
           ( 188046, 1 ), # Fey Missile
           ( 274282, 1 ), # Half Moon
@@ -2437,8 +2439,10 @@ class SpellDataGenerator(DataGenerator):
           ( 1244038, 2 ), ( 1244046, 2 ), ( 1244050, 2 ), # Flicker Clone
           ( 1280133, 2 ), # Rake (unused?)
           # Guardian
+          ( 201671, 3 ), ( 1307881, 3 ), # Gory Fur
           ( 1250913, 3 ), # Memory of Ysera heal
-          ( 1269633, 3 ), ( 1269645, 3 ), ( 1269648, 3 ), # Apex talent echoes
+          ( 1269616, 3 ), ( 1270277, 3 ), ( 1308522, 3 ), # Wild Guardian's Spirit (new apex)
+          ( 1310213, 3 ), # 12.1 Set 4pc
           # Restoration
         ),
         # Demon Hunter:

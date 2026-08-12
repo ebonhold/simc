@@ -83,6 +83,7 @@ void beast_mastery( player_t* p )
   precombat->add_action( "snapshot_stats" );
   precombat->add_action( "use_item,name=algethar_puzzle_box" );
 
+  default_->add_action( "retarget,target_if=max:target.health,line_cd=5,if=fight_style.dungeonroute" );
   default_->add_action( "auto_shot" );
   default_->add_action( "call_action_list,name=cds" );
   default_->add_action( "call_action_list,name=trinkets" );
@@ -99,93 +100,11 @@ void beast_mastery( player_t* p )
   cds->add_action( "potion,if=cooldown.bestial_wrath.ready|fight_remains<31" );
 
   cleave->add_action( "barbed_shot,target_if=min:dot.barbed_shot.remains|max_prio_damage,if=full_recharge_time<gcd" );
-  cleave->add_action( "wild_thrash,if=talent.beast_cleave" );
-  cleave->add_action( "bestial_wrath,if=!prev.wild_thrash" );
-  cleave->add_action( "wild_thrash,if=!talent.beast_cleave" );
-  cleave->add_action( "kill_command,if=cooldown.bestial_wrath.remains>gcd&(buff.natures_ally.react|talent.master_handler)" );
-  cleave->add_action( "cobra_shot,if=cooldown.wild_thrash.remains>gcd&buff.hogstrider.up&active_enemies<4" );
-  cleave->add_action( "barbed_shot,target_if=min:dot.barbed_shot.remains|max_prio_damage" );
-  cleave->add_action( "cobra_shot,if=talent.beast_cleave&cooldown.wild_thrash.remains>gcd|!talent.beast_cleave" );
-
-  drcleave->add_action( "black_arrow,if=buff.beast_cleave.remains<gcd&cooldown.bestial_wrath.remains<gcd&active_enemies>2" );
-  drcleave->add_action( "bestial_wrath,if=buff.beast_cleave.remains" );
-  drcleave->add_action( "wild_thrash" );
-  drcleave->add_action( "kill_command,if=cooldown.bestial_wrath.remains>full_recharge_time+gcd&buff.natures_ally.react|!apex.3" );
-  drcleave->add_action( "barbed_shot,if=full_recharge_time<1*gcd,target_if=min:dot.barbed_shot.remains|max_prio_damage" );
-  drcleave->add_action( "black_arrow,if=buff.withering_fire.up" );
-  drcleave->add_action( "wailing_arrow,if=buff.withering_fire.remains<execute_time+gcd|time_to_die.remains<execute_time+gcd" );
-  drcleave->add_action( "barbed_shot,target_if=min:dot.barbed_shot.remains|max_prio_damage" );
-  drcleave->add_action( "black_arrow" );
-  drcleave->add_action( "wailing_arrow" );
-  drcleave->add_action( "cobra_shot" );
-
-  drst->add_action( "barbed_shot,target_if=min:dot.barbed_shot.remains|max_prio_damage,if=(talent.bloody_frenzy&talent.snakeskin_quiver&talent.jagged_wounds)&cooldown.bestial_wrath.remains<2*gcd" );
-  drst->add_action( "bestial_wrath" );
-  drst->add_action( "black_arrow,if=buff.withering_fire.up&cooldown.kill_command.full_recharge_time>gcd" );
-  drst->add_action( "kill_command,if=cooldown.bestial_wrath.remains>full_recharge_time+gcd&buff.natures_ally.react|!apex.3" );
-  drst->add_action( "wailing_arrow,if=buff.withering_fire.remains<execute_time+2*gcd|time_to_die.remains<execute_time+gcd" );
-  drst->add_action( "cobra_shot,if=talent.killer_cobra&buff.bestial_wrath.up&cooldown.barbed_shot.charges_fractional<1.4" );
-  drst->add_action( "black_arrow" );
-  drst->add_action( "barbed_shot,target_if=min:dot.barbed_shot.remains|max_prio_damage" );
-  drst->add_action( "cobra_shot" );
-
-  st->add_action( "barbed_shot,target_if=min:dot.barbed_shot.remains|max_prio_damage,if=cooldown.bestial_wrath.remains<gcd" );
-  st->add_action( "bestial_wrath" );
-  st->add_action( "wild_thrash,if=active_enemies>1" );
-  st->add_action( "kill_command,if=cooldown.bestial_wrath.remains>full_recharge_time+gcd&(buff.natures_ally.react|howl_summon.ready)|!apex.3" );
-  st->add_action( "barbed_shot,if=(focus<75|full_recharge_time<gcd)&!talent.serpentine_strikes|talent.serpentine_strikes" );
-  st->add_action( "cobra_shot,if=cooldown.bestial_wrath.remains>gcd" );
-
-  trinkets->add_action( "use_item,name=light_company_guidon,if=cooldown.bestial_wrath.ready|fight_remains<21" );
-  trinkets->add_action( "use_item,name=void_execution_mandate,if=cooldown.bestial_wrath.ready|fight_remains<21" );
-  trinkets->add_action( "use_item,name=algethar_puzzle_box,if=cooldown.bestial_wrath.remains<2|fight_remains<23" );
-  trinkets->add_action( "use_item,name=emberwing_feather,if=cooldown.bestial_wrath.ready|fight_remains<16" );
-  trinkets->add_action( "use_item,name=freightrunners_flask,if=cooldown.bestial_wrath.ready|fight_remains<16" );
-  trinkets->add_action( "use_item,name=sealed_chaos_urn,if=cooldown.bestial_wrath.ready|fight_remains<21" );
-  trinkets->add_action( "use_item,name=evercollapsing_void_fissure,if=cooldown.bestial_wrath.ready|fight_remains<11" );
-  trinkets->add_action( "use_item,name=rangercaptains_iridescent_insignia" );
-  trinkets->add_action( "use_item,name=void_stalkers_contract" );
-  trinkets->add_action( "use_item,name=latchs_crooked_hook" );
-}
-//beast_mastery_apl_end
-
-//beast_mastery_ptr_apl_start
-void beast_mastery_ptr( player_t* p )
-{
-  action_priority_list_t* default_ = p->get_action_priority_list( "default" );
-  action_priority_list_t* precombat = p->get_action_priority_list( "precombat" );
-  action_priority_list_t* cds = p->get_action_priority_list( "cds" );
-  action_priority_list_t* cleave = p->get_action_priority_list( "cleave" );
-  action_priority_list_t* drcleave = p->get_action_priority_list( "drcleave" );
-  action_priority_list_t* drst = p->get_action_priority_list( "drst" );
-  action_priority_list_t* st = p->get_action_priority_list( "st" );
-  action_priority_list_t* trinkets = p->get_action_priority_list( "trinkets" );
-
-  precombat->add_action( "summon_pet" );
-  precombat->add_action( "snapshot_stats" );
-  precombat->add_action( "use_item,name=algethar_puzzle_box" );
-
-  default_->add_action( "auto_shot" );
-  default_->add_action( "call_action_list,name=cds" );
-  default_->add_action( "call_action_list,name=trinkets" );
-  default_->add_action( "call_action_list,name=drst,if=talent.black_arrow&(active_enemies<2|!talent.beast_cleave&active_enemies<3)" );
-  default_->add_action( "call_action_list,name=drcleave,if=talent.black_arrow&(active_enemies>2|talent.beast_cleave&active_enemies>1)" );
-  default_->add_action( "call_action_list,name=st,if=!talent.black_arrow&(active_enemies<2|!talent.beast_cleave&active_enemies<3)" );
-  default_->add_action( "call_action_list,name=cleave,if=!talent.black_arrow&(active_enemies>2|talent.beast_cleave&active_enemies>1)" );
-
-  cds->add_action( "invoke_external_buff,name=power_infusion,if=buff.bestial_wrath.up|cooldown.bestial_wrath.remains<30|fight_remains<16" );
-  cds->add_action( "berserking,if=cooldown.bestial_wrath.ready|fight_remains<13" );
-  cds->add_action( "blood_fury,if=cooldown.bestial_wrath.ready|fight_remains<16" );
-  cds->add_action( "ancestral_call,if=cooldown.bestial_wrath.ready|fight_remains<16" );
-  cds->add_action( "fireblood,if=cooldown.bestial_wrath.ready|fight_remains<9" );
-  cds->add_action( "potion,if=cooldown.bestial_wrath.ready|fight_remains<31" );
-
-  cleave->add_action( "barbed_shot,target_if=min:dot.barbed_shot.remains|max_prio_damage,if=full_recharge_time<gcd" );
-  cleave->add_action( "bestial_wrath,if=!prev.wild_thrash" );
+  cleave->add_action( "bestial_wrath,if=buff.beast_cleave.remains|!talent.beast_cleave|!talent.wild_thrash" );
   cleave->add_action( "wild_thrash,if=talent.beast_cleave" );
   cleave->add_action( "wild_thrash,if=!talent.beast_cleave" );
   cleave->add_action( "kill_command,if=buff.natures_ally.react|talent.master_handler&(active_enemies>3|howl_summon.ready)|!apex.3" );
-  cleave->add_action( "cobra_shot,if=cooldown.wild_thrash.remains>gcd&buff.hogstrider.up&active_enemies<4" );
+  cleave->add_action( "cobra_shot,if=buff.cobra_fang.up&buff.beast_cleave.remains" );
   cleave->add_action( "barbed_shot,target_if=min:dot.barbed_shot.remains|max_prio_damage" );
   cleave->add_action( "cobra_shot,if=talent.beast_cleave&cooldown.wild_thrash.remains>gcd|!talent.beast_cleave" );
 
@@ -216,21 +135,91 @@ void beast_mastery_ptr( player_t* p )
   st->add_action( "bestial_wrath" );
   st->add_action( "wild_thrash,if=active_enemies>1" );
   st->add_action( "kill_command,if=howl_summon.ready" );
-  st->add_action( "kill_command,if=(cooldown.bestial_wrath.remains>full_recharge_time+gcd&buff.natures_ally.react|!apex.3)&(buff.howl_of_the_pack_leader_cooldown.remains>4|cooldown.kill_command.charges_fractional>1)" );
+  st->add_action( "kill_command,if=(cooldown.bestial_wrath.remains>full_recharge_time+gcd&buff.natures_ally.react|!apex.3)&(buff.howl_of_the_pack_leader_cooldown.remains>4|cooldown.kill_command.charges_fractional>1.8)" );
   st->add_action( "cobra_shot,if=buff.cobra_fang.stack>=3" );
   st->add_action( "barbed_shot,if=(focus<75|full_recharge_time<gcd)&!talent.serpentine_strikes|talent.serpentine_strikes" );
   st->add_action( "cobra_shot,if=cooldown.bestial_wrath.remains>gcd" );
 
-  trinkets->add_action( "use_item,name=light_company_guidon,if=cooldown.bestial_wrath.ready|fight_remains<21" );
-  trinkets->add_action( "use_item,name=void_execution_mandate,if=cooldown.bestial_wrath.ready|fight_remains<21" );
-  trinkets->add_action( "use_item,name=algethar_puzzle_box,if=cooldown.bestial_wrath.remains<2|fight_remains<23" );
-  trinkets->add_action( "use_item,name=emberwing_feather,if=cooldown.bestial_wrath.ready|fight_remains<16" );
-  trinkets->add_action( "use_item,name=freightrunners_flask,if=cooldown.bestial_wrath.ready|fight_remains<16" );
-  trinkets->add_action( "use_item,name=sealed_chaos_urn,if=cooldown.bestial_wrath.ready|fight_remains<21" );
-  trinkets->add_action( "use_item,name=evercollapsing_void_fissure,if=cooldown.bestial_wrath.ready|fight_remains<11" );
-  trinkets->add_action( "use_item,name=rangercaptains_iridescent_insignia" );
-  trinkets->add_action( "use_item,name=void_stalkers_contract" );
-  trinkets->add_action( "use_item,name=latchs_crooked_hook" );
+  trinkets->add_action( "use_items,check_existing=0,slots=trinket1:trinket2,if=this_trinket.has_use_damage" );
+  trinkets->add_action( "use_items,check_existing=0,slots=trinket1:trinket2,if=this_trinket.has_use_buff" );
+}
+//beast_mastery_apl_end
+
+//beast_mastery_ptr_apl_start
+void beast_mastery_ptr( player_t* p )
+{
+  action_priority_list_t* default_ = p->get_action_priority_list( "default" );
+  action_priority_list_t* precombat = p->get_action_priority_list( "precombat" );
+  action_priority_list_t* cds = p->get_action_priority_list( "cds" );
+  action_priority_list_t* cleave = p->get_action_priority_list( "cleave" );
+  action_priority_list_t* drcleave = p->get_action_priority_list( "drcleave" );
+  action_priority_list_t* drst = p->get_action_priority_list( "drst" );
+  action_priority_list_t* st = p->get_action_priority_list( "st" );
+  action_priority_list_t* trinkets = p->get_action_priority_list( "trinkets" );
+
+  precombat->add_action( "summon_pet" );
+  precombat->add_action( "snapshot_stats" );
+  precombat->add_action( "use_item,name=algethar_puzzle_box" );
+
+  default_->add_action( "retarget,target_if=max:target.health,line_cd=5,if=fight_style.dungeonroute" );
+  default_->add_action( "auto_shot" );
+  default_->add_action( "call_action_list,name=cds" );
+  default_->add_action( "call_action_list,name=trinkets" );
+  default_->add_action( "call_action_list,name=drst,if=talent.black_arrow&(active_enemies<2|!talent.beast_cleave&active_enemies<3)" );
+  default_->add_action( "call_action_list,name=drcleave,if=talent.black_arrow&(active_enemies>2|talent.beast_cleave&active_enemies>1)" );
+  default_->add_action( "call_action_list,name=st,if=!talent.black_arrow&(active_enemies<2|!talent.beast_cleave&active_enemies<3)" );
+  default_->add_action( "call_action_list,name=cleave,if=!talent.black_arrow&(active_enemies>2|talent.beast_cleave&active_enemies>1)" );
+
+  cds->add_action( "invoke_external_buff,name=power_infusion,if=buff.bestial_wrath.up|cooldown.bestial_wrath.remains<30|fight_remains<16" );
+  cds->add_action( "berserking,if=cooldown.bestial_wrath.ready|fight_remains<13" );
+  cds->add_action( "blood_fury,if=cooldown.bestial_wrath.ready|fight_remains<16" );
+  cds->add_action( "ancestral_call,if=cooldown.bestial_wrath.ready|fight_remains<16" );
+  cds->add_action( "fireblood,if=cooldown.bestial_wrath.ready|fight_remains<9" );
+  cds->add_action( "potion,if=cooldown.bestial_wrath.ready|fight_remains<31" );
+
+  cleave->add_action( "barbed_shot,target_if=min:dot.barbed_shot.remains|max_prio_damage,if=full_recharge_time<gcd" );
+  cleave->add_action( "bestial_wrath,if=buff.beast_cleave.remains|!talent.beast_cleave|!talent.wild_thrash" );
+  cleave->add_action( "wild_thrash,if=talent.beast_cleave" );
+  cleave->add_action( "wild_thrash,if=!talent.beast_cleave" );
+  cleave->add_action( "kill_command,if=buff.natures_ally.react|talent.master_handler&(active_enemies>3|howl_summon.ready)|!apex.3" );
+  cleave->add_action( "cobra_shot,if=buff.cobra_fang.up&buff.beast_cleave.remains" );
+  cleave->add_action( "barbed_shot,target_if=min:dot.barbed_shot.remains|max_prio_damage" );
+  cleave->add_action( "cobra_shot,if=talent.beast_cleave&cooldown.wild_thrash.remains>gcd|!talent.beast_cleave" );
+
+  drcleave->add_action( "black_arrow,if=buff.beast_cleave.remains<gcd&cooldown.bestial_wrath.remains<gcd&active_enemies>2" );
+  drcleave->add_action( "bestial_wrath,if=buff.beast_cleave.remains|!talent.beast_cleave" );
+  drcleave->add_action( "wild_thrash" );
+  drcleave->add_action( "kill_command,if=cooldown.bestial_wrath.remains>full_recharge_time+gcd&buff.natures_ally.react|!apex.3" );
+  drcleave->add_action( "barbed_shot,if=full_recharge_time<1*gcd,target_if=min:dot.barbed_shot.remains|max_prio_damage" );
+  drcleave->add_action( "black_arrow,if=buff.withering_fire.up" );
+  drcleave->add_action( "wailing_arrow,if=buff.withering_fire.remains<execute_time+gcd|time_to_die.remains<execute_time+gcd" );
+  drcleave->add_action( "barbed_shot,target_if=min:dot.barbed_shot.remains|max_prio_damage" );
+  drcleave->add_action( "black_arrow" );
+  drcleave->add_action( "wailing_arrow" );
+  drcleave->add_action( "cobra_shot" );
+
+  drst->add_action( "barbed_shot,target_if=min:dot.barbed_shot.remains|max_prio_damage,if=(talent.bloody_frenzy&talent.snakeskin_quiver&talent.jagged_wounds)&cooldown.bestial_wrath.remains<2*gcd" );
+  drst->add_action( "bestial_wrath" );
+  drst->add_action( "black_arrow,if=buff.withering_fire.up&cooldown.kill_command.full_recharge_time>gcd" );
+  drst->add_action( "kill_command,if=cooldown.bestial_wrath.remains>full_recharge_time+gcd&buff.natures_ally.react|!apex.3" );
+  drst->add_action( "wailing_arrow,if=buff.withering_fire.remains<execute_time+2*gcd|time_to_die.remains<execute_time+gcd" );
+  drst->add_action( "cobra_shot,if=buff.cobra_fang.stack>3" );
+  drst->add_action( "cobra_shot,if=talent.killer_cobra&buff.bestial_wrath.up&cooldown.barbed_shot.charges_fractional<1.4" );
+  drst->add_action( "black_arrow" );
+  drst->add_action( "barbed_shot,target_if=min:dot.barbed_shot.remains|max_prio_damage" );
+  drst->add_action( "cobra_shot,if=cooldown.bestial_wrath.remains>gcd" );
+
+  st->add_action( "barbed_shot,target_if=min:dot.barbed_shot.remains|max_prio_damage,if=cooldown.bestial_wrath.remains<gcd|full_recharge_time<gcd" );
+  st->add_action( "bestial_wrath" );
+  st->add_action( "wild_thrash,if=active_enemies>1" );
+  st->add_action( "kill_command,if=howl_summon.ready" );
+  st->add_action( "kill_command,if=(cooldown.bestial_wrath.remains>full_recharge_time+gcd&buff.natures_ally.react|!apex.3)&(buff.howl_of_the_pack_leader_cooldown.remains>4|cooldown.kill_command.charges_fractional>1.8)" );
+  st->add_action( "cobra_shot,if=buff.cobra_fang.stack>=3" );
+  st->add_action( "barbed_shot,if=(focus<75|full_recharge_time<gcd)&!talent.serpentine_strikes|talent.serpentine_strikes" );
+  st->add_action( "cobra_shot,if=cooldown.bestial_wrath.remains>gcd" );
+
+  trinkets->add_action( "use_items,check_existing=0,slots=trinket1:trinket2,if=this_trinket.has_use_damage" );
+  trinkets->add_action( "use_items,check_existing=0,slots=trinket1:trinket2,if=this_trinket.has_use_buff" );
 }
 //beast_mastery_ptr_apl_end
 
@@ -249,102 +238,11 @@ void marksmanship( player_t* p )
   precombat->add_action( "snapshot_stats" );
   precombat->add_action( "summon_pet,if=talent.unbreakable_bond" );
   precombat->add_action( "use_item,name=algethar_puzzle_box" );
-  precombat->add_action( "aimed_shot,if=active_enemies<3|talent.black_arrow&talent.headshot" );
-  precombat->add_action( "steady_shot" );
-
-  default_->add_action( "variable,name=trueshot_ready,value=!talent.bullseye|fight_remains>cooldown.trueshot.duration+10|buff.bullseye.stack=buff.bullseye.max_stack|fight_remains<25|time<10" );
-  default_->add_action( "variable,name=trueshot_ready,op=setif,condition=fight_style.dungeonroute,value_else=variable.trueshot_ready,value=raid_event.pull.remains>30|raid_event.pull.in>60|talent.calling_the_shots", "For DungeonRoute, hold Trueshot at the end of pulls." );
-  default_->add_action( "auto_shot" );
-  default_->add_action( "call_action_list,name=cds" );
-  default_->add_action( "call_action_list,name=trinkets" );
-  default_->add_action( "call_action_list,name=draoe,if=active_enemies>2&talent.trick_shots&hero_tree.dark_ranger" );
-  default_->add_action( "call_action_list,name=sentaoe,if=active_enemies>2&talent.trick_shots&hero_tree.sentinel" );
-  default_->add_action( "call_action_list,name=drst,if=hero_tree.dark_ranger" );
-  default_->add_action( "call_action_list,name=sentst,if=hero_tree.sentinel" );
-
-  cds->add_action( "invoke_external_buff,name=power_infusion,if=buff.trueshot.remains>12|fight_remains<13" );
-  cds->add_action( "berserking,if=buff.trueshot.up|fight_remains<13" );
-  cds->add_action( "blood_fury,if=buff.trueshot.up|cooldown.trueshot.remains>30|fight_remains<16" );
-  cds->add_action( "ancestral_call,if=buff.trueshot.up|cooldown.trueshot.remains>30|fight_remains<16" );
-  cds->add_action( "fireblood,if=buff.trueshot.up|cooldown.trueshot.remains>30|fight_remains<9" );
-  cds->add_action( "lights_judgment,if=buff.trueshot.down" );
-  cds->add_action( "potion,if=buff.trueshot.up&(buff.bloodlust.up|fight_remains<120-30*talent.calling_the_shots)|fight_remains<31" );
-
-  drst->add_action( "black_arrow,target_if=max:debuff.spotters_mark.down|action.aimed_shot.in_flight_to_target|max_prio_damage,if=buff.precise_shots.up" );
-  drst->add_action( "aimed_shot,if=buff.trueshot.up&buff.precise_shots.down&cooldown.black_arrow.ready|full_recharge_time<gcd+cast_time" );
-  drst->add_action( "trueshot,if=!buff.double_tap.up&variable.trueshot_ready" );
-  drst->add_action( "rapid_fire" );
-  drst->add_action( "wailing_arrow,if=!cooldown.black_arrow.ready" );
-  drst->add_action( "arcane_shot,target_if=max:debuff.spotters_mark.down|action.aimed_shot.in_flight_to_target|max_prio_damage,if=buff.precise_shots.up" );
-  drst->add_action( "volley,if=!buff.double_tap.up" );
-  drst->add_action( "aimed_shot,target_if=max:debuff.spotters_mark.up|max_prio_damage" );
-  drst->add_action( "explosive_shot" );
-  drst->add_action( "steady_shot" );
-
-  draoe->add_action( "aimed_shot,target_if=max:debuff.spotters_mark.up|max_prio_damage,if=buff.trick_shots.remains>cast_time&full_recharge_time<gcd+cast_time" );
-  draoe->add_action( "black_arrow,target_if=max:debuff.spotters_mark.down|action.aimed_shot.in_flight_to_target|max_prio_damage,if=buff.precise_shots.up" );
-  draoe->add_action( "multishot,target_if=max:debuff.spotters_mark.down|action.aimed_shot.in_flight_to_target|max_prio_damage,if=buff.precise_shots.up&!talent.aspect_of_the_hydra&!prev_gcd.1.multishot|buff.trick_shots.down" );
-  draoe->add_action( "trueshot,if=!buff.double_tap.up&variable.trueshot_ready" );
-  draoe->add_action( "rapid_fire,if=buff.trick_shots.remains>execute_time&(buff.bulletstorm.remains<action.aimed_shot.execute_time|talent.unload)" );
-  draoe->add_action( "wailing_arrow,if=!cooldown.black_arrow.ready" );
-  draoe->add_action( "volley,if=!buff.double_tap.up" );
-  draoe->add_action( "aimed_shot,target_if=max:debuff.spotters_mark.up|max_prio_damage,if=buff.trick_shots.remains>cast_time" );
-  draoe->add_action( "multishot,target_if=max:debuff.spotters_mark.down|action.aimed_shot.in_flight_to_target|max_prio_damage,if=buff.precise_shots.up" );
-  draoe->add_action( "explosive_shot" );
-  draoe->add_action( "steady_shot" );
-
-  sentaoe->add_action( "multishot,target_if=max:debuff.sentinels_mark.down|action.aimed_shot.in_flight_to_target,if=buff.precise_shots.up&!talent.aspect_of_the_hydra&!prev_gcd.1.multishot|buff.trick_shots.down" );
-  sentaoe->add_action( "rapid_fire,if=(buff.bulletstorm.remains<action.aimed_shot.execute_time|buff.bulletstorm.stack<18|talent.unload&target.health.pct<20)" );
-  sentaoe->add_action( "trueshot,if=!buff.double_tap.up&variable.trueshot_ready" );
-  sentaoe->add_action( "volley,if=!buff.double_tap.up" );
-  sentaoe->add_action( "explosive_shot,if=talent.shrapnel_shot&buff.trueshot.down&buff.lock_and_load.down&cooldown.aimed_shot.charges_fractional<=1.1" );
-  sentaoe->add_action( "aimed_shot,target_if=max:debuff.sentinels_mark.up|max_prio_damage,if=buff.trick_shots.remains>cast_time" );
-  sentaoe->add_action( "moonlight_chakram" );
-  sentaoe->add_action( "rapid_fire,if=buff.trick_shots.remains>execute_time" );
-  sentaoe->add_action( "multishot,target_if=max:debuff.spotters_mark.down|action.aimed_shot.in_flight_to_target|max_prio_damage,if=buff.precise_shots.up&talent.windrunner_quiver" );
-  sentaoe->add_action( "explosive_shot" );
-  sentaoe->add_action( "steady_shot" );
-
-  sentst->add_action( "volley,if=!buff.double_tap.up" );
-  sentst->add_action( "trueshot,if=!buff.double_tap.up&variable.trueshot_ready" );
-  sentst->add_action( "rapid_fire,if=buff.bulletstorm.stack<18" );
-  sentst->add_action( "aimed_shot,target_if=max:debuff.sentinels_mark.up|max_prio_damage,if=full_recharge_time<gcd+cast_time" );
-  sentst->add_action( "arcane_shot,target_if=max:debuff.sentinels_mark.down|action.aimed_shot.in_flight_to_target|max_prio_damage,if=buff.precise_shots.up&(buff.trueshot.up&prev_gcd.1.aimed_shot|!buff.trueshot.up)" );
-  sentst->add_action( "rapid_fire,if=(buff.bulletstorm.remains<action.aimed_shot.execute_time|talent.unload&target.health.pct<20)" );
-  sentst->add_action( "kill_shot,target_if=max:debuff.sentinels_mark.down|action.aimed_shot.in_flight_to_target|max_prio_damage,if=buff.precise_shots.up&active_enemies=1" );
-  sentst->add_action( "moonlight_chakram,if=buff.trueshot.remains<execute_time+gcd" );
-  sentst->add_action( "aimed_shot,target_if=max:debuff.sentinels_mark.up|max_prio_damage" );
-  sentst->add_action( "moonlight_chakram" );
-  sentst->add_action( "rapid_fire" );
-  sentst->add_action( "explosive_shot" );
-  sentst->add_action( "steady_shot" );
-
-  trinkets->add_action( "use_items,check_existing=0,slots=trinket1:trinket2,if=this_trinket.has_use_buff&this_trinket.cooldown.duration%%cooldown.trueshot.duration=0&(buff.trueshot.remains>14|this_trinket.is.algethar_puzzle_box&variable.trueshot_ready&cooldown.trueshot.remains<5)", "A buff trinket that lines up cleanly with Trueshot; use with Trueshot." );
-  trinkets->add_action( "use_items,check_existing=0,slots=trinket1:trinket2,if=this_trinket.has_use_buff&other_trinket.has_use_buff&other_trinket.cooldown.duration%%cooldown.trueshot.duration=0&(buff.trueshot.remains>14&other_trinket.cooldown.remains|cooldown.trueshot.remains>20&other_trinket.cooldown.remains<=cooldown.trueshot.remains)", "A buff trinket paired with a trinket that matches the above line; use with Trueshot if the other trinket is not ready or use without Trueshot if the other trinket will come up for the next Trueshot." );
-  trinkets->add_action( "use_items,check_existing=0,slots=trinket1:trinket2,if=this_trinket.has_use_buff&(buff.trueshot.remains>14|buff.trueshot.up&fight_remains<cooldown.trueshot.remains+15|fight_remains<21)", "A buff trinket, use with Trueshot or in the last ~20 seconds of the fight." );
-  trinkets->add_action( "use_items,check_existing=0,slots=trinket1:trinket2,if=this_trinket.has_use_damage&cooldown.trueshot.remains>20", "A damage trinket; use when Trueshot has at least 20 seconds remaining on its cooldown." );
-}
-//marksmanship_apl_end
-
-//marksmanship_ptr_apl_start
-void marksmanship_ptr( player_t* p )
-{
-  action_priority_list_t* default_ = p->get_action_priority_list( "default" );
-  action_priority_list_t* precombat = p->get_action_priority_list( "precombat" );
-  action_priority_list_t* cds = p->get_action_priority_list( "cds" );
-  action_priority_list_t* drst = p->get_action_priority_list( "drst" );
-  action_priority_list_t* draoe = p->get_action_priority_list( "draoe" );
-  action_priority_list_t* sentaoe = p->get_action_priority_list( "sentaoe" );
-  action_priority_list_t* sentst = p->get_action_priority_list( "sentst" );
-  action_priority_list_t* trinkets = p->get_action_priority_list( "trinkets" );
-
-  precombat->add_action( "snapshot_stats" );
-  precombat->add_action( "summon_pet,if=talent.unbreakable_bond" );
-  precombat->add_action( "use_item,name=algethar_puzzle_box" );
   precombat->add_action( "aimed_shot" );
 
   default_->add_action( "variable,name=trueshot_ready,value=!talent.bullseye|fight_remains>cooldown.trueshot.duration+10|buff.bullseye.stack=buff.bullseye.max_stack|fight_remains<25|time<10" );
   default_->add_action( "variable,name=trueshot_ready,op=setif,condition=fight_style.dungeonroute,value_else=variable.trueshot_ready,value=raid_event.pull.remains>30|raid_event.pull.in>60|talent.calling_the_shots", "For DungeonRoute, hold Trueshot at the end of pulls." );
+  default_->add_action( "retarget,target_if=max:target.health,line_cd=5,if=fight_style.dungeonroute" );
   default_->add_action( "auto_shot" );
   default_->add_action( "call_action_list,name=cds" );
   default_->add_action( "call_action_list,name=trinkets" );
@@ -404,8 +302,102 @@ void marksmanship_ptr( player_t* p )
   sentst->add_action( "volley" );
   sentst->add_action( "trueshot,if=variable.trueshot_ready" );
   sentst->add_action( "moonlight_chakram,if=buff.moonlight_chakram.remains<gcd.max" );
-  sentst->add_action( "kill_shot,target_if=max:debuff.sentinels_mark.down|max_prio_damage,if=buff.precise_shots.up&(buff.trueshot.up&prev_gcd.1.aimed_shot|!buff.trueshot.up)" );
-  sentst->add_action( "multishot,target_if=max:debuff.sentinels_mark.down,if=talent.aspect_of_the_hydra&!max_prio_damage&active_enemies>1&buff.precise_shots.up&(buff.trueshot.up&prev_gcd.1.aimed_shot|!buff.trueshot.up)" );
+  sentst->add_action( "kill_shot,target_if=max:debuff.sentinels_mark.down|max_prio_damage,if=buff.precise_shots.up" );
+  sentst->add_action( "multishot,target_if=max:debuff.sentinels_mark.down,if=talent.aspect_of_the_hydra&!max_prio_damage&active_enemies>1&buff.precise_shots.up" );
+  sentst->add_action( "arcane_shot,target_if=max:debuff.sentinels_mark.down|max_prio_damage,if=buff.precise_shots.up&(buff.trueshot.up&prev_gcd.1.aimed_shot|!buff.trueshot.up)" );
+  sentst->add_action( "rapid_fire" );
+  sentst->add_action( "aimed_shot,target_if=max:debuff.sentinels_mark.up|max_prio_damage" );
+  sentst->add_action( "moonlight_chakram" );
+  sentst->add_action( "steady_shot" );
+
+  trinkets->add_action( "use_items,check_existing=0,slots=trinket1:trinket2,if=this_trinket.has_use_buff&this_trinket.cooldown.duration%%cooldown.trueshot.duration=0&(buff.trueshot.remains>14|this_trinket.is.algethar_puzzle_box&variable.trueshot_ready&cooldown.trueshot.remains<5)", "A buff trinket that lines up cleanly with Trueshot; use with Trueshot." );
+  trinkets->add_action( "use_items,check_existing=0,slots=trinket1:trinket2,if=this_trinket.has_use_buff&other_trinket.has_use_buff&other_trinket.cooldown.duration%%cooldown.trueshot.duration=0&(buff.trueshot.remains>14&other_trinket.cooldown.remains|cooldown.trueshot.remains>20&other_trinket.cooldown.remains<=cooldown.trueshot.remains)", "A buff trinket paired with a trinket that matches the above line; use with Trueshot if the other trinket is not ready or use without Trueshot if the other trinket will come up for the next Trueshot." );
+  trinkets->add_action( "use_items,check_existing=0,slots=trinket1:trinket2,if=this_trinket.has_use_buff&(buff.trueshot.remains>14|buff.trueshot.up&fight_remains<cooldown.trueshot.remains+15|fight_remains<21)", "A buff trinket, use with Trueshot or in the last ~20 seconds of the fight." );
+  trinkets->add_action( "use_items,check_existing=0,slots=trinket1:trinket2,if=this_trinket.has_use_damage&cooldown.trueshot.remains>20", "A damage trinket; use when Trueshot has at least 20 seconds remaining on its cooldown." );
+}
+//marksmanship_apl_end
+
+//marksmanship_ptr_apl_start
+void marksmanship_ptr( player_t* p )
+{
+  action_priority_list_t* default_ = p->get_action_priority_list( "default" );
+  action_priority_list_t* precombat = p->get_action_priority_list( "precombat" );
+  action_priority_list_t* cds = p->get_action_priority_list( "cds" );
+  action_priority_list_t* drst = p->get_action_priority_list( "drst" );
+  action_priority_list_t* draoe = p->get_action_priority_list( "draoe" );
+  action_priority_list_t* sentaoe = p->get_action_priority_list( "sentaoe" );
+  action_priority_list_t* sentst = p->get_action_priority_list( "sentst" );
+  action_priority_list_t* trinkets = p->get_action_priority_list( "trinkets" );
+
+  precombat->add_action( "snapshot_stats" );
+  precombat->add_action( "summon_pet,if=talent.unbreakable_bond" );
+  precombat->add_action( "use_item,name=algethar_puzzle_box" );
+  precombat->add_action( "aimed_shot" );
+
+  default_->add_action( "variable,name=trueshot_ready,value=!talent.bullseye|fight_remains>cooldown.trueshot.duration+10|buff.bullseye.stack=buff.bullseye.max_stack|fight_remains<25|time<10" );
+  default_->add_action( "variable,name=trueshot_ready,op=setif,condition=fight_style.dungeonroute,value_else=variable.trueshot_ready,value=raid_event.pull.remains>30|raid_event.pull.in>60|talent.calling_the_shots", "For DungeonRoute, hold Trueshot at the end of pulls." );
+  default_->add_action( "retarget,target_if=max:target.health,line_cd=5,if=fight_style.dungeonroute" );
+  default_->add_action( "auto_shot" );
+  default_->add_action( "call_action_list,name=cds" );
+  default_->add_action( "call_action_list,name=trinkets" );
+  default_->add_action( "call_action_list,name=draoe,if=active_enemies>2&talent.trick_shots&hero_tree.dark_ranger" );
+  default_->add_action( "call_action_list,name=sentaoe,if=active_enemies>2&talent.trick_shots&hero_tree.sentinel" );
+  default_->add_action( "call_action_list,name=drst,if=hero_tree.dark_ranger" );
+  default_->add_action( "call_action_list,name=sentst,if=hero_tree.sentinel" );
+
+  cds->add_action( "invoke_external_buff,name=power_infusion,if=buff.trueshot.remains>12|fight_remains<13" );
+  cds->add_action( "berserking,if=buff.trueshot.up|fight_remains<13" );
+  cds->add_action( "blood_fury,if=buff.trueshot.up|cooldown.trueshot.remains>30|fight_remains<16" );
+  cds->add_action( "ancestral_call,if=buff.trueshot.up|cooldown.trueshot.remains>30|fight_remains<16" );
+  cds->add_action( "fireblood,if=buff.trueshot.up|cooldown.trueshot.remains>30|fight_remains<9" );
+  cds->add_action( "lights_judgment,if=buff.trueshot.down" );
+  cds->add_action( "potion,if=buff.trueshot.up&(buff.bloodlust.up|fight_remains<120-30*talent.calling_the_shots)|fight_remains<31" );
+
+  drst->add_action( "black_arrow,target_if=max:debuff.spotters_mark.down|action.aimed_shot.in_flight_to_target|max_prio_damage,if=buff.precise_shots.up" );
+  drst->add_action( "explosive_shot,if=!talent.tactical_reload|!buff.lock_and_load.up" );
+  drst->add_action( "volley" );
+  drst->add_action( "aimed_shot,if=buff.trueshot.up&buff.precise_shots.down&cooldown.black_arrow.ready|full_recharge_time<gcd+cast_time" );
+  drst->add_action( "trueshot,if=variable.trueshot_ready" );
+  drst->add_action( "rapid_fire" );
+  drst->add_action( "wailing_arrow" );
+  drst->add_action( "multishot,target_if=max:debuff.spotters_mark.down|action.aimed_shot.in_flight_to_target,if=talent.aspect_of_the_hydra&!max_prio_damage&active_enemies>1&buff.precise_shots.up" );
+  drst->add_action( "arcane_shot,target_if=max:debuff.spotters_mark.down|action.aimed_shot.in_flight_to_target|max_prio_damage,if=buff.precise_shots.up" );
+  drst->add_action( "aimed_shot,target_if=max:debuff.spotters_mark.up|max_prio_damage" );
+  drst->add_action( "black_arrow" );
+  drst->add_action( "steady_shot" );
+
+  draoe->add_action( "explosive_shot,target_if=min:dot.explosive_shot.remains,if=set_bonus.mid2_4pc&(!talent.tactical_reload|!buff.lock_and_load.up)" );
+  draoe->add_action( "explosive_shot,if=!talent.tactical_reload|!buff.lock_and_load.up" );
+  draoe->add_action( "volley" );
+  draoe->add_action( "aimed_shot,target_if=max:debuff.spotters_mark.up|max_prio_damage,if=buff.trick_shots.remains>cast_time&full_recharge_time<gcd+cast_time" );
+  draoe->add_action( "black_arrow,target_if=max:debuff.spotters_mark.down|action.aimed_shot.in_flight_to_target|max_prio_damage,if=buff.precise_shots.up" );
+  draoe->add_action( "multishot,target_if=max:debuff.spotters_mark.down|action.aimed_shot.in_flight_to_target|max_prio_damage,if=buff.trick_shots.down" );
+  draoe->add_action( "trueshot,if=variable.trueshot_ready" );
+  draoe->add_action( "rapid_fire,if=buff.trick_shots.remains>execute_time&(buff.bulletstorm.remains<action.aimed_shot.execute_time|talent.unload)" );
+  draoe->add_action( "wailing_arrow,if=!cooldown.black_arrow.ready" );
+  draoe->add_action( "multishot,target_if=max:debuff.spotters_mark.down|action.aimed_shot.in_flight_to_target|max_prio_damage,if=buff.precise_shots.up" );
+  draoe->add_action( "aimed_shot,target_if=max:debuff.spotters_mark.up|max_prio_damage,if=buff.trick_shots.remains>cast_time" );
+  draoe->add_action( "black_arrow" );
+  draoe->add_action( "steady_shot" );
+
+  sentaoe->add_action( "explosive_shot,target_if=min:dot.explosive_shot.remains,if=set_bonus.mid2_4pc&(!talent.tactical_reload|!buff.lock_and_load.up)" );
+  sentaoe->add_action( "explosive_shot,if=!talent.tactical_reload|!buff.lock_and_load.up" );
+  sentaoe->add_action( "volley" );
+  sentaoe->add_action( "trueshot,if=variable.trueshot_ready" );
+  sentaoe->add_action( "moonlight_chakram,if=buff.moonlight_chakram.remains<gcd.max" );
+  sentaoe->add_action( "multishot,target_if=max:debuff.sentinels_mark.down,if=buff.precise_shots.up&!talent.aspect_of_the_hydra|buff.trick_shots.down" );
+  sentaoe->add_action( "rapid_fire,target_if=max:debuff.sentinels_mark.down,if=talent.unload" );
+  sentaoe->add_action( "rapid_fire" );
+  sentaoe->add_action( "aimed_shot,target_if=max:debuff.sentinels_mark.up|max_prio_damage,if=buff.trick_shots.remains>cast_time" );
+  sentaoe->add_action( "moonlight_chakram" );
+  sentaoe->add_action( "steady_shot" );
+
+  sentst->add_action( "explosive_shot,if=!talent.tactical_reload|!buff.lock_and_load.up" );
+  sentst->add_action( "volley" );
+  sentst->add_action( "trueshot,if=variable.trueshot_ready" );
+  sentst->add_action( "moonlight_chakram,if=buff.moonlight_chakram.remains<gcd.max" );
+  sentst->add_action( "kill_shot,target_if=max:debuff.sentinels_mark.down|max_prio_damage,if=buff.precise_shots.up" );
+  sentst->add_action( "multishot,target_if=max:debuff.sentinels_mark.down,if=talent.aspect_of_the_hydra&!max_prio_damage&active_enemies>1&buff.precise_shots.up" );
   sentst->add_action( "arcane_shot,target_if=max:debuff.sentinels_mark.down|max_prio_damage,if=buff.precise_shots.up&(buff.trueshot.up&prev_gcd.1.aimed_shot|!buff.trueshot.up)" );
   sentst->add_action( "rapid_fire" );
   sentst->add_action( "aimed_shot,target_if=max:debuff.sentinels_mark.up|max_prio_damage" );
@@ -435,6 +427,7 @@ void survival( player_t* p )
   precombat->add_action( "use_item,name=algethar_puzzle_box" );
   precombat->add_action( "wildfire_bomb,if=active_enemies=1" );
 
+  default_->add_action( "retarget,target_if=max:target.health,line_cd=5,if=fight_style.dungeonroute" );
   default_->add_action( "auto_attack" );
   default_->add_action( "call_action_list,name=cds" );
   default_->add_action( "call_action_list,name=plst,if=active_enemies<3&talent.howl_of_the_pack_leader" );
@@ -443,7 +436,9 @@ void survival( player_t* p )
   default_->add_action( "call_action_list,name=sentcleave,if=active_enemies>2&!talent.howl_of_the_pack_leader" );
 
   cds->add_action( "blood_fury,if=buff.takedown.up|cooldown.takedown.ready", "CDS" );
-  cds->add_action( "use_items,if=buff.takedown.up|cooldown.takedown.ready|!talent.takedown" );
+  cds->add_action( "use_items,check_existing=0,slots=trinket1:trinket2,if=this_trinket.has_use_damage" );
+  cds->add_action( "use_items,check_existing=0,slots=trinket1:trinket2,if=this_trinket.has_use_buff&talent.takedown&!other_trinket.has_use_buff&this_trinket.cooldown.duration>=cooldown.takedown.duration*2&this_trinket.has_buff.haste&(buff.takedown.up|cooldown.takedown.remains>this_trinket.cooldown.duration*0.45)" );
+  cds->add_action( "use_items,check_existing=0,slots=trinket1:trinket2,if=this_trinket.has_use_buff&(!talent.takedown|other_trinket.has_use_buff|this_trinket.cooldown.duration<cooldown.takedown.duration*2|!this_trinket.has_buff.haste)&(buff.takedown.up|cooldown.takedown.ready|cooldown.takedown.remains>20|!talent.takedown)" );
   cds->add_action( "use_item,name=algethar_puzzle_box,if=cooldown.takedown.remains<5|!talent.takedown" );
   cds->add_action( "invoke_external_buff,name=power_infusion,if=buff.takedown.up&!buff.power_infusion.up" );
   cds->add_action( "ancestral_call,if=buff.takedown.up|cooldown.takedown.ready" );
@@ -456,7 +451,6 @@ void survival( player_t* p )
   plst->add_action( "kill_command,if=buff.tip_of_the_spear.stack<2&howl_summon.ready", "ST - PL" );
   plst->add_action( "kill_command,if=cooldown.takedown.remains<gcd&buff.tip_of_the_spear.stack<2&!talent.twin_fangs" );
   plst->add_action( "takedown,if=buff.tip_of_the_spear.stack>0&!talent.twin_fangs|buff.tip_of_the_spear.stack=0&talent.twin_fangs" );
-  plst->add_action( "flamefang_pitch" );
   plst->add_action( "wildfire_bomb,if=buff.tip_of_the_spear.up&(talent.lethal_calibration&full_recharge_time<4+gcd|!talent.lethal_calibration)" );
   plst->add_action( "boomstick,if=buff.tip_of_the_spear.up" );
   plst->add_action( "raptor_strike,if=(buff.tip_of_the_spear.up|!buff.raptor_swipe.up)" );
@@ -471,7 +465,6 @@ void survival( player_t* p )
   sentst->add_action( "takedown,if=buff.tip_of_the_spear.stack>0&!talent.twin_fangs|buff.tip_of_the_spear.stack=0&talent.twin_fangs" );
   sentst->add_action( "boomstick,if=buff.tip_of_the_spear.up" );
   sentst->add_action( "moonlight_chakram,if=buff.tip_of_the_spear.up" );
-  sentst->add_action( "flamefang_pitch" );
   sentst->add_action( "raptor_strike,if=buff.tip_of_the_spear.up|!buff.raptor_swipe.up" );
   sentst->add_action( "kill_command,if=cooldown.takedown.remains" );
   sentst->add_action( "takedown" );
@@ -479,7 +472,6 @@ void survival( player_t* p )
   plcleave->add_action( "kill_command,if=buff.tip_of_the_spear.stack<2&(buff.howl_of_the_pack_leader_wyvern.remains|buff.howl_of_the_pack_leader_boar.remains|buff.howl_of_the_pack_leader_bear.remains)", "AOE - PL" );
   plcleave->add_action( "kill_command,if=cooldown.takedown.remains<gcd&buff.tip_of_the_spear.stack<2&!talent.twin_fangs" );
   plcleave->add_action( "takedown,if=buff.tip_of_the_spear.stack>0&!talent.twin_fangs|buff.tip_of_the_spear.stack=0&talent.twin_fangs" );
-  plcleave->add_action( "flamefang_pitch" );
   plcleave->add_action( "wildfire_bomb,if=full_recharge_time<gcd" );
   plcleave->add_action( "boomstick,if=buff.tip_of_the_spear.up" );
   plcleave->add_action( "wildfire_bomb,if=buff.tip_of_the_spear.up" );
@@ -488,15 +480,13 @@ void survival( player_t* p )
   plcleave->add_action( "wildfire_bomb" );
   plcleave->add_action( "takedown" );
 
-  sentcleave->add_action( "kill_command,if=buff.tip_of_the_spear.stack=0", "AOE - Sent" );
-  sentcleave->add_action( "wildfire_bomb,if=talent.wildfire_shells&(buff.tip_of_the_spear.up&!debuff.sentinels_mark.remains&cooldown.boomstick.remains<11&cooldown.boomstick.remains>1)" );
+  sentcleave->add_action( "kill_command,if=buff.tip_of_the_spear.stack=0&(cooldown.takedown.remains|!talent.twin_fangs)", "AOE - Sent" );
   sentcleave->add_action( "boomstick,if=buff.tip_of_the_spear.up" );
-  sentcleave->add_action( "wildfire_bomb,if=buff.tip_of_the_spear.up&(debuff.sentinels_mark.remains|full_recharge_time<4+gcd)" );
+  sentcleave->add_action( "wildfire_bomb,target_if=max:debuff.sentinels_mark.remains,if=buff.tip_of_the_spear.up" );
   sentcleave->add_action( "kill_command,if=cooldown.takedown.remains<gcd&buff.tip_of_the_spear.stack<2&!talent.twin_fangs" );
-  sentcleave->add_action( "takedown,if=buff.tip_of_the_spear.up" );
-  sentcleave->add_action( "moonlight_chakram,if=buff.tip_of_the_spear.up" );
-  sentcleave->add_action( "flamefang_pitch,if=talent.flamefang_pitch&buff.tip_of_the_spear.up" );
-  sentcleave->add_action( "raptor_strike,if=buff.tip_of_the_spear.up&buff.raptor_swipe.up|!buff.raptor_swipe.up" );
+  sentcleave->add_action( "takedown,target_if=min:debuff.sentinels_mark.remains,if=buff.tip_of_the_spear.stack>0&!talent.twin_fangs|buff.tip_of_the_spear.stack=0&talent.twin_fangs" );
+  sentcleave->add_action( "moonlight_chakram,target_if=min:debuff.sentinels_mark.remains,if=buff.tip_of_the_spear.up" );
+  sentcleave->add_action( "raptor_strike,target_if=min:debuff.sentinels_mark.remains,if=buff.tip_of_the_spear.up&buff.raptor_swipe.up|!buff.raptor_swipe.up" );
   sentcleave->add_action( "kill_command" );
 }
 //survival_apl_end
@@ -517,6 +507,7 @@ void survival_ptr( player_t* p )
   precombat->add_action( "use_item,name=algethar_puzzle_box" );
   precombat->add_action( "wildfire_bomb,if=active_enemies=1" );
 
+  default_->add_action( "retarget,target_if=max:target.health,line_cd=5,if=fight_style.dungeonroute" );
   default_->add_action( "auto_attack" );
   default_->add_action( "call_action_list,name=cds" );
   default_->add_action( "call_action_list,name=plst,if=active_enemies<3&talent.howl_of_the_pack_leader" );
@@ -525,7 +516,9 @@ void survival_ptr( player_t* p )
   default_->add_action( "call_action_list,name=sentcleave,if=active_enemies>2&!talent.howl_of_the_pack_leader" );
 
   cds->add_action( "blood_fury,if=buff.takedown.up|cooldown.takedown.ready", "CDS" );
-  cds->add_action( "use_items,if=buff.takedown.up|cooldown.takedown.ready|!talent.takedown" );
+  cds->add_action( "use_items,check_existing=0,slots=trinket1:trinket2,if=this_trinket.has_use_damage" );
+  cds->add_action( "use_items,check_existing=0,slots=trinket1:trinket2,if=this_trinket.has_use_buff&talent.takedown&!other_trinket.has_use_buff&this_trinket.cooldown.duration>=cooldown.takedown.duration*2&this_trinket.has_buff.haste&(buff.takedown.up|cooldown.takedown.remains>this_trinket.cooldown.duration*0.45)" );
+  cds->add_action( "use_items,check_existing=0,slots=trinket1:trinket2,if=this_trinket.has_use_buff&(!talent.takedown|other_trinket.has_use_buff|this_trinket.cooldown.duration<cooldown.takedown.duration*2|!this_trinket.has_buff.haste)&(buff.takedown.up|cooldown.takedown.ready|cooldown.takedown.remains>20|!talent.takedown)" );
   cds->add_action( "use_item,name=algethar_puzzle_box,if=cooldown.takedown.remains<5|!talent.takedown" );
   cds->add_action( "invoke_external_buff,name=power_infusion,if=buff.takedown.up&!buff.power_infusion.up" );
   cds->add_action( "ancestral_call,if=buff.takedown.up|cooldown.takedown.ready" );
@@ -567,14 +560,13 @@ void survival_ptr( player_t* p )
   plcleave->add_action( "wildfire_bomb" );
   plcleave->add_action( "takedown" );
 
-  sentcleave->add_action( "kill_command,if=buff.tip_of_the_spear.stack=0", "AOE - Sent" );
-  sentcleave->add_action( "wildfire_bomb,if=talent.wildfire_shells&(buff.tip_of_the_spear.up&!debuff.sentinels_mark.remains&cooldown.boomstick.remains<11&cooldown.boomstick.remains>1)" );
+  sentcleave->add_action( "kill_command,if=buff.tip_of_the_spear.stack=0&(cooldown.takedown.remains|!talent.twin_fangs)", "AOE - Sent" );
   sentcleave->add_action( "boomstick,if=buff.tip_of_the_spear.up" );
-  sentcleave->add_action( "wildfire_bomb,if=buff.tip_of_the_spear.up" );
+  sentcleave->add_action( "wildfire_bomb,target_if=max:debuff.sentinels_mark.remains,if=buff.tip_of_the_spear.up" );
   sentcleave->add_action( "kill_command,if=cooldown.takedown.remains<gcd&buff.tip_of_the_spear.stack<2&!talent.twin_fangs" );
-  sentcleave->add_action( "takedown,if=buff.tip_of_the_spear.up" );
-  sentcleave->add_action( "moonlight_chakram,if=buff.tip_of_the_spear.up" );
-  sentcleave->add_action( "raptor_strike,if=buff.tip_of_the_spear.up&buff.raptor_swipe.up|!buff.raptor_swipe.up" );
+  sentcleave->add_action( "takedown,target_if=min:debuff.sentinels_mark.remains,if=buff.tip_of_the_spear.stack>0&!talent.twin_fangs|buff.tip_of_the_spear.stack=0&talent.twin_fangs" );
+  sentcleave->add_action( "moonlight_chakram,target_if=min:debuff.sentinels_mark.remains,if=buff.tip_of_the_spear.up" );
+  sentcleave->add_action( "raptor_strike,target_if=min:debuff.sentinels_mark.remains,if=buff.tip_of_the_spear.up&buff.raptor_swipe.up|!buff.raptor_swipe.up" );
   sentcleave->add_action( "kill_command" );
 }
 //survival_ptr_apl_end
