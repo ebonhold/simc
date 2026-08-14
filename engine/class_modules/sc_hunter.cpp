@@ -483,7 +483,6 @@ public:
     buff_t* huntmasters_call;
     buff_t* summon_fenryr;
     buff_t* summon_hati;
-    buff_t* heart_of_the_pack;
     buff_t* natures_ally_3;
     buff_t* bloody_frenzy;
 
@@ -721,7 +720,6 @@ public:
     spell_data_ptr_t brutal_companion;
     spell_data_ptr_t huntmasters_call;
     spell_data_ptr_t razor_sharp;
-    spell_data_ptr_t heart_of_the_pack_buff;
     spell_data_ptr_t bloodshed;
     spell_data_ptr_t bloodshed_dot;
     spell_data_ptr_t savagery_bm;
@@ -1208,7 +1206,7 @@ public:
   void consume_trick_shots();
   void trigger_deathblow( bool activated = false );
   void trigger_lunar_storm( player_t* target );
-  void consume_precise_shots();
+  void consume_precise_shots( bool expire_buff = true );
   void trigger_eagles_mark( player_t* target, bool sentinel, bool force = false, bool unload = false );
   bool consume_howl_of_the_pack_leader( player_t* target );
   void trigger_howl_of_the_pack_leader();
@@ -3187,8 +3185,8 @@ struct kill_command_wildspeaker_t: public hunter_pet_attack_t<dire_critter_t>
   {
     hunter_pet_attack_t::impact( s );
 
-    // 2026-07-27: Wildspeaker Kill Command can Beast Cleave without Kill Cleave talented.
-    if ( s->action->result_is_hit( s->result ) && s->action->sim->active_enemies > 1 && p()->hunter_pet_t::buffs.beast_cleave->up() )
+    if ( s->action->result_is_hit( s->result ) && s->action->sim->active_enemies > 1 && o()->talents.kill_cleave.ok() 
+      && p()->hunter_pet_t::buffs.beast_cleave->up() )
     {
       // 2026-07-27: Wildspeaker Kill Command's crit bonus is not Beast Cleaved.
       double amount = s->result_total;
@@ -3196,8 +3194,7 @@ struct kill_command_wildspeaker_t: public hunter_pet_attack_t<dire_critter_t>
       {
         amount /= ( 1.0 + s->result_crit_bonus ) / 2.0;
       }
-      // 2026-07-27: Wildspeaker Kill Command cleaves for Beast Cleave's value, not Kill Cleave's.
-      amount *= o()->bugs ? p()->hunter_pet_t::buffs.beast_cleave->check_value() : o()->talents.kill_cleave->effectN( 1 ).percent();
+      amount *= o()->talents.kill_cleave->effectN( 1 ).percent();
       // Target multipliers do not replicate to secondary targets
       amount *= ( 1.0 / s->target_da_multiplier );
       amount *= ( 1.0 / s->target_pet_multiplier );
@@ -3655,15 +3652,20 @@ void hunter_t::consume_trick_shots()
   buffs.trick_shots -> decrement();
 }
 
-void hunter_t::consume_precise_shots()
+void hunter_t::consume_precise_shots( bool expire_buff )
 {
   if ( !talents.precise_shots.ok() || !buffs.precise_shots->check() )
     return;
 
   cooldowns.aimed_shot->adjust( -talents.focused_aim->effectN( 1 ).time_value() );
-
-  buffs.precise_shots->expire();
   buffs.stargazer->trigger();
+
+  // 2026-08-14: In some cases the benefits of consuming Precise Shots can be gained
+  //             without actually consuming the buff.
+  if ( expire_buff )
+  {
+    buffs.precise_shots->expire();
+  }
 }
 
 void hunter_t::trigger_eagles_mark( player_t* target, bool sentinel, bool force, bool unload )
@@ -3753,13 +3755,6 @@ void hunter_t::trigger_huntmasters_call()
       buffs.summon_hati->trigger();
       pets.hati.despawn();
       pets.hati.spawn( buffs.summon_hati->buff_duration() );
-    }
-
-    // 2026-04-08: With Razor Sharp talented, Huntmaster's Call summons will trigger a ghost Heart of the Pack buff.
-    //             This buff uses Razor Sharp's base value of 100 (divided by 10) to create a free 10% haste buff.
-    if ( bugs && talents.razor_sharp.ok() )
-    {
-      buffs.heart_of_the_pack->trigger();
     }
   }
 }
@@ -5892,7 +5887,8 @@ struct rapid_fire_t: public hunter_ranged_attack_t
     //       TODO: Move the consume_precise_shots() call back to the base spell execute() functions if/when this is fixed.
     if ( p()->bugs && sequence == 2 )
     {
-      make_event( sim, 10_ms, [ this ]() { p()->consume_precise_shots(); } );
+      p()->consume_precise_shots( false );
+      make_event( sim, 10_ms, [ this ]() { p()->buffs.precise_shots->expire(); } );
     }
     else
     {
@@ -7732,7 +7728,6 @@ void hunter_t::init_spells()
     talents.brutal_companion                  = find_talent_spell( talent_tree::SPECIALIZATION, "Brutal Companion", HUNTER_BEAST_MASTERY );
     talents.huntmasters_call                  = find_talent_spell( talent_tree::SPECIALIZATION, "Huntmaster's Call", HUNTER_BEAST_MASTERY );
     talents.razor_sharp                       = find_talent_spell( talent_tree::SPECIALIZATION, "Razor Sharp", HUNTER_BEAST_MASTERY );
-    talents.heart_of_the_pack_buff            = talents.razor_sharp.ok() ? find_spell( 1282747 ) : spell_data_t::not_found();
     talents.bloodshed                         = find_talent_spell( talent_tree::SPECIALIZATION, "Bloodshed", HUNTER_BEAST_MASTERY );
     talents.bloodshed_dot                     = talents.bloodshed.ok() ? find_spell( 321538 ) : spell_data_t::not_found();
     talents.savagery_bm                       = find_talent_spell( talent_tree::SPECIALIZATION, "Savagery", HUNTER_BEAST_MASTERY );
@@ -8259,12 +8254,6 @@ void hunter_t::create_buffs()
     make_buff( this, "summon_fenryr", find_spell ( 459735 ) )
     -> set_default_value_from_effect( 2 )
     -> set_pct_buff_type( STAT_PCT_BUFF_HASTE );
-
-  // 2026-08-04: This is a bugged buff that should not exist, it uses the spell data of its replacement talent.
-  buffs.heart_of_the_pack =
-    make_buff( this, "heart_of_the_pack", talents.heart_of_the_pack_buff )
-      -> set_default_value( talents.razor_sharp->effectN( 1 ).percent() / 10 )
-      -> set_pct_buff_type( STAT_PCT_BUFF_HASTE );
 
   buffs.summon_hati = 
     make_buff( this, "summon_hati", find_spell( 459738 ) )
