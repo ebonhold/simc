@@ -1115,6 +1115,7 @@ struct druid_t final : public parse_player_effects_t
     player_talent_t everbloom_1;  // apex
     player_talent_t everbloom_2;  // apex
     player_talent_t everbloom_3;  // apex
+    player_talent_t flash_of_clarity;
     player_talent_t flourish;
     player_talent_t germination;
     player_talent_t grove_guardians;
@@ -1134,6 +1135,7 @@ struct druid_t final : public parse_player_effects_t
     player_talent_t natures_swiftness;
     player_talent_t nurturing_dormancy;
     player_talent_t omen_of_clarity_tree;
+    player_talent_t overgrowth;
     player_talent_t passing_seasons;
     player_talent_t photosynthesis;
     player_talent_t power_of_the_archdruid;
@@ -3822,8 +3824,10 @@ public:
       p()->resource_gain( RESOURCE_ENERGY, cp * sotf_energy, sotf_gain );
 
     // all finishers count their effective combo points, including free finishers (apex, convoke) at max
-    if ( halazzis_fury_add > 0_ms && halazzis_fury_icd->up() )
+    if ( halazzis_fury_add > 0_ms && p()->buff.b_inc_cat->check() && halazzis_fury_icd->up() )
+    {
       p()->halazzis_fury_duration += halazzis_fury_add * cp;
+    }
 
     trigger_with_chance_per_cp( p()->buff.frantic_momentum, cp );
     trigger_with_chance_per_cp( p()->buff.predatory_swiftness, cp );
@@ -5103,7 +5107,9 @@ public:
     consume_rage_after_the_wildfire( BASE::last_resource_cost );
     consume_rage_memory_of_ysera( BASE::last_resource_cost );
     consume_rage_ursocs_guidance( BASE::last_resource_cost );
-    consume_rage_wild_guardian( wg_pct );
+
+    if ( !p_->buff.answered_calling_summon->check() )
+      consume_rage_wild_guardian( wg_pct );
   }
 };
 
@@ -5660,12 +5666,8 @@ struct maul_base_t : public trigger_vicious_brambles_t<
 
     base_t::execute();
 
-    if ( p()->buff.dream_conduit->check() )
-    {
-      // technically can have 2 stacks
-      p()->buff.dream_conduit->decrement();
+    if ( p()->buff.dream_conduit->consume( this ) )
       consume_rage_wild_guardian( 1.0 );
-    }
   }
 
   void consume_resource() override
@@ -8955,7 +8957,7 @@ struct wild_mushroom_t final : public druid_spell_t
       auto spell_targets = damage->create_expression( "spell_targets" );
 
       return make_fn_expr( name, [ this, spell_targets = std::move( spell_targets ) ] {
-        return damage->ap_gain( spell_targets->evaluate() );
+        return damage->ap_gain( as<int>( spell_targets->evaluate() ) );
       } );
     }
 
@@ -10497,6 +10499,7 @@ void druid_t::init_spells()
   talent.everbloom_1                    = ST( "Everbloom", 1 );
   talent.everbloom_2                    = ST( "Everbloom", 2 );
   talent.everbloom_3                    = ST( "Everbloom", 3 );
+  talent.flash_of_clarity               = ST( "Flash of Clarity" );  // TODO: NYI
   talent.flourish                       = ST( "Flourish" );
   talent.germination                    = ST( "Germination" );
   talent.grove_guardians                = ST( "Grove Guardians" );  // TODO: NYI
@@ -10516,6 +10519,7 @@ void druid_t::init_spells()
   talent.natures_swiftness              = ST( "Nature's Swiftness" );
   talent.nurturing_dormancy             = ST( "Nurturing Dormancy" );  // TODO: NYI
   talent.omen_of_clarity_tree           = ST( "Omen of Clarity", DRUID_RESTORATION );
+  talent.overgrowth                     = ST( "Overgrowth" );  // TODO: NYI
   talent.passing_seasons                = ST( "Passing Seasons" );
   talent.photosynthesis                 = ST( "Photosynthesis" );
   talent.power_of_the_archdruid         = ST( "Power of the Archdruid" );  // TODO: NYI
@@ -11350,7 +11354,8 @@ void druid_t::create_buffs()
     this, "celestial_might", find_trigger( sets->set( DRUID_GUARDIAN, MID1, B4 ) ).trigger() );
 
   buff.dream_conduit = make_fallback( talent.wild_guardian_3.ok(),
-    this, "dream_conduit", find_trigger( spec.wild_guardian_action ).trigger() );
+    this, "dream_conduit", find_trigger( spec.wild_guardian_action ).trigger() )
+      ->set_consume_all_stacks( false );
 
   buff.dream_guide =
     make_fallback( talent.dream_guide.ok(), this, "dream_guide", find_trigger( talent.dream_guide ).trigger() )

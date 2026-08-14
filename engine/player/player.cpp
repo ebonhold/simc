@@ -5563,7 +5563,7 @@ double player_t::composite_player_multiplier( school_e school ) const
   return m;
 }
 
-double player_t::composite_player_target_multiplier( player_t* t, school_e /* school */ ) const
+double player_t::composite_versus_multiplier( player_t* t ) const
 {
   double m = 1.0;
 
@@ -5579,6 +5579,13 @@ double player_t::composite_player_target_multiplier( player_t* t, school_e /* sc
       m *= 1.0 + std::get<2>( entry );
     }
   }
+
+  return m;
+}
+
+double player_t::composite_player_target_multiplier( player_t* t, school_e /* school */ ) const
+{
+  double m = 1.0;
 
   auto td = find_target_data( t );
   if ( td )
@@ -5899,7 +5906,8 @@ double player_t::composite_mitigation_multiplier( const action_state_t* s, schoo
 {
   double m = 1.0;
 
-  if ( !is_enemy() && type != HEALING_ENEMY )
+  if ( !is_enemy() && type != HEALING_ENEMY &&
+       ( s->result_type == result_amount_type::DMG_DIRECT || s->result_type == result_amount_type::DMG_OVER_TIME ) )
   {
     if ( !is_pet() )
     {
@@ -13868,6 +13876,13 @@ scaling_metric_data_t player_t::scaling_for_metric( scale_metric_e metric ) cons
       double mean   = q->collected_data.hps.mean() + q->collected_data.aps.mean();
       double stddev = sqrt( q->collected_data.hps.mean_variance + q->collected_data.aps.mean_variance );
       return { metric, "Healing + Absorb per second", mean, stddev };
+    }
+    case SCALE_METRIC_DHAPS:
+    {
+      double hps_value = q->sim->dhaps_healing_weight;
+      double mean   = ( q->collected_data.hps.mean() + q->collected_data.aps.mean() ) * hps_value + q->collected_data.dps.mean();
+      double stddev = sqrt( ( q->collected_data.hps.mean_variance + q->collected_data.aps.mean_variance ) * hps_value + q->collected_data.dps.mean_variance );
+      return { metric, "Damage + Healing + Absorb per second (haps weight: " + std::to_string( hps_value ) + ")", mean, stddev };
     }
     case SCALE_METRIC_DTPS:
       return { metric, q->collected_data.dtps };

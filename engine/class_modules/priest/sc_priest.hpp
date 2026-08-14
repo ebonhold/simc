@@ -836,6 +836,7 @@ public:
     propagate_const<actions::spells::void_bolt_t*> void_bolt;
     propagate_const<actions::spells::shadeburst_t*> shadeburst;
     propagate_const<actions::spells::searing_light_t*> searing_light_dot;
+    propagate_const<action_t*> void_shield_damage;
   } background_actions;
 
   // Items
@@ -914,6 +915,9 @@ public:
     double archon_halo_outgoing_hit_chance = 0.5;
     // Chance for returning Halo damage pulses to hit (Divine Halo / Archon).
     double archon_halo_return_hit_chance = 0.5;
+
+    // Should healing a target below the threshold grant Twist of Fate?
+    bool twist_of_fate_from_healing = true;
   } options;
 
   priest_t( sim_t* sim, util::string_view name, race_e r );
@@ -1390,7 +1394,7 @@ public:
   {
     base_t::execute();
 
-    if ( priest().talents.surge_of_light.enabled() )
+    if ( !background && priest().talents.surge_of_light.enabled() )
       priest().buffs.surge_of_light->trigger();
   }
 };
@@ -1472,7 +1476,7 @@ struct priest_heal_t : public priest_action_t<heal_t>
     if ( s->result_amount > 0 )
     {
       // TODO: Use proper base_value() from talent struct when fixed
-      if ( priest().talents.twist_of_fate.enabled() &&
+      if ( priest().talents.twist_of_fate.enabled() && priest().options.twist_of_fate_from_healing &&
            ( save_health_percentage < priest().talents.twist_of_fate->effectN( 1 ).base_value() ) )
       {
         priest().buffs.twist_of_fate->trigger();
@@ -1489,7 +1493,7 @@ struct priest_heal_t : public priest_action_t<heal_t>
   {
     base_t::execute();
 
-    if ( priest().talents.surge_of_light.enabled() )
+    if ( !background && priest().talents.surge_of_light.enabled() )
       priest().buffs.surge_of_light->trigger();
   }
 };
@@ -1542,11 +1546,15 @@ struct priest_spell_t : public priest_action_t<spell_t>
     double mul = p().talents.discipline.atonement->effectN( 1 ).percent();
 
     if ( !p().options.discipline_in_raid )
-      mul *= 1 + p().talents.discipline.atonement->effectN( 3 ).percent();
+      mul *= 1.0 + p().talents.discipline.atonement->effectN( 3 ).percent();
 
     if ( p().talents.discipline.abyssal_reverie.enabled() &&
-         ( dbc::get_school_mask( s->action->school ) & SCHOOL_SHADOW ) != SCHOOL_SHADOW )
-      mul *= 1 + p().talents.discipline.abyssal_reverie->effectN( 1 ).percent();
+         ( dbc::get_school_mask( s->action->school ) & SCHOOL_MASK_SHADOW ) == SCHOOL_MASK_SHADOW )
+      mul *= 1.0 + p().talents.discipline.abyssal_reverie->effectN( 1 ).percent();
+
+    if ( p().talents.oracle.prophets_insight.enabled() &&
+         ( dbc::get_school_mask( s->action->school ) & SCHOOL_MASK_HOLY ) == SCHOOL_MASK_HOLY )
+      mul *= 1.0 + p().talents.oracle.prophets_insight->effectN( 4 ).percent();
 
     if ( p().talents.voidweaver.voidheart.enabled() && p().buffs.voidheart->check() )
       mul *= 1.0 + p().talents.voidweaver.voidheart->effectN( 2 ).percent();

@@ -1106,6 +1106,7 @@ public:
     proc_t* soul_fragment_from_reapers_toll;
     proc_t* soul_fragment_from_void_metamorphosis;
     proc_t* soul_fragment_from_entropy;
+    proc_t* soul_fragment_auto_pickup;
     std::unordered_map<std::string, proc_t*> shattered_souls;
 
     // Havoc
@@ -1338,7 +1339,7 @@ public:
   void set_out_of_range( timespan_t duration );
   void adjust_movement();
   double calculate_expected_max_health() const;
-  unsigned consume_soul_fragments( soul_fragment = soul_fragment::ANY, bool instant = true,
+  unsigned consume_soul_fragments( soul_fragment = soul_fragment::ANY, bool instant = false,
                                    unsigned max = MAX_SOUL_FRAGMENTS );
   unsigned consume_nearby_soul_fragments( soul_fragment = soul_fragment::ANY );
   unsigned get_active_soul_fragments( soul_fragment = soul_fragment::ANY ) const;
@@ -1707,6 +1708,15 @@ struct soul_fragment_t
 
       frag->activate   = nullptr;
       frag->expiration = make_event<fragment_expiration_t>( sim(), frag );
+
+      // Devourer souls automatically get picked up if they activate inside the pickup range
+      if ( ( frag->dh->specialization() == DEMON_HUNTER_DEVOURER ) && ( frag->get_distance( frag->dh ) <= 4.0 ) )
+      {
+        frag->consume_on_activation = true;
+
+        frag->dh->proc.soul_fragment_auto_pickup->occur();
+      }
+
       frag->dh->activate_soul_fragment( frag );
     }
   };
@@ -1740,7 +1750,8 @@ struct soul_fragment_t
   timespan_t get_travel_time( bool activation = false ) const
   {
     double velocity = dh->spec.consume_soul->missile_speed();
-    if ( ( activation && consume_on_activation ) || velocity == 0 )
+
+    if ( velocity == 0 )
       return timespan_t::zero();
 
     if ( activation )
@@ -1804,12 +1815,15 @@ struct soul_fragment_t
   void set_position()
   {
     // Base position is up to 15 yards to the front right or front left for Vengeance, 9.5 yards for Havoc
+    // 08/12/2026: Devourer base distance appears to be slightly larger than Havoc, needs further testing but
+    // distance=5.6066 results in similar automatic soul pickups to ingame
+
     double distance = 0;
     double dist;
     switch ( dh->specialization() )
     {
       case DEMON_HUNTER_DEVOURER:
-        distance = 4.6066;
+        distance = 5.6066;
         break;
       case DEMON_HUNTER_HAVOC:
         distance = 4.6066;
@@ -5367,6 +5381,7 @@ struct spirit_bomb_t : public demon_hunter_spell_t
     demon_hunter_spell_t::execute();
 
     // Soul fragments consumed are capped for Spirit Bomb
+    // TOCHECK: Do the souls instantly consume?
     const int fragments_consumed = dh()->consume_soul_fragments( soul_fragment::ANY, true, max_fragments_consumed );
     if ( fragments_consumed > 0 )
     {
@@ -8186,6 +8201,7 @@ struct soul_cleave_t
     heal->execute_on_target( player );
 
     // Soul fragments consumed are capped for Soul Cleave
+    // TOCHECK: Do the souls instantly consume?
     const int fragments_consumed = dh()->consume_soul_fragments( soul_fragment::ANY, true, max_fragments_consumed );
     damage->set_target( target );
     action_state_t* damage_state = damage->get_state();
@@ -10565,6 +10581,7 @@ void demon_hunter_t::init_procs()
   proc.soul_fragment_from_reapers_toll       = get_proc( "Soul Fragment from Reaper's Toll" );
   proc.soul_fragment_from_void_metamorphosis = get_proc( "Soul Fragment from Void Metamorphosis" );
   proc.soul_fragment_from_entropy            = get_proc( "Soul Fragment from Entropy" );
+  proc.soul_fragment_auto_pickup             = get_proc( "Soul Fragment Auto Pickup" );
 
   // Havoc
   proc.soul_fragment_from_demonic_appetite = get_proc( "Soul Fragment from Demonic Appetite" );
@@ -12367,7 +12384,7 @@ unsigned demon_hunter_t::consume_nearby_soul_fragments( soul_fragment type )
   }
 
   event_t::cancel( soul_fragment_pick_up );
-  return demon_hunter_t::consume_soul_fragments( type, true, soul_fragments_to_consume );
+  return demon_hunter_t::consume_soul_fragments( type, false, soul_fragments_to_consume );
 }
 
 // demon_hunter_t::get_active_soul_fragments ================================
@@ -12500,10 +12517,10 @@ void demon_hunter_t::activate_soul_fragment( soul_fragment_t* frag )
 {
   buff.soul_fragments->trigger();
 
-  // If we spawn a fragment with this flag, instantly consume it
+  // If we spawn a fragment with this flag, consume it once it is active
   if ( frag->consume_on_activation )
   {
-    frag->consume( true );
+    frag->consume();
     return;
   }
 
@@ -12951,6 +12968,7 @@ public:
         p.proc.soul_fragment_from_reapers_toll,
         p.proc.soul_fragment_from_void_metamorphosis,
         p.proc.soul_fragment_from_entropy,
+        p.proc.soul_fragment_auto_pickup,
 
         // havoc
         p.proc.soul_fragment_from_demonic_appetite,

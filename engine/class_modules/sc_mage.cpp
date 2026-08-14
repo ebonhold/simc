@@ -862,6 +862,7 @@ public:
   double composite_player_critical_damage_multiplier( const action_state_t*, school_e school ) const override;
   double composite_player_multiplier( school_e ) const override;
   double composite_player_target_multiplier( player_t*, school_e ) const override;
+  double composite_versus_multiplier( player_t* ) const override;
   double composite_spell_crit_chance() const override;
   double composite_player_pet_damage_multiplier( const action_state_t*, bool ) const override;
   double composite_attribute_multiplier( attribute_e ) const override;
@@ -6736,6 +6737,13 @@ double mage_t::composite_player_target_multiplier( player_t* target, school_e sc
       m *= 1.0 + totm->data().effectN( 2 ).percent();
   }
 
+  return m;
+}
+
+double mage_t::composite_versus_multiplier( player_t* target ) const
+{
+  double m = player_t::composite_versus_multiplier( target );
+
   // TODO: this still technically points to 458910's value (but the debuff is likely no longer used)
   if ( talents.molten_fury.ok() && target->health_percentage() <= talents.molten_fury->effectN( 1 ).base_value() )
     m *= 1.0 + talents.molten_fury->effectN( 2 ).percent();
@@ -7476,10 +7484,6 @@ private:
   mage_t& p;
 };
 
-namespace live_mage {
-#include "class_modules/sc_mage_live.inc"
-}
-
 // MAGE MODULE INTERFACE ====================================================
 
 struct mage_module_t final : public module_t
@@ -7491,19 +7495,9 @@ public:
 
   player_t* create_player( sim_t* sim, std::string_view name, race_e r = RACE_NONE ) const override
   {
-    // TODO: Remove version check and the live mage file
-    if ( sim->dbc->wowv() >= wowv_t{ 12, 1, 0 } )
-    {
-      auto p = new mage_t( sim, name, r );
-      p->report_extension = std::make_unique<mage_report_t>( *p );
-      return p;
-    }
-    else
-    {
-      auto p = new live_mage::mage_t( sim, name, r );
-      p->report_extension = std::make_unique<live_mage::mage_report_t>( *p );
-      return p;
-    }
+    auto p = new mage_t( sim, name, r );
+    p->report_extension = std::make_unique<mage_report_t>( *p );
+    return p;
   }
 
   void register_hotfixes() const override
