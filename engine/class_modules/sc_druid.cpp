@@ -539,7 +539,6 @@ struct druid_t final : public parse_player_effects_t
   timespan_t halazzis_fury_duration;  // mid2 2pc
   // Guardian
   player_t* red_moon_target;  // lunar wrath hits most recent rm target
-  double lunar_wrath_rage_spent;
   timespan_t rampant_thorn_berserk_extension;  // mid2 4pc
 
   struct dot_list_t
@@ -4980,6 +4979,7 @@ struct rage_spender_t : public BASE
 private:
   druid_t* p_;
   buff_t* atw_buff;
+  buff_t* lw_buff;
   double lw_rage_per_proc;
   double moy_hp_pct_per_rage;
   double ug_rage_per_cdr;
@@ -4993,6 +4993,7 @@ public:
     : BASE( n, p, s, f ),
       p_( p ),
       atw_buff( p->buff.after_the_wildfire ),
+      lw_buff( p->buff.lunar_wrath ),
       lw_rage_per_proc( p->talent.red_moon.ok()
         ? p->talent.galactic_guardian->effectN( 3 ).base_value()
         : 0.0 ),
@@ -5023,19 +5024,19 @@ public:
 
   void consume_rage_lunar_wrath( double amount )
   {
-    if ( !lw_rage_per_proc || amount < 0.0 || !p_->red_moon_target )
+    if ( !lw_rage_per_proc || amount < 0.0 || !p_->red_moon_target || !lw_buff->check() )
       return;
 
     assert( BASE::td( p_->red_moon_target )->dots.red_moon->is_ticking() &&
             "Lunar Wrath attempting to proc on target without Red Moon" );
 
-    p_->lunar_wrath_rage_spent += amount;
+    lw_buff->current_value += amount;
 
-    while ( p_->lunar_wrath_rage_spent >= lw_rage_per_proc )
+    while ( lw_buff->check() && lw_buff->current_value >= lw_rage_per_proc )
     {
-      p_->lunar_wrath_rage_spent -= lw_rage_per_proc;
+      lw_buff->current_value -= lw_rage_per_proc;
 
-      if ( p_->buff.lunar_wrath->consume( this ) )
+      if ( lw_buff->consume( this ) )
       {
         p_->active.lunar_wrath_heal->execute();
         p_->active.lunar_wrath->execute_on_target( p_->red_moon_target );
@@ -5072,7 +5073,7 @@ public:
 
   void consume_rage_wild_guardian( double chance )
   {
-    if ( !chance || !p_->rng().roll( chance ) )
+    if ( !chance || p_->buff.answered_calling_summon->check() || !p_->rng().roll( chance ) )
       return;
 
     // trigger wild guardian 1, if possible
@@ -5097,11 +5098,10 @@ public:
       return;
 
     consume_rage_after_the_wildfire( BASE::last_resource_cost );
+    consume_rage_lunar_wrath( BASE::last_resource_cost );
     consume_rage_memory_of_ysera( BASE::last_resource_cost );
     consume_rage_ursocs_guidance( BASE::last_resource_cost );
-
-    if ( !p_->buff.answered_calling_summon->check() )
-      consume_rage_wild_guardian( wg_pct );
+    consume_rage_wild_guardian( wg_pct );
   }
 };
 
@@ -7991,7 +7991,7 @@ struct red_moon_t final : public druid_spell_t
     p()->red_moon_target = s->target;
 
     // rage tracking is reset on new cast
-    p()->lunar_wrath_rage_spent = 0.0;
+    p()->buff.lunar_wrath->current_value = 0.0;
   }
 
   void last_tick( dot_t* d ) override
@@ -11427,7 +11427,8 @@ void druid_t::create_buffs()
 
   buff.lunar_wrath =
     make_fallback( talent.galactic_guardian.ok() && talent.red_moon.ok(), this, "lunar_wrath", find_spell( 1253600 ) )
-      ->set_consume_all_stacks( false );
+      ->set_consume_all_stacks( false )
+      ->set_default_value( 0.0 );
 
   buff.natural_resilience = make_fallback<druid_absorb_buff_t>( talent.natural_resilience.ok(),
     this, "natural_resilience", find_spell( 1278800 ) );
@@ -13022,7 +13023,6 @@ void druid_t::reset()
   moon_stage = static_cast<moon_stage_e>( options.initial_moon_stage );
   halazzis_fury_duration = 0_ms;
   red_moon_target = nullptr;
-  lunar_wrath_rage_spent = 0;
   rampant_thorn_berserk_extension = 0_ms;
   dot_lists.moonfire.clear();
   dot_lists.sunfire.clear();
