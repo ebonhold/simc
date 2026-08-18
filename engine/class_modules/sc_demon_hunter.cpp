@@ -1422,9 +1422,10 @@ public:
     double meta_drain_multiplier = 1.0;
     // Fit against per-tick drain event schedules from logs (matches cumulative drain
     // timing through end of meta, not just instantaneous rates); see PR #11549.
-    double initial_drain = 15.0;
-    double exp_factor    = 1.40;
-    double exp_power     = 0.0775;
+    double initial_drain          = 15.0;
+    double exp_factor             = 1.40;
+    double exp_power              = 0.0775;
+    double per_event_drain_amount = 2;
 
     fury_state_t( demon_hunter_t* a )
       : start_time( timespan_t::min() ), next_drain_event( nullptr ), drain_stacks( 0 ), actor( a )
@@ -1449,6 +1450,8 @@ public:
       // calculation.
       initial_drain *= meta_drain_multiplier;
       exp_factor *= meta_drain_multiplier;
+
+      per_event_drain_amount = -dh()->spec.void_buildup->effectN( 1 ).resource( RESOURCE_FURY );
     }
 
     void clear_state();
@@ -4037,7 +4040,8 @@ struct eye_beam_base_t : public student_of_suffering_trigger_t<final_breath_trig
 
       // 08/01/2026 - Essence Break and Eyebeam currently reduce the value of the other by 2.5 seconds when stacks 2 - 4
       // are each applied.
-      if ( dh()->buff.cycle_of_hatred->check() && dh()->buff.cycle_of_hatred->stack() < 4 )
+      // 2026-08-17 -- EssB is only reduced if the playerh as the 4pc equipped.
+      if ( dh()->set_bonuses.mid2_havoc_4pc->ok() && dh()->buff.cycle_of_hatred->check() && dh()->buff.cycle_of_hatred->stack() < 4 )
       {
         dh()->cooldown.essence_break->adjust(
             -timespan_t::from_millis( as<int>( dh()->buff.cycle_of_hatred->check_value() ) ) );
@@ -9897,14 +9901,7 @@ void demon_hunter_t::create_buffs()
   buff.rolling_torment = make_buff( this, "rolling_torment", spec.rolling_torment_buff )->disable_ticking( true );
 
   buff.emptiness = make_buff( this, "emptiness", spec.emptiness_buff )
-                       ->set_pct_buff_type( STAT_PCT_BUFF_HASTE )
                        ->set_constant_behavior( buff_constant_behavior::NEVER_CONSTANT );
-
-  if ( spec.emptiness_buff->ok() )
-  {
-    buff.emptiness->set_default_value( talent.devourer.emptiness->effectN( 1 ).percent() /
-                                       spec.emptiness_buff->max_stacks() );
-  }
 
   buff.impending_apocalypse = make_buff<impending_apocalypse_buff_t>( this );
 
@@ -12450,8 +12447,9 @@ double demon_hunter_t::fury_state_t::fury_drain_per_second( int stacks ) const
 
   if ( has_reduced_drain )
   {
-    // Reduced while casting Collapsing Star / channeling Void Ray. Measured ~0.127 from logs.
-    drain *= 0.127;
+    // Reduced while casting Collapsing Star / channeling Void Ray.
+    // 2026-08-16 -- Remeasured on 12.1 to be a factor of 10.
+    drain *= 0.1;
   }
 
   if ( drain_stacks < 1 )
@@ -12468,10 +12466,9 @@ timespan_t demon_hunter_t::fury_state_t::time_to_next_tick( int stacks ) const
   // The drain is a periodic event. A tick schedules the next one at the rate in force when it fires,
   // and a change to the reduced-drain state does not re-time the tick already pending: that tick runs
   // to term at the interval it was scheduled with, and only the tick after it picks up the new rate.
-
-  // 2 as it currently drains 2 per event.
-  // TODO: Don't hardcode this.
-  return 2.0_s / fury_drain_per_second( stacks );
+  // Time between ticks cannot go below 0s and cannot go above 1s.
+  return std::clamp( timespan_t::from_seconds( per_event_drain_amount ) / fury_drain_per_second( stacks ), 0.0_s,
+                     1.0_s );
 }
 
 void demon_hunter_t::fury_state_t::clear_state()
@@ -12729,6 +12726,7 @@ void demon_hunter_t::parse_player_effects()
   parse_effects( buff.voidfall_building );
   parse_effects( buff.voidfall_spending );
   parse_effects( buff.voidfall_final_hour );
+  parse_effects( buff.emptiness, talent.devourer.emptiness->effectN( 1 ).percent() / 100 );
 
   // Scarred
   parse_effects( buff.pursuit_of_angryness, USE_CURRENT );

@@ -358,26 +358,12 @@ struct hunter_td_t: public actor_target_data_t
   // Active targets will get a random priority set and be ranked by it when the secondary target is chosen.
   int hydra_priority;
 
-  struct spotters_mark_rapid_fire_buff_t final : public buff_t
-  {
-    bool triggered_by_unload = false;
-
-    spotters_mark_rapid_fire_buff_t( actor_pair_t q, util::string_view n, const spell_data_ptr_t s ) : buff_t( q, n, s ) {}
-
-    bool trigger( int stacks = -1, double value = DEFAULT_VALUE(), double chance = (-1.0), timespan_t duration = timespan_t::min() ) override
-    {
-      triggered_by_unload = false;
-
-      return buff_t::trigger( stacks, value, chance, duration );
-    }
-  };
-
   struct debuffs_t
   {
     buff_t* outland_venom;
 
     buff_t* spotters_mark;
-    spotters_mark_rapid_fire_buff_t* spotters_mark_rapid_fire;
+    buff_t* spotters_mark_rapid_fire;
     buff_t* sentinels_mark;
   } debuffs;
 
@@ -577,7 +563,6 @@ public:
 
     proc_t* windrunner_quiver;
     proc_t* eagles_mark;
-    proc_t* rapid_fire_mark_munched;
 
     proc_t* dire_beast_spawn;
     proc_t* dark_minion_spawn;
@@ -1207,7 +1192,7 @@ public:
   void trigger_deathblow( bool activated = false );
   void trigger_lunar_storm( player_t* target );
   void consume_precise_shots( bool expire_buff = true );
-  void trigger_eagles_mark( player_t* target, bool sentinel, bool force = false, bool unload = false );
+  void trigger_eagles_mark( player_t* target, bool sentinel, bool force = false );
   bool consume_howl_of_the_pack_leader( player_t* target );
   void trigger_howl_of_the_pack_leader();
   void trigger_natures_ally_3();
@@ -3665,7 +3650,7 @@ void hunter_t::consume_precise_shots( bool expire_buff )
   }
 }
 
-void hunter_t::trigger_eagles_mark( player_t* target, bool sentinel, bool force, bool unload )
+void hunter_t::trigger_eagles_mark( player_t* target, bool sentinel, bool force )
 {
   if ( !talents.sentinel.ok() && !specs.spotters_mark_data.ok() )
     return;
@@ -3677,7 +3662,6 @@ void hunter_t::trigger_eagles_mark( player_t* target, bool sentinel, bool force,
     if ( talents.spotters_mark_rapid_fire_debuff.ok() )
     {
       td->debuffs.spotters_mark_rapid_fire->trigger();
-      td->debuffs.spotters_mark_rapid_fire->triggered_by_unload = unload;
     }
 
     procs.eagles_mark->occur();
@@ -3722,7 +3706,6 @@ void hunter_t::trigger_eagles_mark( player_t* target, bool sentinel, bool force,
     if ( talents.spotters_mark_rapid_fire_debuff.ok() )
     {
       td->debuffs.spotters_mark_rapid_fire->trigger();
-      td->debuffs.spotters_mark_rapid_fire->triggered_by_unload = unload;
     }
 
     procs.eagles_mark->occur();
@@ -5171,7 +5154,14 @@ struct barbed_shot_t : public barbed_shot_base_t
 
 struct laceration_t : public residual_bleed_base_t
 {
-  laceration_t( hunter_t* p ) : residual_bleed_base_t( "laceration", p, p->talents.laceration_bleed ) {}
+  laceration_t( hunter_t* p ) : residual_bleed_base_t( "laceration", p, p->talents.laceration_bleed )
+  {
+    // 2026-08-15: Due to scripting, Laceration is in Unnatural Causes' spell data but is not affected by it.
+    if ( p->bugs )
+    {
+      affected_by.unnatural_causes.tick = as<uint8_t>( 0 );
+    }
+  }
 };
 
 //==============================
@@ -5341,7 +5331,7 @@ struct aimed_shot_base_t : public hunter_ranged_attack_t
   {
     double m = hunter_ranged_attack_t::composite_target_da_multiplier( t );
 
-    m *= 1 + td( target )->debuffs.spotters_mark->check_value();
+    m *= 1 + td( t )->debuffs.spotters_mark->check_value();
 
     return m;
   }
@@ -5484,9 +5474,9 @@ struct aimed_shot_t : public aimed_shot_base_t
 
     // 2026-08-14: Aimed Shot hits and bounces can only expire Spotter's Marks if the primary
     //             target had Spotter's Mark up.
-    debug_cast<state_t*>( s )->expires_marks = s->chain_target == 0 &&
-                                             ( td( s->target )->debuffs.spotters_mark->check() ||
-                                               td( s->target )->debuffs.sentinels_mark->check() );
+    //       Note: Using action_t::target as the primary target.
+    debug_cast<state_t*>( s )->expires_marks = td( target )->debuffs.spotters_mark->check() ||
+                                               td( target )->debuffs.sentinels_mark->check();
   }
 
   double cost() const override
@@ -5688,21 +5678,6 @@ struct rapid_fire_t: public hunter_ranged_attack_t
     {
       hunter_ranged_attack_t::impact( state );
 
-      // 2026-07-17: Spotter's Mark Rapid Fire also expires on impact, meaning a sequence of Rapid Fire -> Precise Shots 
-      //             can munch a proc with no benefit, depending on travel time & distance.
-      // 2026-07-22: This interaction only happens for Spotter's Mark Rapid Fire debuffs NOT triggered by Unload.
-      // 2026-07-24: ... when the initial Rapid Fire was cast against a marked target.
-      if ( p()->bugs )
-      {
-        if ( td( state->target )->debuffs.spotters_mark_rapid_fire->check() &&
-            !td( state->target )->debuffs.spotters_mark_rapid_fire->triggered_by_unload &&
-            range::find( channel->marked_targets, state->target ) != channel->marked_targets.end() )
-        {
-          td( state->target )->debuffs.spotters_mark_rapid_fire->expire();
-          p()->procs.rapid_fire_mark_munched->occur();
-        }
-      }
-
       if ( sanctified_armaments )
       {
         double amount = state->result_amount * p()->talents.sanctified_armaments->effectN( 1 ).percent();
@@ -5760,7 +5735,7 @@ struct rapid_fire_t: public hunter_ranged_attack_t
         //             of Unload's first shot being able to instantly trigger a Mark without Precise Shots.
         if ( !p()->bugs || sequence == 2 )
         {
-          p()->trigger_eagles_mark( s->target, p()->talents.sentinel.ok(), false, true );
+          p()->trigger_eagles_mark( s->target, p()->talents.sentinel.ok(), false );
         }
       }
     }
@@ -5792,7 +5767,7 @@ struct rapid_fire_t: public hunter_ranged_attack_t
         //             of Unload's first shot being able to instantly trigger a Mark without Precise Shots.
         if ( !p()->bugs || sequence == 2 )
         {
-          p()->trigger_eagles_mark( s->target, p()->talents.sentinel.ok(), false, true );
+          p()->trigger_eagles_mark( s->target, p()->talents.sentinel.ok(), false );
         }
       }
     }
@@ -5824,7 +5799,7 @@ struct rapid_fire_t: public hunter_ranged_attack_t
         //             of Unload's first shot being able to instantly trigger a Mark without Precise Shots.
         if ( !p()->bugs || sequence == 2 )
         {
-          p()->trigger_eagles_mark( s->target, p()->talents.sentinel.ok(), false, true );
+          p()->trigger_eagles_mark( s->target, p()->talents.sentinel.ok(), false );
         }
       }
     }
@@ -7226,7 +7201,10 @@ struct wildfire_bomb_base_t : public hunter_ranged_attack_t
       background = dual = true;
 
       // 2026-02-11: Wildfire Bomb's direct damage is not buffed by Unnatural Causes in game, despite being in spell data
-      affected_by.unnatural_causes.direct = as<uint8_t>( 0 );
+      if ( p->bugs )
+      {
+        affected_by.unnatural_causes.direct = as<uint8_t>( 0 );
+      }
 
       aoe = -1;
       reduced_aoe_targets = p -> talents.wildfire_bomb -> effectN( 2 ).base_value();
@@ -7463,9 +7441,10 @@ hunter_td_t::hunter_td_t( player_t* t, hunter_t* p ) : actor_target_data_t( t, p
   debuffs.spotters_mark = make_buff( *this, "spotters_mark", p->specs.spotters_mark_debuff )
     ->set_default_value( p->specs.spotters_mark_debuff->effectN( 1 ).percent() );
 
-  debuffs.spotters_mark_rapid_fire = new spotters_mark_rapid_fire_buff_t( *this, "spotters_mark_rapid_fire", p->talents.spotters_mark_rapid_fire_debuff );
-  debuffs.spotters_mark_rapid_fire->set_default_value_from_effect_type( A_MOD_DAMAGE_FROM_CASTER_SPELLS );
-  debuffs.spotters_mark_rapid_fire->set_chance( p->talents.spotters_mark_rapid_fire_debuff.ok() );
+  debuffs.spotters_mark_rapid_fire = 
+    make_buff( *this, "spotters_mark_rapid_fire", p->talents.spotters_mark_rapid_fire_debuff )
+      ->set_default_value_from_effect_type( A_MOD_DAMAGE_FROM_CASTER_SPELLS )
+      ->set_chance( p->talents.spotters_mark_rapid_fire_debuff.ok() );
 
   debuffs.sentinels_mark = make_buff( *this, "sentinels_mark", p->talents.sentinels_mark )
     ->set_default_value_from_effect( p->specialization() == HUNTER_MARKSMANSHIP ? 1 : 2 );
@@ -8534,11 +8513,6 @@ void hunter_t::init_procs()
   else if ( specs.spotters_mark_data.ok() )
     procs.eagles_mark = get_proc( "Spotter's Mark" );
 
-  if ( talents.spotters_mark_rapid_fire_debuff.ok() )
-  {
-    procs.rapid_fire_mark_munched = get_proc( "Rapid Fire Mark munched" );
-  }
-
   procs.windrunner_quiver = get_proc( "Windrunner Quiver" );
 
   if ( talents.dire_beast_summon.ok() )
@@ -9166,6 +9140,18 @@ struct hunter_module_t: public module_t
         .field( "base_value" )
         .operation( hotfix::HOTFIX_SET )
         .modifier( 25 )
+        .verification_value( 15 );
+
+    hotfix::register_effect( "Hunter", "2026-08-16", "Cobra Cleave Percent", 1323597, hotfix::HOTFIX_FLAG_LIVE )
+        .field( "base_value" )
+        .operation( hotfix::HOTFIX_SET )
+        .modifier( 30 )
+        .verification_value( 20 );
+
+    hotfix::register_effect( "Hunter", "2026-08-16", "Cobra Fang Percent", 1323599, hotfix::HOTFIX_FLAG_LIVE )
+        .field( "base_value" )
+        .operation( hotfix::HOTFIX_SET )
+        .modifier( 20 )
         .verification_value( 15 );
   }
 

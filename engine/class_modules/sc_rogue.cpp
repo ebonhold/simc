@@ -6282,6 +6282,12 @@ struct thistle_tea_t : public rogue_spell_t
     {
       p()->cooldowns.thistle_tea->adjust( -timespan_t::from_seconds( precombat_seconds ), false );
     }
+
+    // Manually inject the auto-trigger Thistle Tea into the sample sequence for visibility
+    if ( background )
+    {
+      p()->sequence_add(this, this->target);
+    }
   }
 };
 
@@ -7415,6 +7421,23 @@ struct shadow_dance_t : public stealth_like_buff_t<buff_t>
 
     // These buffs do not persist after Shadow Dance expires, unlike normal Stealth
     rogue->buffs.improved_garrote->expire();
+  }
+
+  void update_duration()
+  {
+    if ( !check() || !rogue->talent.subtlety.deepening_shadows->ok() )
+      return;
+
+    // When haste changes during the buff uptime, it extends if greater than the original duration
+    timespan_t trigger_duration = elapsed( sim->current_time() ) + remains();
+    timespan_t new_duration = buff_duration();
+    if ( new_duration > trigger_duration )
+    {
+      timespan_t extra_duration = new_duration - trigger_duration;
+      sim->print_log( "{} {} extends original duration from {} to {} ({})", *rogue, *this,
+                      trigger_duration.total_seconds(), new_duration.total_seconds(), extra_duration.total_seconds() );
+      extend_duration( extra_duration );
+    }
   }
 };
 
@@ -11155,6 +11178,12 @@ void rogue_t::invalidate_cache( cache_e c )
       {
         invalidate_cache( CACHE_AUTO_ATTACK_SPEED );
       }
+
+      if ( buffs.shadow_dance->check() )
+      {
+        static_cast<buffs::shadow_dance_t*>( buffs.shadow_dance )->update_duration();
+      }
+
       break;
     default:
       break;
