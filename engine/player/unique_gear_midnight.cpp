@@ -446,8 +446,11 @@ void weighted_boomshots( special_effect_t& effect )
   // assumed to not split so use generic_proc_t and just set aoe = -1;
   auto aoe = create_proc_action<generic_proc_t>( "weighted_boomshots", effect, missile->data().effectN( 1 ).trigger() );
   aoe->aoe = -1;
-  missile->stats = aoe->stats;  // just report the damage
+
+  missile->dual = true;
   missile->impact_action = aoe;
+  missile->stats = aoe->stats;  // just report the damage
+  aoe->stats->action_list.push_back( missile );
 
   effect.execute_action = missile;
 
@@ -722,7 +725,8 @@ void devouring_banding( special_effect_t& effect )
       dual = true;
 
       impact_action = create_proc_action<generic_proc_t>( "devouring_bolt", e, data().effectN( 1 ).trigger() );
-      stats         = impact_action->stats;  // report the damage only
+      stats = impact_action->stats;  // report the damage only
+      impact_action->stats->action_list.push_back( this );
     }
   };
 
@@ -2397,8 +2401,7 @@ void void_execution_mandate( special_effect_t& effect )
   };
 
   auto crit_buff = create_buff<stat_buff_t>( effect.player, effect.player->find_spell( 1263357 ) )
-                     ->set_stat_from_effect_type( A_MOD_RATING, effect.driver()->effectN( 2 ).average( effect ) )
-                     ->set_refresh_behavior( buff_refresh_behavior::DISABLED );
+                     ->set_stat_from_effect_type( A_MOD_RATING, effect.driver()->effectN( 2 ).average( effect ) );
 
   auto haste_buff = create_buff<stat_buff_t>( effect.player, effect.driver() )
                       ->set_stat_from_effect_type( A_MOD_RATING, effect.driver()->effectN( 3 ).average( effect ) )
@@ -3684,7 +3687,6 @@ void voracious_heart_of_ulatek( special_effect_t& effect )
 // 1307222 Venom Splatter
 void font_of_venomous_rage( special_effect_t& effect )
 {
-
   struct font_channel_t : public proc_spell_t
   {
     action_t* venom_splatter;
@@ -4325,8 +4327,10 @@ void polished_lightwood_channeler( special_effect_t& effect )
   damage->base_dd_min = damage->base_dd_max = effect.driver()->effectN( 1 ).average( effect );
   damage->base_multiplier *= role_mult( effect );
 
-  missile->add_child( damage );
+  missile->dual = true;
   missile->impact_action = damage;
+  missile->stats = damage->stats;
+  damage->stats->action_list.push_back( missile );
 
   effect.execute_action = missile;
 
@@ -4636,6 +4640,8 @@ void sporecallers_blooming_loop( special_effect_t& effect )
       dot->dual = damage->dual = true;
       stats = dot->stats;
       damage->stats = dot->stats;
+      dot->stats->action_list.push_back( this );
+      dot->stats->action_list.push_back( damage );
     }
 
     void impact( action_state_t* state ) override
@@ -4696,7 +4702,7 @@ void rotmires_sporeheart( special_effect_t& effect )
   new dbc_proc_callback_t( effect.player, effect );
 }
 
-// 1307906, 1317036 crit driver
+// 1307906 crit driver
 // 1307910 crit buff
 // 1307923 mast driver
 // 1307922 mast buff
@@ -4704,55 +4710,70 @@ void rotmires_sporeheart( special_effect_t& effect )
 // 1307927 haste buff
 void venomcursed( special_effect_t& effect )
 {
-  // The crit version has two drivers with different coeffs, but share the same buff. Each driver can proc
-  // independently, and when triggered will apply the buff with the stat amount based on it's own coeff, including
-  // overwriting existing stat amount if it refreshes a buff triggered by the other driver. The stat amounts are cached
-  // in dbc_proc_callback_t and buffs are created with the values for the first processed driver for html reporting
-  // purposes.
-  struct venomcursed_cb_t : public dbc_proc_callback_t
+  effect.custom_buff = create_buff<stat_buff_t>( effect.player, effect.trigger() )
+    ->add_stat_from_effect( 1, effect.driver()->effectN( 1 ).average( effect ) )
+    ->add_stat_from_effect( 2, effect.driver()->effectN( 2 ).average( effect ) );
+
+  new dbc_proc_callback_t( effect.player, effect );
+}
+
+// 1317582 Ascendace (random stat) driver
+// 1317581 Ascendace (random stat) buff
+void venomcursed_ascendance( special_effect_t& effect )
+{
+  struct venomcursed_ascendance_cb_t : public dbc_proc_callback_t
   {
     stat_buff_t* buff;
     double pos_value;
     double neg_value;
 
-    venomcursed_cb_t( const special_effect_t& e )
+    venomcursed_ascendance_cb_t( const special_effect_t& e )
       : dbc_proc_callback_t( e.player, e ),
         pos_value( e.driver()->effectN( 1 ).average( e ) ),
         neg_value( e.driver()->effectN( 2 ).average( e ) )
     {
-      buff = debug_cast<stat_buff_t*>( buff_t::find( e.player, util::tokenize_fn( e.trigger()->name_cstr() ) ) );
-      if ( !buff )
+      // Because the buff pandemics, we can't use create_all_stat_buffs and must instead utilize a single buff with
+      // hacked execute using update_player_buff_stat and directly stat amount manipulation.
+      buff = create_buff<stat_buff_t>( e.player, e.trigger() )
+        ->add_stat_from_effect( 1, pos_value )
+        ->add_stat_from_effect( 2, neg_value )
+        ->add_stat_from_effect( 3, neg_value )
+        ->add_stat_from_effect( 4, neg_value );
+    }
+
+    void ascendance_stat_change( stat_e stat, bool update )
+    {
+      for ( auto& s : buff->stats )
       {
-        buff = create_buff<stat_buff_t>( e.player, e.trigger() )
-          ->add_stat_from_effect( 1, pos_value )
-          ->add_stat_from_effect( 2, neg_value );
+        if ( update )
+          buff->update_player_buff_stat( s, 0 );
+
+        s.amount = s.stat == stat ? pos_value : neg_value;
+
+        if ( update )
+          buff->update_player_buff_stat( s, 1 );
       }
     }
 
     void execute( const spell_data_t*, player_t*, action_state_t* ) override
     {
-      if ( buff->check() && buff->stats.front().amount != pos_value )
-      {
-        if ( listener->sim->debug )
-        {
-          listener->sim->print_debug( "{} replacing {}: {} -> {}", *buff,
-                                      util::stat_type_abbrev( buff->stats.front().stat ), buff->stats.front().amount,
-                                      pos_value );
-        }
+      auto rng_stat = rng().range( buff->stats );
 
-        for ( auto it = buff->stats.begin(); it != buff->stats.end(); ++it )
-        {
-          buff->update_player_buff_stat( *it, 0 );
-          it->amount = it == buff->stats.begin() ? pos_value : neg_value;
-          buff->update_player_buff_stat( *it, 1 );
-        }
+      if ( listener->sim->debug )
+      {
+        listener->sim->print_debug( "{} {} with stat: {}", *buff, buff->check() ? "refreshes" : "procs",
+                                    util::stat_type_abbrev( rng_stat.stat ) );
       }
+
+      // update stat amounts if the randomly chosen stat is not already positive
+      if ( rng_stat.amount != pos_value )
+        ascendance_stat_change( rng_stat.stat, buff->check() );
 
       buff->trigger();
     }
   };
 
-  new venomcursed_cb_t( effect );
+  new venomcursed_ascendance_cb_t( effect );
 }
 }  // namespace armors
 
@@ -4775,8 +4796,9 @@ action_t* create_mrm_action( std::string n, const special_effect_t& e, unsigned 
   auto impact = create_proc_action<T>( n, e, missile->data().effectN( 1 ).trigger() );
   impact->base_dd_min = impact->base_dd_max = a;
   missile->dual = true;
-  missile->stats = impact->stats;  // report the damage only
   missile->impact_action = impact;
+  missile->stats = impact->stats;  // report the damage only
+  impact->stats->action_list.push_back( missile );
 
   return missile;
 }
@@ -4990,11 +5012,9 @@ struct rune_of_echoes_debuff_t : public buff_t
   double accumulator;
   action_t* echo;
 
-  rune_of_echoes_debuff_t( actor_pair_t pair, std::string_view n, const spell_data_t* s,
-                           action_t* d )
+  rune_of_echoes_debuff_t( actor_pair_t pair, std::string_view n, const spell_data_t* s, action_t* d )
     : buff_t( pair, n, s ), accumulator( 0 ), echo( d )
-  {
-  }
+  {}
 
   void reset() override
   {
@@ -5575,7 +5595,8 @@ void register_special_effects()
   register_special_effect( 1285138, armors::sporecallers_blooming_loop );
   register_special_effect( 1285139, armors::rotmires_sporeheart );
   set_min_version( wowv_t( 12, 1, 0 ) );
-  register_special_effect( { 1307906, 1307923, 1307928, 1317036 }, armors::venomcursed );
+  register_special_effect( { 1307906, 1307923, 1307928 }, armors::venomcursed );
+  register_special_effect( 1317582, armors::venomcursed_ascendance );
   reset_version_check();
   // Sets
   register_special_effect( 1281574, sets::voidlight_bindings );

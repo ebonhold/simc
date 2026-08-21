@@ -991,7 +991,6 @@ public:
     propagate_const<action_t*> putrefy_fk_st;
     propagate_const<action_t*> putrefy_fk_aoe;
     propagate_const<action_t*> dread_plague_death;
-    propagate_const<action_t*> epidemic_order;
   } background_actions;
 
   struct runeforge_actions_t
@@ -2881,12 +2880,12 @@ struct death_knight_pet_t : public pet_t
                         ->set_default_value_from_effect_type( A_MOD_CRIT_DAMAGE_MULTIPLIER )
                         ->set_quiet( true );
 
-    transfusion = make_buff( this, "transfusion", dk()->spell.transfusion_buff )
-                      ->set_default_value_from_effect( 1 )
-                      ->set_stack_behavior( buff_stack_behavior::ASYNCHRONOUS );
+    transfusion = make_buff( this, "transfusion", dk()->spell.transfusion_buff )->set_default_value_from_effect( 1 );
 
-    // if ( dk()->specialization() == DEATH_KNIGHT_UNHOLY )
-      // transfusion->set_duration( 8_s ); // Transfusion has no duration in data, changing it to 8s manually in 12.1
+    if ( dk()->specialization() == DEATH_KNIGHT_BLOOD )
+      transfusion->set_stack_behavior( buff_stack_behavior::ASYNCHRONOUS );
+    else
+      transfusion->set_duration( 8_s );  // Transfusion has no duration in data, changing it to 8s manually
 
     mastery_dreadblade_crit = make_buff<mastery_dreadblade_crit_t>( this );
   }
@@ -3761,13 +3760,7 @@ struct lesser_ghoul_pet_t final : public base_ghoul_pet_t
   void trigger_orders()
   {
     if ( sim->target_non_sleeping_list.size() >= 3 && epidemic_order )
-    {
-      // Non doomed bidding epidemic orders come from the DK, rather than the pets confusingly.
-      if ( dk()->bugs )
-        dk()->background_actions.epidemic_order->execute();
-      else
       epidemic_order->execute();
-    }
     else if ( death_order )
       death_order->execute();
     else
@@ -4439,13 +4432,6 @@ struct magus_base_pet_t : public death_knight_pet_t
       {
         // If the target is immune to slows, frostbolt seems to be used at most every 6 seconds
         cooldown->duration = s->duration();
-      }
-
-      if ( p->pet_type == PET_LORD_OF_THE_DEAD && dk()->bugs )
-      {
-        // Currently bugged. While this doesnt capture its behavior perfectly, its close enough for now. 
-        min_gcd     = data().cast_time() * 0.8;
-        trigger_gcd = data().cast_time();
       }
     }
 
@@ -6896,23 +6882,6 @@ struct raise_skulker_t : public death_knight_summon_spell_t
   }
 };
 
-// Epidemic Order ==========================================================
-struct epidemic_order_t : public death_knight_spell_t
-{
-  epidemic_order_t( std::string_view n, death_knight_t* p ) : death_knight_spell_t( n, p, p->pet_spell.epidemic_order )
-  {
-    background = true;
-    aoe        = -1;
-  }
-
-  void impact( action_state_t* s ) override
-  {
-    death_knight_spell_t::impact( s );
-
-    p()->trigger_rune_of_the_apocalypse( s->target );
-  }
-};
-
 // Blood Shield =============================================================
 struct blood_shield_buff_t final : public absorb_buff_t
 {
@@ -8611,14 +8580,6 @@ struct reapers_mark_t final : public death_knight_spell_t
       debug_cast<exterminate_t*>( p()->background_actions.exterminate )->empowered         = exterm_stacks;
       debug_cast<exterminate_aoe_t*>( p()->background_actions.exterminate_aoe )->empowered = exterm_stacks;
     }
-
-    // Tested and confirmed June 11th 2026.  Casting reapers mark gives 1 stack on blood, but should only apply to Frost
-    if ( p()->bugs && p()->specialization() == DEATH_KNIGHT_BLOOD && p()->talent.deathbringer.echoing_fury.ok() )
-    {
-      p()->buffs.exterminate->trigger( exterm_stacks );
-      debug_cast<exterminate_t*>( p()->background_actions.exterminate )->empowered         = exterm_stacks;
-      debug_cast<exterminate_aoe_t*>( p()->background_actions.exterminate_aoe )->empowered = exterm_stacks;
-    }  
   }
 
 private:
@@ -8765,8 +8726,7 @@ struct dark_transformation_t : public death_knight_spell_t
     if ( p->talent.unholy.blightfall.ok() )
       set_replacement_action( new blightfall_t( "blightfall", p, options_str ), p->buffs.blightfall );
 
-    if ( !p->talent.unholy.blightfall.ok() )
-      trigger_gcd = 0_ms;  // in data as 1.5s, only triggers this gcd if blightfall is talented.
+    trigger_gcd = 0_ms;  // in data as 1.5s, only triggers a shared gcd with blightfall so this shouldnt apply.
   }
 
   void execute() override
@@ -13853,10 +13813,8 @@ void death_knight_t::trigger_sanlayn_execute_talents( bool is_vampiric, bool sum
   {
     if ( specialization() == DEATH_KNIGHT_UNHOLY )
     {
-      if ( summoned_ghoul && !buffs.army_of_the_dead->check() )
-        active_lesser_ghouls.back()->transfusion->trigger();
-      // for ( auto& ghoul : active_lesser_ghouls )
-      // ghoul->transfusion->trigger();
+      for ( auto& ghoul : active_lesser_ghouls )
+        ghoul->transfusion->trigger();
     }
 
     else if ( specialization() == DEATH_KNIGHT_BLOOD )
@@ -14241,7 +14199,6 @@ void death_knight_t::create_actions()
     {
       pet_summon.army_ghoul = get_action<summon_lesser_ghoul_t>( "army_ghoul", this, spell.summon_army_ghoul,
                                                                  lesser_ghoul_e::LESSER_ARMY_OF_THE_DEAD );
-      background_actions.epidemic_order = get_action<epidemic_order_t>( "epidemic_order", this );
     }
 
     if ( talent.unholy.infected_claws.ok() )

@@ -1,4 +1,4 @@
-SimulationCraft 1210-01 for World of Warcraft 12.1.0.69382 Live
+SimulationCraft 1210-01 for World of Warcraft 12.1.0.69404 Live
 Name             : Stun (id=56) 
 School           : Physical
 Spell Type       : Magic
@@ -241759,7 +241759,7 @@ Duration         : 30 seconds
 Labels           : 3959: Item Effects
 Stacks           : 10 maximum
 Proc Chance      : 101%
-Attributes       : Aura Points On Client (268), Asynchronous Buff (490)
+Attributes       : Aura Points On Client (268), Asynchronous Aura (490)
 Effects          :
 #1 (id=1244299)  : Apply Aura (6) | Attribute (29)
                    Base Value: 0 | Scaled Value: 0 | PvP Coefficient: 0.5 | Stat: Int | Target: Self (1)
@@ -242235,7 +242235,7 @@ Duration         : 15 seconds
 Stacks           : 10 maximum
 Proc Chance      : 101%
 Triggered By     : Void (1244253)
-Attributes       : Item Cast With Owner Skill (88), DoT Stacking Rule (103), Aura Points On Client (268), Recompute Aura On Level Scale (446), Asynchronous Buff (490)
+Attributes       : Item Cast With Owner Skill (88), DoT Stacking Rule (103), Aura Points On Client (268), Recompute Aura On Level Scale (446), Asynchronous Aura (490)
 Effects          :
 #1 (id=1245511)  : Apply Aura (6) | Modify Rating (189)
                    Base Value: 0 | Scaled Value: 0 | Rating: Vers | Target: Self (1)
@@ -243020,7 +243020,7 @@ Duration         : 6 seconds
 Stacks           : 10 maximum
 Proc Chance      : 101%
 Triggered By     : Rot (1244332)
-Attributes       : Aura Is Debuff (26), No Reflection (39), No Threat (42), DoT Stacking Rule (103), Suppress Caster Procs (112), Allow Cast While Casting (135), Aura Points On Client (268), Missile Speed is Delay (in sec) (292), Allow Cast While Channeling (308), Don't Cancel When All Effects are Disabled (353), Asynchronous Buff (490)
+Attributes       : Aura Is Debuff (26), No Reflection (39), No Threat (42), DoT Stacking Rule (103), Suppress Caster Procs (112), Allow Cast While Casting (135), Aura Points On Client (268), Missile Speed is Delay (in sec) (292), Allow Cast While Channeling (308), Don't Cancel When All Effects are Disabled (353), Asynchronous Aura (490)
 Effects          :
 #1 (id=1249550)  : Apply Aura (6) | Periodic Damage (3): nature every 2 seconds | Attributes: Aura Points Stack (9)
                    Base Value: 0 | Scaled Value: 0 | Trigger Spell: 1245051 | Target: Targeted Enemy (6)
@@ -247335,7 +247335,7 @@ Labels           : 292
                  : 3959: Item Effects
 Stacks           : 15 maximum
 Proc Chance      : 101%
-Attributes       : Aura Points On Client (268), Asynchronous Buff (490)
+Attributes       : Aura Points On Client (268), Asynchronous Aura (490)
 Effects          :
 #1 (id=1267261)  : Apply Aura (6) | Attribute (29)
                    Base Value: 0 | Scaled Value: 0 | Stat: Int | Target: Self (1)
@@ -250637,15 +250637,15 @@ Name             : Rune of Unleashed Fire (id=1263002)
 School           : Fire
 Spell Type       : Magic
 Range            : 100 yards
+Max Targets      : 1
 Labels           : 6782
 Attributes       : Can't Crit (93)
 Effects          :
 #1 (id=1273548)  : Direct Heal (10)
-                   Base Value: 0 | Scaled Value: 0 | Target: Targeted Ally (21)
+                   Base Value: 0 | Scaled Value: 0 | Radius: 45 yards | Target: Ally in Area (30)
+Hotfixed         : Target 1 (21 -> 30)
 #2 (id=1305384)  : Dummy (3)
                    Base Value: 2051 | Scaled Value: 2051 | Target: Targeted Ally (21)
-#3 (id=1307063)  : Trigger Spell (64): Rune of Lingering
-                   Base Value: 0 | Scaled Value: 0 | Trigger Spell: 1287665 | Target: Targeted Ally (21)
 Description      : $@spelldesc1279599
 
 Name             : Amani Extract (id=1263074) 
@@ -250774,7 +250774,7 @@ Spell Type       : None
 Duration         : 20 seconds
 Stacks           : 15 maximum
 Proc Chance      : 101%
-Attributes       : Aura Is Buff (140), Aura Points On Client (268), Scales with Casting Item's Level (354), Unknown (489)
+Attributes       : Aura Is Buff (140), Aura Points On Client (268), Scales with Casting Item's Level (354), Aura Does Not Refresh (489)
 Effects          :
 #1 (id=1273976)  : Apply Aura (6) | Modify Rating (189) | Scaling Class: Secondary Rating (-7)
                    Base Value: 0 | Scaled Value: 13.10805 (coefficient=0.1) | Rating: Crit | Target: Self (1)
@@ -251371,7 +251371,7 @@ Duration         : 60 seconds
 Labels           : 3959: Item Effects
 Stacks           : 10 maximum
 Proc Chance      : 101%
-Attributes       : No Aura Cancel (31), Aura Icon Only For Caster (Limit 10) (212), Aura Points On Client (268), Scales with Casting Item's Level (354), Asynchronous Buff (490)
+Attributes       : No Aura Cancel (31), Aura Icon Only For Caster (Limit 10) (212), Aura Points On Client (268), Scales with Casting Item's Level (354), Asynchronous Aura (490)
 Effects          :
 #1 (id=1277407)  : Apply Aura (6) | Attribute (29)
                    Base Value: 0 | Scaled Value: 0 | Stat: StrAgiInt | Target: Self (1)
@@ -252252,7 +252252,7 @@ Labels           : 292
                  : 3959: Item Effects
 Stacks           : 20 maximum
 Proc Chance      : 101%
-Attributes       : Not an Action (92), Suppress Caster Procs (112), Aura Points On Client (268), Asynchronous Buff (490)
+Attributes       : Not an Action (92), Suppress Caster Procs (112), Aura Points On Client (268), Asynchronous Aura (490)
 Effects          :
 #1 (id=1279323)  : Apply Aura (6) | Attribute (29)
                    Base Value: 0 | Scaled Value: 0 | Stat: StrAgiInt | Target: Self (1)
@@ -252269,7 +252269,7 @@ Labels           : 292
 Stacks           : 20 maximum
 Proc Chance      : 101%
 Triggered By     : Alnsight (1266686)
-Attributes       : Do Not Display (Spellbook, Aura Icon, Combat Log) (7), Allow While Mounted (24), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Not an Action (92), Suppress Caster Procs (112), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Allow While Riding Vehicle (204), Allow While Charmed (261), Allow While Banished Aura State (299), Allow While Stunned By Horror Mechanic (342), Allow While Stunned by Stun Mechanic (378), Allow While Feared By Fear Mechanic (417), Unknown (452), Asynchronous Buff (490)
+Attributes       : Do Not Display (Spellbook, Aura Icon, Combat Log) (7), Allow While Mounted (24), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Not an Action (92), Suppress Caster Procs (112), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Allow While Riding Vehicle (204), Allow While Charmed (261), Allow While Banished Aura State (299), Allow While Stunned By Horror Mechanic (342), Allow While Stunned by Stun Mechanic (378), Allow While Feared By Fear Mechanic (417), Unknown (452), Asynchronous Aura (490)
 Effects          :
 #1 (id=1279342)  : Create Area Trigger (179)
                    Base Value: 0 | Scaled Value: 0 | Misc Value: 40575 | Radius: 6 yards | Target: at Radius (73) -> Self (1)
@@ -254023,7 +254023,6 @@ Description      : Restores $s1% of your maximum health and mana every second ov
 Tooltip          : Restoring $s1% health and mana every sec.
 
 Name             : Bundle of Adventurer Mistcrests (id=1286592) 
-Hotfixed         : Description
 School           : Physical
 Spell Type       : None
 Cast Time        : 0.5 seconds
@@ -254036,7 +254035,6 @@ Effects          :
 Description      : Collect 10 Adventurer Mistcrests.
 
 Name             : Satchel of Champion Mistcrests (id=1286602) 
-Hotfixed         : Description
 School           : Physical
 Spell Type       : None
 Cast Time        : 0.5 seconds
@@ -254049,7 +254047,6 @@ Effects          :
 Description      : Collect 10 Champion Mistcrests.
 
 Name             : Pack of Hero Mistcrests (id=1286604) 
-Hotfixed         : Description
 School           : Physical
 Spell Type       : None
 Cast Time        : 0.5 seconds
@@ -254062,7 +254059,6 @@ Effects          :
 Description      : Collect 10 Hero Mistcrests.
 
 Name             : Pouch of Veteran Mistcrests (id=1286605) 
-Hotfixed         : Description
 School           : Physical
 Spell Type       : None
 Cast Time        : 0.5 seconds
@@ -254178,15 +254174,16 @@ Name             : Rune of Unleashed Fire (id=1286970)
 School           : Fire
 Spell Type       : Magic
 Range            : 100 yards
+Max Targets      : 1
 Labels           : 6782
 Attributes       : Can't Crit (93), Do Not Display Range (126), Do Not Display Cast Time (441)
 Effects          :
 #1 (id=1304141)  : School Damage (2): fire
-                   Base Value: 0 | Scaled Value: 0 | Target: Targeted Enemy (6)
+                   Base Value: 0 | Scaled Value: 0 | Radius: 0 - 45 yards | Target: Source (22) -> Enemy in Area (15)
+Hotfixed         : Target 1 (6 -> 22), Target 2 (0 -> 15)
 #2 (id=1305382)  : Dummy (3)
-                   Base Value: 977 | Scaled Value: 977 | Target: Targeted Enemy (6)
-#3 (id=1307066)  : Trigger Spell (64): Rune of Lingering
-                   Base Value: 0 | Scaled Value: 0 | Trigger Spell: 1287663 | Target: Targeted Enemy (6)
+                   Base Value: 977 | Scaled Value: 977 | Radius: 0 - 45 yards | Target: Source (22) -> Enemy in Area (15)
+Hotfixed         : Target 1 (6 -> 22), Target 2 (0 -> 15)
 Description      : $@spelldesc1279599
 
 Name             : Rune of Void-Touched Orbs (desc=Core Rune) (id=1287255) [Hidden] 
@@ -254273,7 +254270,7 @@ Spell Type       : Magic
 Range            : 100 yards
 Duration         : 8 seconds
 Labels           : 6782
-Triggered By     : Rune of Void-Touched Orbs (1286716), Rune of Unleashed Fire (1286970)
+Triggered By     : Rune of Void-Touched Orbs (1286716)
 Attributes       : Not an Action (92), Do Not Display Range (126), Not an Attack (194), Aura Points On Client (268), Do Not Display Cast Time (441)
 Effects          :
 #1 (id=1305315)  : Apply Aura (6) | Periodic Damage (3): cosmic every 1 seconds | Attributes: Compute Points Only At Cast Time (15)
@@ -254289,7 +254286,7 @@ Spell Type       : Magic
 Range            : 100 yards
 Duration         : 8 seconds
 Labels           : 6782
-Triggered By     : Rune of Unleashed Fire (1263002), Rune of Void-Touched Orbs (1286721)
+Triggered By     : Rune of Void-Touched Orbs (1286721)
 Attributes       : Do Not Display Range (126), Aura Points On Client (268), Do Not Display Cast Time (441)
 Effects          :
 #1 (id=1305319)  : Apply Aura (6) | Periodic Heal (8): every 1 seconds | Attributes: Compute Points Only At Cast Time (15)
@@ -254305,7 +254302,7 @@ Spell Type       : None
 Duration         : 10 seconds
 Stacks           : 20 maximum
 Proc Chance      : 101%
-Attributes       : No Aura Cancel (31), Aura Points On Client (268), Do Not Display Cast Time (441), Asynchronous Buff (490)
+Attributes       : No Aura Cancel (31), Aura Points On Client (268), Do Not Display Cast Time (441), Asynchronous Aura (490)
 Effects          :
 #1 (id=1305485)  : Apply Aura (6) | Modify Rating (189)
                    Base Value: 0 | Scaled Value: 0 | Rating: Vers | Target: Self (1)
@@ -254320,7 +254317,7 @@ Spell Type       : None
 Duration         : 10 seconds
 Stacks           : 20 maximum
 Proc Chance      : 101%
-Attributes       : No Aura Cancel (31), Aura Points On Client (268), Do Not Display Cast Time (441), Asynchronous Buff (490)
+Attributes       : No Aura Cancel (31), Aura Points On Client (268), Do Not Display Cast Time (441), Asynchronous Aura (490)
 Effects          :
 #1 (id=1305486)  : Apply Aura (6) | Modify Rating (189)
                    Base Value: 0 | Scaled Value: 0 | Rating: Mastery | Target: Self (1)
@@ -254335,7 +254332,7 @@ Spell Type       : None
 Duration         : 10 seconds
 Stacks           : 20 maximum
 Proc Chance      : 101%
-Attributes       : No Aura Cancel (31), Aura Points On Client (268), Do Not Display Cast Time (441), Asynchronous Buff (490)
+Attributes       : No Aura Cancel (31), Aura Points On Client (268), Do Not Display Cast Time (441), Asynchronous Aura (490)
 Effects          :
 #1 (id=1305487)  : Apply Aura (6) | Modify Rating (189)
                    Base Value: 0 | Scaled Value: 0 | Rating: Crit | Target: Self (1)
@@ -254350,7 +254347,7 @@ Spell Type       : None
 Duration         : 10 seconds
 Stacks           : 20 maximum
 Proc Chance      : 101%
-Attributes       : No Aura Cancel (31), Aura Points On Client (268), Do Not Display Cast Time (441), Asynchronous Buff (490)
+Attributes       : No Aura Cancel (31), Aura Points On Client (268), Do Not Display Cast Time (441), Asynchronous Aura (490)
 Effects          :
 #1 (id=1305489)  : Apply Aura (6) | Modify Rating (189)
                    Base Value: 0 | Scaled Value: 0 | Rating: Haste | Target: Self (1)
@@ -254952,7 +254949,7 @@ School           : Physical
 Spell Type       : None
 Range            : 100 yards
 Duration         : 10 seconds
-Attributes       : No Aura Cancel (31), Casting Cancels Autorepeat (Mainline: Do Not Trigger Target Stand) (118), Aura Points On Client (268), Do Not Display Cast Time (441), Unknown (489)
+Attributes       : No Aura Cancel (31), Casting Cancels Autorepeat (Mainline: Do Not Trigger Target Stand) (118), Aura Points On Client (268), Do Not Display Cast Time (441), Aura Does Not Refresh (489)
 Effects          :
 #1 (id=1307259)  : Apply Aura (6) | Dummy (4) | Attributes: Suppress Points Stacking (6), Aura Points Stack (9)
                    Base Value: 0 | Scaled Value: 0 | Target: Current Target (25)
@@ -254969,7 +254966,7 @@ Duration         : 60 seconds
 Labels           : 6096
 Stacks           : 255 maximum
 Proc Chance      : 101%
-Attributes       : Allow While Mounted (24), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), Can't Crit (93), DoT Stacking Rule (103), Suppress Caster Procs (112), Suppress Target Procs (113), Allow Cast While Casting (135), Suppress Weapon Procs (151), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Allow On Charmed Targets (201), Allow While Riding Vehicle (204), Allow While Charmed (261), Aura Points On Client (268), Allow Cast While Channeling (308), Allow While Stunned By Horror Mechanic (342), Scales with Casting Item's Level (354), Allow While Stunned by Stun Mechanic (378), Allow during spell override (404), Allow While Feared By Fear Mechanic (417), Asynchronous Buff (490)
+Attributes       : Allow While Mounted (24), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), Can't Crit (93), DoT Stacking Rule (103), Suppress Caster Procs (112), Suppress Target Procs (113), Allow Cast While Casting (135), Suppress Weapon Procs (151), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Allow On Charmed Targets (201), Allow While Riding Vehicle (204), Allow While Charmed (261), Aura Points On Client (268), Allow Cast While Channeling (308), Allow While Stunned By Horror Mechanic (342), Scales with Casting Item's Level (354), Allow While Stunned by Stun Mechanic (378), Allow during spell override (404), Allow While Feared By Fear Mechanic (417), Asynchronous Aura (490)
 Effects          :
 #1 (id=1307374)  : Apply Aura (6) | Periodic Damage (3): nature every 5 seconds
                    Base Value: 0 | Scaled Value: 0 | PvP Coefficient: 0.4 | Target: Targeted Enemy (6)
@@ -254994,7 +254991,6 @@ Effects          :
 Description      : Add the Lindormi's Guidance affix to a Mythic Keystone.
 
 Name             : Gift Expunction (id=1289168) 
-Hotfixed         : Description
 School           : Nature
 Spell Type       : Magic
 Range            : 50000 yards
@@ -256141,7 +256137,7 @@ Range            : 150 yards
 Duration         : 60 seconds
 Stacks           : 1 maximum
 Proc Chance      : 101%
-Attributes       : Allow Cast While Dead (23), Allow While Mounted (24), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), Allow Cast While Casting (135), Allow Actions During Channel (160), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Allow On Charmed Targets (201), Allow While Riding Vehicle (204), Allow While Charmed (261), Aura Points On Client (268), Allow Cast While Channeling (308), Proc cooldown on a per target basis (330), Allow While Stunned By Horror Mechanic (342), Scales with Casting Item's Level (354), Allow While Stunned by Stun Mechanic (378), Allow during spell override (404), Allow While Feared By Fear Mechanic (417), Do Not Consume Aura Stack On Proc (428), Asynchronous Buff (490)
+Attributes       : Allow Cast While Dead (23), Allow While Mounted (24), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), Allow Cast While Casting (135), Allow Actions During Channel (160), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Allow On Charmed Targets (201), Allow While Riding Vehicle (204), Allow While Charmed (261), Aura Points On Client (268), Allow Cast While Channeling (308), Proc cooldown on a per target basis (330), Allow While Stunned By Horror Mechanic (342), Scales with Casting Item's Level (354), Allow While Stunned by Stun Mechanic (378), Allow during spell override (404), Allow While Feared By Fear Mechanic (417), Do Not Consume Aura Stack On Proc (428), Asynchronous Aura (490)
 Effects          :
 #1 (id=1312038)  : Apply Aura (6) | Absorb Damage (69) | Scaling Class: Replace Primary (-8)
                    Base Value: 0 | Scaled Value: 0 | PvP Coefficient: 0 | Misc Value: 0x7f | Target: Self (1)
@@ -257140,7 +257136,7 @@ Labels           : 292
 Stacks           : 10 maximum
 Proc Chance      : 101%
 Triggered By     : Keeper's Seething Core (1292065)
-Attributes       : Extra Initial Period (169), Aura Points On Client (268), Asynchronous Buff (490)
+Attributes       : Extra Initial Period (169), Aura Points On Client (268), Asynchronous Aura (490)
 Effects          :
 #1 (id=1317723)  : Apply Aura (6) | Modify Rating (189)
                    Base Value: 0 | Scaled Value: 0 | Rating: Haste | Target: Self (1)
@@ -257362,7 +257358,6 @@ Effects          :
 Description      : Recipe for $M1 servings. Actual number of servings will vary based on cooking skill.
 
 Name             : Ouroboric Gift (id=1295803) 
-Hotfixed         : Tooltip
 School           : Physical
 Spell Type       : None
 Range            : 50000 yards
@@ -257381,7 +257376,6 @@ Effects          :
                    Base Value: 0 | Scaled Value: 0 | Rating: RunSpeed, Leech, Avoidance | Target: Self (1)
 #3 (id=1318110)  : Apply Aura (6) | Modify Combat Rating Multiplier (405)
                    Base Value: 0 | Scaled Value: 0 | Rating: RunSpeed, Leech, Avoidance | Target: Self (1)
-Hotfixed         : Base Value (100 -> 0)
 Description      : Increases $pri by $s1% and all Tertiary stats by $s2%
 Tooltip          : $pri increased by $w1% and Tertiary stats increased by $w3%.
 
@@ -257645,7 +257639,7 @@ Range            : 50000 yards
 Duration         : 10 seconds
 Stacks           : 1 maximum
 Proc Chance      : 101%
-Attributes       : Allow Cast While Dead (23), Allow While Mounted (24), Aura Is Debuff (26), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), Allow Client Targeting (133), Allow Cast While Casting (135), Allow Proc While Sitting (147), Allow Entering Arena (149), Allow Actions During Channel (160), Allow While Fleeing (177), Allow While Confused (178), Allow On Charmed Targets (201), Allow While Riding Vehicle (204), Allow Equip While Casting (209), Allow While Charmed (261), Aura Points On Client (268), Allow Cast While Channeling (308), Allow While Feared By Fear Mechanic (417), Asynchronous Buff (490)
+Attributes       : Allow Cast While Dead (23), Allow While Mounted (24), Aura Is Debuff (26), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), Allow Client Targeting (133), Allow Cast While Casting (135), Allow Proc While Sitting (147), Allow Entering Arena (149), Allow Actions During Channel (160), Allow While Fleeing (177), Allow While Confused (178), Allow On Charmed Targets (201), Allow While Riding Vehicle (204), Allow Equip While Casting (209), Allow While Charmed (261), Aura Points On Client (268), Allow Cast While Channeling (308), Allow While Feared By Fear Mechanic (417), Asynchronous Aura (490)
 Effects          :
 #1 (id=1318563)  : Apply Aura (6) | Modify Damage Taken% (87)
                    Base Value: 5 | Scaled Value: 5 | Misc Value: 0x7f | Target: Targeted Enemy (6)
@@ -257659,7 +257653,7 @@ Spell Type       : Magic
 Range            : 50000 yards
 Stacks           : 1 maximum
 Proc Chance      : 101%
-Attributes       : Allow Cast While Dead (23), Allow While Mounted (24), Aura Is Debuff (26), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), Allow Client Targeting (133), Allow Cast While Casting (135), Allow Proc While Sitting (147), Allow Entering Arena (149), Allow Actions During Channel (160), Allow While Fleeing (177), Allow While Confused (178), Allow On Charmed Targets (201), Allow While Riding Vehicle (204), Allow Equip While Casting (209), Allow While Charmed (261), Aura Points On Client (268), Allow Cast While Channeling (308), Allow While Feared By Fear Mechanic (417), Asynchronous Buff (490)
+Attributes       : Allow Cast While Dead (23), Allow While Mounted (24), Aura Is Debuff (26), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), Allow Client Targeting (133), Allow Cast While Casting (135), Allow Proc While Sitting (147), Allow Entering Arena (149), Allow Actions During Channel (160), Allow While Fleeing (177), Allow While Confused (178), Allow On Charmed Targets (201), Allow While Riding Vehicle (204), Allow Equip While Casting (209), Allow While Charmed (261), Aura Points On Client (268), Allow Cast While Channeling (308), Allow While Feared By Fear Mechanic (417), Asynchronous Aura (490)
 Effects          :
 #1 (id=1318579)  : Dummy (3)
                    Base Value: 0 | Scaled Value: 0 | Radius: 0 - 8 yards | Target: At Enemy (53) -> at Enemy in Area (16)
@@ -258250,7 +258244,7 @@ Range            : 100 yards
 Duration         : 15 seconds
 Stacks           : 3 maximum
 Proc Chance      : 101%
-Attributes       : Aura Is Buff (140), Aura Points On Client (268), Unknown (489)
+Attributes       : Aura Is Buff (140), Aura Points On Client (268), Aura Does Not Refresh (489)
 Effects          :
 #1 (id=1319673)  : Apply Aura (6) | Modify Rating (189)
                    Base Value: 0 | Scaled Value: 0 | Rating: Haste | Target: Targeted Ally (21)
@@ -258394,7 +258388,6 @@ If an afflicted target dies the Venom is expelled, instantly dealing its remaini
 Tooltip          : Absorb x damage.
 
 Name             : Hunter's Ritual Stone (id=1297382) [Passive, Hidden] 
-Hotfixed         : Max Scaling Level (0 -> 90)
 School           : Physical
 Spell Type       : None
 Max Scaling Level: 90
@@ -258406,7 +258399,6 @@ Effects          :
                    Base Value: 50 | Scaled Value: 50 | Trigger Spell: 1295897 | Target: Self (1)
 #2 (id=1320611)  : Dummy (3) | Scaling Class: Secondary Rating (-7)
                    Base Value: 0 | Scaled Value: 66.51784 (coefficient=0.507458)
-Hotfixed         : Coefficient (0.830768 -> 0.507458)
 Description      : Your damaging spells and abilities have a chance to grant $s2 of a random secondary stat for $1295898d.
 
 While on a Prey Hunt this effect is increased by $s1%. This bonus is only available outdoors while hunting prey.
@@ -258922,7 +258914,7 @@ Duration         : 5 seconds
 Labels           : 6096
 Stacks           : 99 maximum
 Proc Chance      : 101%
-Attributes       : Allow While Mounted (24), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), Can't Crit (93), DoT Stacking Rule (103), Suppress Caster Procs (112), Suppress Target Procs (113), Allow Cast While Casting (135), Allow Entering Arena (149), Suppress Weapon Procs (151), Allow Actions During Channel (160), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Always Line of Sight (185), Allow On Charmed Targets (201), Allow While Riding Vehicle (204), Allow While Charmed (261), Aura Points On Client (268), Allow While Banished Aura State (299), Allow Cast While Channeling (308), Allow While Stunned By Horror Mechanic (342), Allow While Stunned by Stun Mechanic (378), Allow Class Ability Procs (416), Allow While Feared By Fear Mechanic (417), Do Not Consume Aura Stack On Proc (428), Asynchronous Buff (490)
+Attributes       : Allow While Mounted (24), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), Can't Crit (93), DoT Stacking Rule (103), Suppress Caster Procs (112), Suppress Target Procs (113), Allow Cast While Casting (135), Allow Entering Arena (149), Suppress Weapon Procs (151), Allow Actions During Channel (160), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Always Line of Sight (185), Allow On Charmed Targets (201), Allow While Riding Vehicle (204), Allow While Charmed (261), Aura Points On Client (268), Allow While Banished Aura State (299), Allow Cast While Channeling (308), Allow While Stunned By Horror Mechanic (342), Allow While Stunned by Stun Mechanic (378), Allow Class Ability Procs (416), Allow While Feared By Fear Mechanic (417), Do Not Consume Aura Stack On Proc (428), Asynchronous Aura (490)
 Effects          :
 #1 (id=1327399)  : Apply Aura (6) | Periodic Damage (3): nature every 1 seconds
                    Base Value: 0 | Scaled Value: 0 | Target: Targeted Enemy (6)
@@ -258937,7 +258929,7 @@ Spell Type       : Magic
 Range            : 50000 yards
 Duration         : 5 seconds
 Labels           : 6096
-Attributes       : Allow Cast While Dead (23), Allow While Mounted (24), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), Can't Crit (93), DoT Stacking Rule (103), Suppress Caster Procs (112), Suppress Target Procs (113), Allow Cast While Casting (135), Suppress Weapon Procs (151), Allow Actions During Channel (160), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Allow On Charmed Targets (201), Allow While Riding Vehicle (204), Allow While Charmed (261), Aura Points On Client (268), Allow Cast While Channeling (308), Proc cooldown on a per target basis (330), Allow While Stunned By Horror Mechanic (342), Scales with Casting Item's Level (354), Allow While Stunned by Stun Mechanic (378), Allow during spell override (404), Allow While Feared By Fear Mechanic (417), Do Not Consume Aura Stack On Proc (428), Asynchronous Buff (490)
+Attributes       : Allow Cast While Dead (23), Allow While Mounted (24), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), Can't Crit (93), DoT Stacking Rule (103), Suppress Caster Procs (112), Suppress Target Procs (113), Allow Cast While Casting (135), Suppress Weapon Procs (151), Allow Actions During Channel (160), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Allow On Charmed Targets (201), Allow While Riding Vehicle (204), Allow While Charmed (261), Aura Points On Client (268), Allow Cast While Channeling (308), Proc cooldown on a per target basis (330), Allow While Stunned By Horror Mechanic (342), Scales with Casting Item's Level (354), Allow While Stunned by Stun Mechanic (378), Allow during spell override (404), Allow While Feared By Fear Mechanic (417), Do Not Consume Aura Stack On Proc (428), Asynchronous Aura (490)
 Effects          :
 #1 (id=1327442)  : Apply Aura (6) | Periodic Damage (3): nature every 1 seconds
                    Base Value: 0 | Scaled Value: 0 | Target: Targeted Enemy (6)
@@ -259280,7 +259272,7 @@ Labels           : 6096
 Stacks           : 2 maximum
 Proc Chance      : 101%
 Triggered By     : Insidious Venom (1302568)
-Attributes       : Allow Cast While Dead (23), Allow While Mounted (24), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), Allow Cast While Casting (135), Allow Actions During Channel (160), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Allow On Charmed Targets (201), Allow While Riding Vehicle (204), Allow While Charmed (261), Aura Points On Client (268), Allow Cast While Channeling (308), Proc cooldown on a per target basis (330), Allow While Stunned By Horror Mechanic (342), Allow While Stunned by Stun Mechanic (378), Allow during spell override (404), Allow While Feared By Fear Mechanic (417), Do Not Consume Aura Stack On Proc (428), Asynchronous Buff (490)
+Attributes       : Allow Cast While Dead (23), Allow While Mounted (24), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), Allow Cast While Casting (135), Allow Actions During Channel (160), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Allow On Charmed Targets (201), Allow While Riding Vehicle (204), Allow While Charmed (261), Aura Points On Client (268), Allow Cast While Channeling (308), Proc cooldown on a per target basis (330), Allow While Stunned By Horror Mechanic (342), Allow While Stunned by Stun Mechanic (378), Allow during spell override (404), Allow While Feared By Fear Mechanic (417), Do Not Consume Aura Stack On Proc (428), Asynchronous Aura (490)
 Effects          :
 #1 (id=1328304)  : Apply Aura (6) | Attribute (29)
                    Base Value: 0 | Scaled Value: 0 | Stat: All | Target: Self (1)
@@ -259297,7 +259289,7 @@ Labels           : 6096
 Stacks           : 99 maximum
 Proc Chance      : 101%
 Proc Flags       : Cast Successful
-Attributes       : Allow Cast While Dead (23), Allow While Mounted (24), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), Can't Crit (93), DoT Stacking Rule (103), Suppress Caster Procs (112), Suppress Target Procs (113), Allow Cast While Casting (135), Suppress Weapon Procs (151), Allow Actions During Channel (160), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Allow On Charmed Targets (201), Allow While Riding Vehicle (204), Allow While Charmed (261), Aura Points On Client (268), Allow Cast While Channeling (308), Proc cooldown on a per target basis (330), Allow While Stunned By Horror Mechanic (342), Scales with Casting Item's Level (354), Allow While Stunned by Stun Mechanic (378), Allow during spell override (404), Allow While Feared By Fear Mechanic (417), Do Not Consume Aura Stack On Proc (428), Asynchronous Buff (490)
+Attributes       : Allow Cast While Dead (23), Allow While Mounted (24), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), Can't Crit (93), DoT Stacking Rule (103), Suppress Caster Procs (112), Suppress Target Procs (113), Allow Cast While Casting (135), Suppress Weapon Procs (151), Allow Actions During Channel (160), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Allow On Charmed Targets (201), Allow While Riding Vehicle (204), Allow While Charmed (261), Aura Points On Client (268), Allow Cast While Channeling (308), Proc cooldown on a per target basis (330), Allow While Stunned By Horror Mechanic (342), Scales with Casting Item's Level (354), Allow While Stunned by Stun Mechanic (378), Allow during spell override (404), Allow While Feared By Fear Mechanic (417), Do Not Consume Aura Stack On Proc (428), Asynchronous Aura (490)
 Effects          :
 #1 (id=1328416)  : Apply Aura (6) | Periodic Damage (3): nature every 1 seconds
                    Base Value: 0 | Scaled Value: 0 | Target: Current Target (25)
@@ -259329,7 +259321,7 @@ Duration         : 60 seconds
 Labels           : 6096
 Stacks           : 100 maximum
 Proc Chance      : 101%
-Attributes       : Allow While Mounted (24), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), Can't Crit (93), DoT Stacking Rule (103), Suppress Caster Procs (112), Suppress Target Procs (113), Allow Cast While Casting (135), Allow Entering Arena (149), Suppress Weapon Procs (151), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Always Line of Sight (185), Allow On Charmed Targets (201), Allow While Riding Vehicle (204), Aura Points On Client (268), Allow Cast While Channeling (308), Allow during spell override (404), Do Not Consume Aura Stack On Proc (428), Asynchronous Buff (490)
+Attributes       : Allow While Mounted (24), Allow While Sitting (27), Allow While Stealthed (37), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), Can't Crit (93), DoT Stacking Rule (103), Suppress Caster Procs (112), Suppress Target Procs (113), Allow Cast While Casting (135), Allow Entering Arena (149), Suppress Weapon Procs (151), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Always Line of Sight (185), Allow On Charmed Targets (201), Allow While Riding Vehicle (204), Aura Points On Client (268), Allow Cast While Channeling (308), Allow during spell override (404), Do Not Consume Aura Stack On Proc (428), Asynchronous Aura (490)
 Effects          :
 #1 (id=1328441)  : Apply Aura (6) | Periodic Damage (3): nature every 2 seconds
                    Base Value: 0 | Scaled Value: 0 | Target: Targeted Enemy (6)
@@ -259506,6 +259498,7 @@ Description      : Restores $s1% of your maximum mana every second over $d. Must
 Tooltip          : Restoring $w1% mana every sec.
 
 Name             : Hearty Amani Cornucopia (id=1303407) 
+Hotfixed         : Description
 School           : Physical
 Spell Type       : None
 Range            : 5 yards
@@ -259524,11 +259517,12 @@ Description      : Place a Hearty Amani Cornucopia for all players to enjoy!
 $@spelldesc1232065
 
 $@spellicon457049 $@spellname1232078
-If you spend at least 10 seconds eating, you will become $@spellname1232078 gaining $1219179s7 Stamina and $1219179s4 of your highest secondary stat for $462209d.
+If you spend at least 10 seconds eating, you will become $@spellname1232078 gaining ${$1219179s7*1.1} Stamina and ${$1219179s4*1.1} of your highest secondary stat for $462209d.
 
 This aura persists through death.
 
 Name             : Hearty Loa's Gathering (id=1303408) 
+Hotfixed         : Description
 School           : Physical
 Spell Type       : None
 Range            : 5 yards
@@ -259547,11 +259541,12 @@ Description      : Place a Hearty Loa's Gathering for all players to enjoy!
 $@spelldesc1232065
 
 $@spellicon457049 $@spellname1232078
-If you spend at least 10 seconds eating, you will become $@spellname1232078 gaining $1219179s7 Stamina and $1219179s4 of your highest secondary stat for $462209d.
+If you spend at least 10 seconds eating, you will become $@spellname1232078 gaining ${$1219179s7*1.1} Stamina and ${$1219179s4*1.1} of your highest secondary stat for $462209d.
 
 This aura persists through death.
 
 Name             : Hearty Feast of Knowledge (id=1303409) 
+Hotfixed         : Description
 School           : Physical
 Spell Type       : None
 Range            : 5 yards
@@ -259570,7 +259565,7 @@ Description      : Place a Hearty Feast of Knowledge for all players to enjoy!
 $@spelldesc1232065
 
 $@spellicon457049 $@spellname1232078
-If you spend at least 10 seconds eating, you will become $@spellname1232078 gaining $1219179s7 Stamina and $1219179s4 of your highest secondary stat for $462209d.
+If you spend at least 10 seconds eating, you will become $@spellname1232078 gaining ${$1219179s7*1.1} Stamina and ${$1219179s4*1.1} of your highest secondary stat for $462209d.
 
 This aura persists through death.
 
@@ -260541,7 +260536,6 @@ Description      : $@spelldesc1305830
 
 
 Name             : Preternatural Antivenom (id=1305846) 
-Hotfixed         : Attributes
 School           : Nature
 Spell Type       : None
 Range            : 100 yards
@@ -260700,7 +260694,7 @@ Labels           : 292
                  : 3959: Item Effects
 Stacks           : 20 maximum
 Proc Chance      : 101%
-Attributes       : DoT Stacking Rule (103), Always Line of Sight (185), Periodic Can Crit (265), Aura Points On Client (268), Asynchronous Buff (490)
+Attributes       : DoT Stacking Rule (103), Always Line of Sight (185), Periodic Can Crit (265), Aura Points On Client (268), Asynchronous Aura (490)
 Effects          :
 #1 (id=1334105)  : Apply Aura (6) | Periodic Damage (3): nature every 1 seconds
                    Base Value: 0 | Scaled Value: 0 | Target: Targeted Enemy (6)
@@ -261078,19 +261072,17 @@ Attributes       : Passive (6), No Aura Icon (60), Can Proc From Procs (122), No
 Effects          :
 #1 (id=1336169)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
                    Base Value: 0 | Scaled Value: 165.7889 (coefficient=1.264787) | Trigger Spell: 1307910 | Target: Self (1)
-Hotfixed         : Sub Type (42 -> 4)
 #2 (id=1336170)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
                    Base Value: 0 | Scaled Value: -27.63072 (coefficient=-0.210792) | Target: Self (1)
 Description      : Your spells and abilities have a chance to increase your Critical Strike by $s1, but reduce your other secondary stats by $s2 for $1307910d.
 
 Name             : Venomcursed Critical Strike (id=1307910) 
-Hotfixed         : Attributes
 School           : Nature
 Spell Type       : None
 Duration         : 12 seconds
 Labels           : 292
                  : 3959: Item Effects
-Triggered By     : Venomcursed Critical Strike (1307906), Venomcursed Critical Strike (1317036)
+Triggered By     : Venomcursed Critical Strike (1307906)
 Attributes       : Aura Never Bounces (148), Aura Points On Client (268), Periodic Refresh Extends Duration (436)
 Effects          :
 #1 (id=1336174)  : Apply Aura (6) | Modify Rating (189)
@@ -261101,7 +261093,6 @@ Description      : $@spelldesc1307906
 Tooltip          : Critical Strike increased by $w1. Haste, Mastery, and Versatility decreased by $w2.
 
 Name             : Venomcursed Mastery (id=1307922) 
-Hotfixed         : Attributes
 School           : Nature
 Spell Type       : None
 Duration         : 12 seconds
@@ -261129,13 +261120,11 @@ Attributes       : Passive (6), No Aura Icon (60), Can Proc From Procs (122), No
 Effects          :
 #1 (id=1336195)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
                    Base Value: 0 | Scaled Value: 165.7889 (coefficient=1.264787) | Trigger Spell: 1307922 | Target: Self (1)
-Hotfixed         : Sub Type (42 -> 4)
 #2 (id=1336196)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
                    Base Value: 0 | Scaled Value: -27.63072 (coefficient=-0.210792) | Target: Self (1)
 Description      : Your spells and abilities have a chance to increase your Mastery by $s1, but reduce your other secondary stats by $s2 for $1307922d.
 
 Name             : Venomcursed Haste (id=1307927) 
-Hotfixed         : Attributes
 School           : Nature
 Spell Type       : None
 Duration         : 12 seconds
@@ -261163,7 +261152,6 @@ Attributes       : Passive (6), No Aura Icon (60), Can Proc From Procs (122), No
 Effects          :
 #1 (id=1336206)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
                    Base Value: 0 | Scaled Value: 165.7889 (coefficient=1.264787) | Trigger Spell: 1307927 | Target: Self (1)
-Hotfixed         : Sub Type (42 -> 4)
 #2 (id=1336207)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
                    Base Value: 0 | Scaled Value: -27.63072 (coefficient=-0.210792) | Target: Self (1)
 Description      : Your spells and abilities have a chance to increase your Haste by $s1, but reduce your other secondary stats by $s2 for $1307927d.
@@ -261462,7 +261450,32 @@ Effects          :
 #1 (id=1342188)  : Summon Credit Creature (90)
                    Base Value: 0 | Scaled Value: 0 | Misc Value: 265919 | Target: Self (1)
 
-Name             : Venomcursed Critical Strike (id=1317036) [Passive] 
+Name             : Venomcursed Ascendance (id=1317581) 
+Hotfixed         : NEW SPELL
+School           : Nature
+Spell Type       : None
+Duration         : 12 seconds
+Labels           : 292
+                 : 3959: Item Effects
+Triggered By     : Venomcursed Ascendance (1317582)
+Attributes       : Aura Points On Client (268), Periodic Refresh Extends Duration (436)
+Effects          :
+#1 (id=1350712)  : Apply Aura (6) | Modify Rating (189)
+                   Base Value: 0 | Scaled Value: 0 | PvP Coefficient: 0.66 | Rating: Crit | Target: Self (1)
+Hotfixed         : NEW EFFECT
+#2 (id=1350713)  : Apply Aura (6) | Modify Rating (189)
+                   Base Value: 0 | Scaled Value: 0 | Rating: Haste | Target: Self (1)
+Hotfixed         : NEW EFFECT
+#3 (id=1350714)  : Apply Aura (6) | Modify Rating (189)
+                   Base Value: 0 | Scaled Value: 0 | Rating: Mastery | Target: Self (1)
+Hotfixed         : NEW EFFECT
+#4 (id=1350715)  : Apply Aura (6) | Modify Rating (189)
+                   Base Value: 0 | Scaled Value: 0 | Rating: Vers | Target: Self (1)
+Hotfixed         : NEW EFFECT
+Description      : $@spelldesc1317582
+Tooltip          : $?$W1>0[Critical Strike increased by $w1. Haste, Mastery, and Versatility decreased by $w2.]?$W2>0[Haste increased by $w2. Critical Strike, Mastery, and Versatility decreased by $w1.]?$W3>0[Mastery increased by $w3. Critical Strike, Haste, and Versatility decreased by $w1.]?$W4>0[Versatility increased by $w4. Critical Strike, Haste, and Mastery decreased by $w1.][]
+
+Name             : Venomcursed Ascendance (id=1317582) [Passive] 
 Hotfixed         : NEW SPELL
 School           : Physical
 Spell Type       : None
@@ -261473,11 +261486,11 @@ Real PPM         : 2
 Proc Flags       : Yellow Melee, Yellow Ranged, Generic Helpful, Generic Hostile Spell, Magic Heal, Magic Hostile Spell
 Attributes       : Passive (6), No Aura Icon (60), Can Proc From Procs (122), No Aura Log (202), Aura Points On Client (268), Scales with Casting Item's Level (354)
 Effects          :
-#1 (id=1350099)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
-                   Base Value: 0 | Scaled Value: 124.7005 (coefficient=0.951328) | Trigger Spell: 1307910 | Target: Self (1)
+#1 (id=1350716)  : Apply Aura (6) | Proc Trigger Spell (42): Venomcursed Ascendance | Scaling Class: Secondary Rating (-7)
+                   Base Value: 0 | Scaled Value: 130.8133 (coefficient=0.997962) | Trigger Spell: 1317581 | Target: Self (1)
 Hotfixed         : NEW EFFECT
-#2 (id=1350100)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
-                   Base Value: 0 | Scaled Value: -20.78347 (coefficient=-0.158555) | Target: Self (1)
+#2 (id=1350717)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
+                   Base Value: 0 | Scaled Value: -22.00592 (coefficient=-0.167881) | Target: Self (1)
 Hotfixed         : NEW EFFECT
-Description      : Your spells and abilities have a chance to increase your Critical Strike by $s1, but reduce your other secondary stats by $s2 for $1307910d.
+Description      : Your spells and abilities have a chance to increase a random secondary stat by $s1 but reduce your other secondary stats by $s2 for $1317581d.
 
