@@ -601,6 +601,62 @@ void farstriders_hawkeye( special_effect_t& effect )
 
   new dbc_proc_callback_t( effect.player, effect );
 }
+
+// Rite of the Hash'ey
+// 1297651 Rank 1 Driver
+// 1297652 Rank 2 Driver
+// 1297654 RPPM
+// 1297655 Jan'alai's Rite (Haste)
+// 1297663 Halazzi's Rite (Crit)
+// 1297664 Akil'zon's Rite (Mastery)
+// 1297665 Nalorakk's Rite (Vers)
+// The proc always grants the highest secondary stat, so "favors"
+// is implemented as a guarantee while above the health threshold.
+void rite_of_the_hashey( special_effect_t& effect )
+{
+  struct rite_of_the_hashey_cb_t final : public dbc_proc_callback_t
+  {
+    std::unordered_map<stat_e, buff_t*> rites;
+
+    rite_of_the_hashey_cb_t( const special_effect_t& e, std::unordered_map<stat_e, buff_t*> b )
+      : dbc_proc_callback_t( e.player, e ), rites( std::move( b ) )
+    {}
+
+    void execute( const spell_data_t*, player_t*, action_state_t* ) override
+    {
+      // The enchant favors the highest secondary stat while above 80% health. Instead of tracking
+      // health, roll against the configured uptime for how often that condition is met.
+      auto stat = rng().roll( listener->midnight_opts.rite_of_the_hashey_uptime )
+                    ? util::highest_stat( listener, secondary_ratings )
+                    : secondary_ratings[ rng().range( secondary_ratings.size() ) ];
+
+      rites[ stat ]->trigger();
+    }
+  };
+
+  auto proc_value = effect.driver()->effectN( 1 ).average( effect );
+
+  std::unordered_map<stat_e, buff_t*> rites;
+
+  for ( unsigned id : { 1297655u, 1297663u, 1297664u, 1297665u } )
+  {
+    auto rite_data = effect.player->find_spell( id );
+
+    assert( rite_data->effectN( 1 ).subtype() == A_MOD_RATING );
+
+    rites[ util::translate_rating_mod( rite_data->effectN( 1 ).misc_value1() ) ] =
+      create_buff<stat_buff_t>( effect.player, rite_data )
+        ->add_stat_from_effect_type( A_MOD_RATING, proc_value );
+  }
+
+  // skip setup if callback has been created by already having another copy of the enchant
+  if ( find_special_effect( effect.player, effect.trigger()->id() ) )
+    return;
+
+  effect.spell_id = effect.trigger()->id();
+
+  new rite_of_the_hashey_cb_t( effect, std::move( rites ) );
+}
 }  // namespace enchants
 
 namespace embellishments
@@ -1854,7 +1910,7 @@ void sapling_of_the_dawnroot( special_effect_t& effect )
     {
       parent_action = parent;
       main_hand_weapon.type = WEAPON_BEAST;
-      main_hand_weapon.swing_time = 2_s;
+      main_hand_weapon.swing_time = 1500_ms;
       use_auto_attack = true;
     }
 
@@ -1875,6 +1931,11 @@ void sapling_of_the_dawnroot( special_effect_t& effect )
     {
       unique_gear_pet_t::create_actions();
       sappy_demise = new sappy_demise_t( effect, "sappy_demise", this, find_spell( 1263121 ), parent_action );
+    }
+
+    double composite_melee_auto_attack_speed() const override
+    {
+      return 1.0;
     }
 
   private:
@@ -4203,6 +4264,258 @@ void tattered_amani_war_banner( special_effect_t& effect )
   effect.disable_buff();
   effect.has_use_buff_override = true;
 }
+
+// 1291885 effect driver
+// 1291894 use driver
+// 1307599 aura trigger
+// 1307578 absorb
+void soulcoiler_ritual_vessel( special_effect_t& effect )
+{
+  struct fractional_absorb_t : public absorb_buff_t
+  {
+    double absorb_fraction;
+
+    fractional_absorb_t( actor_pair_t q, std::string_view name, const spell_data_t* spell,
+                         const item_t* item = nullptr )
+      : absorb_buff_t( q, name, spell, item ), absorb_fraction( 1.0 )
+    {
+    }
+
+    fractional_absorb_t( player_t* target, player_t* source, std::string_view name, const spell_data_t* spell,
+                         const item_t* item = nullptr )
+      : fractional_absorb_t( { target, source }, name, spell, item )
+    {
+    }
+
+    double consume( double amount, action_state_t* state = nullptr ) override
+    {
+      return absorb_buff_t::consume( amount * absorb_fraction, state );
+    }
+
+    absorb_buff_t* set_absorb_fraction( double fraction )
+    {
+      absorb_fraction = fraction;
+      return this;
+    }
+  };
+
+  struct soulcoiler_ritual_vessel_t : public proc_heal_t
+  {
+    target_specific_t<absorb_buff_t> absorb_buffs;
+    const special_effect_t& e;
+    const spell_data_t* absorb_spell;
+    double absorb_amount;
+    mutable target_cache_t absorb_target_cache;
+
+    soulcoiler_ritual_vessel_t( const special_effect_t& effect, const spell_data_t* absorb_spell )
+      : proc_heal_t( "soulcoiler_ritual_vessel", effect.player, effect.driver() ),
+        absorb_amount( 0 ),
+        absorb_target_cache(),
+        absorb_buffs{ false },
+        e( effect ),
+        absorb_spell( absorb_spell )
+    {
+      auto equip = find_special_effect( effect.player, 1291885 );
+      assert( equip && "Soulcoiler Ritual Vessel missing equip effect" );
+
+      absorb_amount = equip->driver()->effectN( 1 ).average( effect.item );
+      absorb_amount *= role_mult( effect );
+
+      channeled = tick_zero = true;
+      harmful   = false;
+
+      target = player;
+    }
+
+    absorb_buff_t* get_buff( player_t* t )
+    {
+      if ( absorb_buffs[ t ] )
+        return absorb_buffs[ t ];
+
+      auto buff = make_buff<fractional_absorb_t>( t, player, "soulcoil_barrier", absorb_spell )
+                      ->set_absorb_fraction( absorb_spell->effectN( 2 ).percent() )
+                      ->set_absorb_source( e.player->get_stats( "soulcoiler_ritual_vessel", this ) );
+
+      absorb_buffs[ t ] = buff;
+
+      return buff;
+    }
+
+    void reset() override
+    {
+      proc_heal_t::reset();
+      absorb_target_cache.is_valid = false;
+    }
+
+    void activate() override
+    {
+      proc_heal_t::activate();
+
+      sim->healing_no_pet_list.register_callback( [ this ]( player_t* ) { absorb_target_cache.is_valid = false; } );
+    }
+
+    size_t absorb_available_targets( std::vector<player_t*>& target_list ) const
+    {
+      target_list.clear();
+
+      for ( const auto& t : sim->healing_no_pet_list )
+      {
+        if ( !t->is_sleeping() )
+          target_list.push_back( t );
+      }
+
+      return target_list.size();
+    }
+
+    std::vector<player_t*>& absorb_target_list() const
+    {
+      if ( !absorb_target_cache.is_valid )
+      {
+        absorb_available_targets( absorb_target_cache.list );
+        absorb_target_cache.is_valid = true;
+      }
+
+      return absorb_target_cache.list;
+    }
+
+    void execute() override
+    {
+      proc_heal_t::execute();
+
+      // cancel the player-ready event triggered by use_item_t
+      event_t::cancel( player->readying );
+
+      // prevent auto attacks while channeling
+      player->reset_auto_attacks( composite_dot_duration( execute_state ) );
+    }
+
+    void tick( dot_t* d ) override
+    {
+      proc_heal_t::tick( d );
+
+      auto& tl = absorb_target_list();
+
+      if ( tl.size() > 0 )
+      {
+        rng().shuffle( tl.begin(), tl.end() );
+
+        auto target = tl.begin();
+        while ( next( target ) < tl.end() && get_buff( *target )->check() )
+        {
+          target = next( target );
+        }
+
+        get_buff( *target )->trigger( -1, absorb_amount );
+      }
+    }
+
+    void last_tick( dot_t* d ) override
+    {
+      // cache first since last_tick() will null out player->channeling
+      bool was_channeling = player->channeling == this;
+
+      proc_heal_t::last_tick( d );
+
+      // restart the player since the player-ready from use_item_t was canceled
+      if ( was_channeling && !player->readying )
+        player->schedule_ready( rng().gauss( sim->channel_lag ) );
+    }
+  };
+
+  effect.execute_action = create_proc_action<soulcoiler_ritual_vessel_t>( "soulcoiler_ritual_vessel", effect,
+                                                                          effect.player->find_spell( 1307578 ) );
+}
+
+// 1306743 use driver
+// 1296883 equip driver
+// 1294327 use damage
+// 1296888 repeat damage
+// 1296890 repeat buff
+// 1306744 repeat driver
+void ophidian_bone_whistle( special_effect_t& effect )
+{
+  struct ophidian_bone_whistle_t : public generic_proc_t
+  {
+    action_t* damage;
+    action_t* repeat;
+    buff_t* buff;
+    timespan_t damage_delay;
+    timespan_t repeat_delay;
+
+    ophidian_bone_whistle_t( const special_effect_t& e ) : generic_proc_t( e, "ophidian_bone_whistle", e.driver() )
+    {
+      unsigned equip_id = 1296883;
+      auto equip = find_special_effect( e.player, equip_id );
+      assert( equip && "Ophidian Bone Whistle missing equip effect" );
+
+      // setup on-use damage
+      damage = create_proc_action<generic_aoe_proc_t>( "ophidian_bone_whistle_damage", e, e.trigger() );
+      damage->base_dd_min = damage->base_dd_max = equip->driver()->effectN( 1 ).average( e );
+      damage->base_multiplier *= role_mult( e );
+      damage->base_execute_time = timespan_t::from_millis( e.driver()->effectN( 1 ).misc_value1() );
+      damage->dual = true;
+      damage->stats = stats;
+
+      damage_delay = timespan_t::from_millis( e.driver()->effectN( 1 ).misc_value1() );
+
+      // setup repeat damage
+      auto s_repeat_buff = e.player->find_spell( 1296890 );
+      auto s_repeat_driver = s_repeat_buff->effectN( 1 ).trigger();
+      auto s_repeat = s_repeat_driver->effectN( 1 ).trigger();
+
+      repeat = create_proc_action<generic_aoe_proc_t>( "ophidian_bone_whistle_repeat", e, s_repeat );
+      repeat->base_dd_min = repeat->base_dd_max = equip->driver()->effectN( 1 ).average( e );
+      repeat->base_multiplier *= role_mult( e.player, s_repeat_buff );
+      repeat->base_execute_time = timespan_t::from_millis( s_repeat_driver->effectN( 1 ).misc_value1() );
+      repeat->name_str_reporting = "Repeat";
+      add_child( repeat );
+
+      repeat_delay = timespan_t::from_millis( s_repeat_driver->effectN( 1 ).misc_value1() );
+
+      // setup repeat buff + cb
+      buff = create_buff<buff_t>( e.player, s_repeat_buff );
+
+      auto repeat_eff = new special_effect_t( e.player );
+      repeat_eff->name_str = "ophidian_bone_whistle_repeat";
+      repeat_eff->spell_id = s_repeat_buff->id();
+      repeat_eff->execute_action = repeat;
+      e.player->special_effects.push_back( repeat_eff );
+
+      auto repeat_cb = new dbc_proc_callback_t( e.player, *repeat_eff );
+      repeat_cb->activate_with_buff( buff );
+
+      // proc is guaranteed on next spell, so we can use register_callback_trigger_function to expire the buff
+      e.player->callbacks.register_callback_trigger_function(
+        repeat_eff->spell_id, dbc_proc_callback_t::trigger_fn_type::CONDITION,
+        [ this ]( dbc_proc_callback_t* cb, const auto&, auto, auto, auto ) {
+          assert( cb->proc_chance >= 1.0 && buff->check() );
+          buff->expire();
+          return true;
+        } );
+
+      // TODO: is this cast at the target's location? does this need to be set up as ground_aoe?
+      e.player->callbacks.register_callback_execute_function(
+        repeat_eff->spell_id, [ this ]( auto, auto, player_t* t, auto ) {
+          assert( !buff->check() );
+          repeat->set_target( t );
+          make_event( *sim, repeat_delay, [ this ] { repeat->execute(); } );
+        } );
+    }
+
+    void execute() override
+    {
+      generic_proc_t::execute();
+
+      damage->set_target( target );
+      make_event( *sim, damage_delay, [ this ] { damage->execute(); } );
+
+      assert( cooldown && cooldown->down() );
+      make_event( *sim, cooldown->remains(), [ this ] { buff->trigger(); } );
+    }
+  };
+
+  effect.execute_action = create_proc_action<ophidian_bone_whistle_t>( "ophidian_bone_whistle", effect );
+}
 }  // namespace trinkets
 
 namespace weapons
@@ -5466,6 +5779,7 @@ void register_special_effects()
   register_special_effect( { 1236700, 1236701 }, enchants::eyes_of_the_eagle, false, true );
   register_special_effect( { 1262295, 1262298 }, enchants::smugglers_lynxeye );
   register_special_effect( { 1262337, 1262339 }, enchants::farstriders_hawkeye );
+  register_special_effect( { 1297651, 1297652 }, enchants::rite_of_the_hashey );
   // Embellishments & Tinkers
   register_special_effect( 1283697, embellishments::arcanoweave_lining );
   register_special_effect( 1241711, embellishments::sunfire_silk_lining );
@@ -5572,6 +5886,10 @@ void register_special_effects()
   register_special_effect( 1293304, trinkets::knot_of_writhing_serpents );
   register_special_effect( 1294329, trinkets::ulateks_faithful );
   register_special_effect( 1293326, trinkets::tattered_amani_war_banner );
+  register_special_effect( 1291894, trinkets::soulcoiler_ritual_vessel );
+  register_special_effect( 1291885, DISABLED_EFFECT );  // Soulcoiler Ritual Vessel equip Driver
+  register_special_effect( 1306743, trinkets::ophidian_bone_whistle );
+  register_special_effect( 1296883, DISABLED_EFFECT );  // Ophidian Bone Whistle equip driver
   reset_version_check();
   // Weapons
   register_special_effect( { 1253357, 1253359 }, weapons::torments_duality );  // umbral sabre & radiant foil

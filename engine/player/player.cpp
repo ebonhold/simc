@@ -7417,7 +7417,7 @@ void player_t::regen( timespan_t periodicity )
 
   for ( resource_e r = RESOURCE_HEALTH; r < RESOURCE_MAX; r++ )
   {
-    if ( resources.is_active( r ) )
+    if ( resources.active_resource[ r ] )
     {
       double regen  = resource_regen_per_second( r );
       gain_t* gain = gains.resource_regen[ r ];
@@ -13668,6 +13668,8 @@ void player_t::create_options()
                             midnight_opts.arcanoweave_trappings_update_interval_stddev, 1_s, timespan_t::max() ) );
   add_option(    opt_float( "midnight.lightspire_core_duration_multiplier",
                             midnight_opts.lightspire_core_duration_multiplier, 0.0, 1.0 ) );
+  add_option(    opt_float( "midnight.rite_of_the_hashey_uptime",
+                            midnight_opts.rite_of_the_hashey_uptime, 0.0, 1.0 ) );
 }
 
 player_t* player_t::create( sim_t*, const player_description_t& )

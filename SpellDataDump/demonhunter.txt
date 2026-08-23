@@ -36,7 +36,7 @@ Labels           : 16: Class Spells
                  : 292
                  : 3875
 Proc Chance      : 101%
-Triggered By     : Bloody Screech (24423), Monstrous Bite (54680), Deadly Sting (160060), Infected Bite (263853), Savage Rend (263854), Ravage (263857), Toxic Sting (263858)
+Triggered By     : Bloody Screech (24423), Monstrous Bite (54680), Gruesome Bite (160018), Deadly Sting (160060), Infected Bite (263853), Savage Rend (263854), Gnaw (263856), Ravage (263857), Toxic Sting (263858), Gore (263861), Acid Bite (263863), Grievous Bite (279362)
 Attributes       : Is Ability (4), Not Shapeshifted (16), Do Not Sheath (18), Initiates Combat (Enables Auto-Attack) (41), Discount Power On Miss (59), Requires Main-Hand Weapon (106), Aura Points On Client (268), Not In Spellbook Until Learned (269), Allow Class Ability Procs (416)
 Effects          :
 #1 (id=129901)   : Apply Aura (6) | Modify Healing Received% (118)
@@ -10929,7 +10929,7 @@ Effects          :
 Description      : $@spelldesc436897
 
 Name             : Art of the Glaive (id=442290) [Spell Family (107), Passive] 
-Talent Entry     : Aldrachi Reaver (Havoc, Vengeance) [tree=hero, row=1, col=3, max_rank=1, req_points=1]
+Talent Entry     : Aldrachi Reaver (Havoc, Vengeance) [free=(Havoc, Vengeance), tree=hero, row=1, col=3, max_rank=1, req_points=1]
 Class            : Demon Hunter
 School           : Physical
 Spell Type       : None
@@ -11591,8 +11591,8 @@ Effects          :
 Description      : $@spelldesc451258
 
 Name             : Demonsurge (id=452402) [Spell Family (107), Passive] 
-Talent Entry     : Fel-Scarred (Havoc, Devourer) [tree=hero, row=1, col=3, max_rank=1, req_points=1]
-                 : Void-Scarred (Havoc, Devourer) [tree=hero, row=1, col=3, max_rank=1, req_points=1, name="Voidsurge"]
+Talent Entry     : Fel-Scarred (Havoc, Devourer) [free=(Havoc, Devourer), tree=hero, row=1, col=3, max_rank=1, req_points=1]
+                 : Void-Scarred (Havoc, Devourer) [free=(Havoc, Devourer), tree=hero, row=1, col=3, max_rank=1, req_points=1, name="Voidsurge"]
 Class            : Demon Hunter
 School           : Physical
 Spell Type       : None
@@ -12814,6 +12814,7 @@ Effects          :
 Description      : $@spelldesc452402
 
 Name             : Void Metamorphosis (id=471306) [Spell Family (107), Passive, Hidden] 
+Hotfixed         : Attributes
 Talent Entry     : Devourer [tree=spec, row=3, col=4, max_rank=1, req_points=0]
 Class            : Demon Hunter
 School           : Spellshadow
@@ -12822,7 +12823,7 @@ Labels           : 16: Class Spells
                  : 66: Demon Hunter Spells
                  : 292
                  : 5408: Soul Glutton (1247534 effect#2)
-Attributes       : Passive (6), Do Not Display (Spellbook, Aura Icon, Combat Log) (7), Can Proc From Procs (122), Do Not Log on Learn (355)
+Attributes       : Passive (6), Do Not Display (Spellbook, Aura Icon, Combat Log) (7), Can Proc From Procs (122), Ignore For Mod Time Rate (196), Do Not Log on Learn (355)
 Aura Interrupt   : Change Specialization (38)
 Effects          :
 #1 (id=1187543)  : Apply Aura (6) | Periodic Dummy (226): every 0.12 seconds
