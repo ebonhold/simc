@@ -1487,7 +1487,7 @@ public:
     int tww3_stormbringer_set = 0;
 
     // Chance on Crash Lightning target to sit in the Crash Lightning (Unleashed) puddle
-    double crash_lightning_su_hit_chance = 0.85;
+    double crash_lightning_su_hit_chance = 0.9;
   } options;
 
   // Cooldowns
@@ -6059,16 +6059,16 @@ struct crash_lightning_t : public shaman_attack_t
     return shaman_attack_t::usable_precombat();
   }
 
-  timespan_t cooldown_base_duration( const cooldown_t& cd ) const override
+  void update_ready( timespan_t cd_duration ) override
   {
-    auto total = cd.duration;
-
     if ( precombat_action > 0_ms )
     {
-      total -= precombat_action / ( recharge_multiplier( cd ) * recharge_rate_multiplier( cd ) );
+      cd_duration = cooldown->duration -
+        precombat_action /
+        ( recharge_multiplier( *cooldown ) * recharge_rate_multiplier( *cooldown ) );
     }
 
-    return total;
+    shaman_attack_t::update_ready( cd_duration );
   }
 
   void execute() override
@@ -6143,6 +6143,16 @@ struct crash_lightning_t : public shaman_attack_t
     {
       p()->trigger_windfury_weapon( execute_state, 1.0 );
     }
+  }
+
+  bool ready() override
+  {
+    if ( precombat_action > 0_ms && p()->in_combat )
+    {
+      return false;
+    }
+
+    return shaman_attack_t::ready();
   }
 };
 
@@ -10644,9 +10654,16 @@ void shaman_t::create_actions()
       talent.thorims_invocation, "thorims_invocation" );
     action.lightning_bolt_ti = new lightning_bolt_t( this,
       variant_flag( spell_variant::THORIMS_INVOCATION ) );
-    action.tempest_ti = new tempest_t( this, variant_flag( spell_variant::THORIMS_INVOCATION ) );
-    action.chain_lightning_ti = new chain_lightning_t( this, talent.chain_lightning,
-      variant_flag( spell_variant::THORIMS_INVOCATION ) );
+    if ( talent.tempest.ok() )
+    {
+      action.tempest_ti = new tempest_t( this, variant_flag( spell_variant::THORIMS_INVOCATION ) );
+    }
+
+    if ( talent.chain_lightning.ok() )
+    {
+      action.chain_lightning_ti = new chain_lightning_t( this, talent.chain_lightning,
+        variant_flag( spell_variant::THORIMS_INVOCATION ) );
+    }
   }
 
   if ( talent.lightning_rod.ok() || talent.conductive_energy.ok() )

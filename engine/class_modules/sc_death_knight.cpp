@@ -3224,16 +3224,6 @@ struct ghoul_pet_t final : public base_ghoul_pet_t
     {
     }
 
-    double composite_da_multiplier( const action_state_t* s ) const override
-    {
-      double m = pet_melee_attack_t<ghoul_pet_t>::composite_da_multiplier( s );
-      // Currently using the normalized attack speed increase aura, which reduces auto attack damage perportionally to
-      // the attack speed increase. This results in a 0 auto attack dps gain. Lovely bug.
-      if ( pet()->unholy_devotion->check() && dk()->bugs )
-        m /= 1.0 + pet()->unholy_devotion->check_stack_value();
-      return m;
-    }
-
     void impact( action_state_t* state ) override
     {
       auto_attack_melee_t<ghoul_pet_t>::impact( state );
@@ -3471,7 +3461,7 @@ struct ghoul_pet_t final : public base_ghoul_pet_t
                           ->add_invalidate( CACHE_AUTO_ATTACK_SPEED );
 
     unholy_devotion = make_buff( this, "unholy_devotion", dk()->pet_spell.unholy_devotion_buff )
-                          ->set_default_value_from_effect_type( A_MOD_ATTACKSPEED_NORMALIZED )
+                          ->set_default_value_from_effect_type( A_MOD_RANGED_AND_MELEE_AUTO_ATTACK_SPEED )
                           ->set_disable_async_expire_events_removal( true );
   }
 
@@ -16842,20 +16832,6 @@ void death_knight_t::arise()
 
   if ( talent.rider.a_feast_of_souls.ok() )
     start_a_feast_of_souls();
-
-  // Exclude Blood from recklessness checks
-  if ( specialization() != DEATH_KNIGHT_BLOOD )
-  {
-    std::array<stat_e, 4> offensive_stats = { STAT_CRIT_RATING, STAT_HASTE_RATING, STAT_MASTERY_RATING,
-                                              STAT_VERSATILITY_RATING };
-    if ( ( util::str_compare_ci( potion_str, "potion_of_recklessness" ) ||
-           util::str_compare_ci( potion_str, "potion_of_recklessness_2" ) ) &&
-         util::highest_stat( this, offensive_stats ) != STAT_MASTERY_RATING )
-      sim->error( MODERATE,
-                  "Player {} has selected Potion of Recklessness but does not have Mastery as their highest offensive "
-                  "stat. Results may be inaccurate.",
-                  name() );
-  }
 }
 
 void death_knight_t::adjust_dynamic_cooldowns()
@@ -17631,7 +17607,7 @@ struct death_knight_module_t : public module_t
   
   void register_hotfixes() const override
   {
-    
+    /*
     hotfix::register_effect( "Death Knight", "2026-08-22", "Frost aura (direct) buffed 6%", 179689,
                              hotfix::HOTFIX_FLAG_LIVE )
         .field( "base_value" )
@@ -17722,7 +17698,7 @@ struct death_knight_module_t : public module_t
         .operation( hotfix::HOTFIX_SET )
         .modifier( .919399 )
         .verification_value( .799477 );
-        
+   */
   }
 
   void register_actor_initializers( sim_t* ) const override

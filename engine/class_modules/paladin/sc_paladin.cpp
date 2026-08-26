@@ -36,7 +36,7 @@ paladin_t::paladin_t( sim_t* sim, util::string_view name, race_e r )
     random_weapon_target( nullptr ),
     random_bulwark_target( nullptr ),
     divine_inspiration_next( -1 ),
-    reflection_of_radiance_proc_chance( .001 ) // ToDo Fluttershy: Find out real proc chance - Currently something very, very low
+    reflection_of_radiance_proc_chance( .04 ) // ToDo Fluttershy: Find out real proc chance - Currently something very, very low
 {
   active_consecration = nullptr;
   active_boj_cons = nullptr;
@@ -972,10 +972,11 @@ struct melee_t : public paladin_melee_attack_t
   {
     if ( !player->in_combat )
       return 10_ms;
-    if ( first )
+
+    if ( first && !player->channeling )
       return 0_ms;
-    else
-      return paladin_melee_attack_t::execute_time();
+
+    return paladin_melee_attack_t::execute_time();
   }
 
   void execute() override
