@@ -1,4 +1,4 @@
-SimulationCraft 1210-01 for World of Warcraft 12.1.0.69497 Live
+SimulationCraft 1210-01 for World of Warcraft 12.1.0.69933 Live
 Name             : Stun (id=56) 
 School           : Physical
 Spell Type       : Magic
@@ -8265,7 +8265,7 @@ Name             : Battlemaster (id=28005)
 School           : Arcane
 Spell Type       : Magic
 Max Scaling Level: 27
-Labels           : 1387
+Labels           : 1387: Avoid CC Targets
 Attributes       : No Threat (42)
 Effects          :
 #1 (id=17509)    : Direct Heal (10) | Scaling Class: Food/Gems Attribute (-4)
@@ -42652,7 +42652,7 @@ Name             : Blades of Renataki (id=138756)
 School           : Physical
 Spell Type       : None
 Duration         : 10 seconds
-Labels           : 1387
+Labels           : 1387: Avoid CC Targets
 Stacks           : 1 maximum
 Proc Chance      : 101%
 Triggered By     : Item - Proc Stacking Agility (138757)
@@ -42666,7 +42666,7 @@ Tooltip          : Increases Agility by $s1 every $t1 sec.
 Name             : Item - Proc Stacking Agility (id=138757) [Passive, Hidden] 
 School           : Physical
 Spell Type       : None
-Labels           : 1387
+Labels           : 1387: Avoid CC Targets
 Internal Cooldown: 10 seconds
 Proc Chance      : 100%
 Real PPM         : 1.21
@@ -152728,7 +152728,7 @@ School           : Nature
 Spell Type       : Magic
 Duration         : 15 seconds
 Labels           : 1218
-                 : 1387
+                 : 1387: Avoid CC Targets
 Attributes       : Allow Item Spell In PvP (13), Aura Is Debuff (26), Allow While Sitting (27), No Aura Cancel (31), Allow While Stealthed (37), Can't Crit (93), Ignore Caster Damage Modifiers (221), Aura Points On Client (268), Cannot Kill Target (316), Visible only to caster (conversations only) (343)
 Effects          :
 #1 (id=982758)   : Apply Aura (6) | Periodic Max Health% Damage (89)
@@ -154661,7 +154661,7 @@ Name             : Overwhelming Rage (id=374037)
 School           : Frost
 Spell Type       : Magic
 Duration         : 15 seconds
-Labels           : 1387
+Labels           : 1387: Avoid CC Targets
 Attributes       : Allow Item Spell In PvP (13), Aura Is Debuff (26), Allow While Sitting (27), Not In Combat (Only Peaceful) (28), No Immunities (29), Allow While Stealthed (37), Allow Dead Target (64), Include In Advanced Combat Log (72), Allow Aura While Dead (116), Ignore Caster Damage Modifiers (221), Aura Points On Client (268), Allow Aura On Level Scale (444), Recompute Aura On Level Scale (446)
 Effects          :
 #1 (id=999664)   : Apply Aura (6) | Periodic Max Health% Damage (89)
@@ -159934,7 +159934,8 @@ Category Cooldown: 20 seconds
 Attributes       : Do Not Display Range (126), Aura Points On Client (268), Reset cooldown upon ending an encounter (333), Scales with Casting Item's Level (354)
 Effects          :
 #1 (id=1015921)  : Apply Aura (6) | Modify Rating (189) | Scaling Class: Secondary Rating (-7)
-                   Base Value: 0 | Scaled Value: 480.5574 (coefficient=3.666125) | Rating: Mastery | Target: Self (1)
+                   Base Value: 0 | Scaled Value: 360.418 (coefficient=2.749593) | Rating: Mastery | Target: Self (1)
+Hotfixed         : Coefficient (3.666125 -> 2.749593)
 Description      : Solve a puzzle, increasing your Mastery by $s1 for $d.
 Tooltip          : Mastery increased by $w1.
 
@@ -159989,23 +159990,29 @@ School           : Fire
 Spell Type       : None
 Labels           : 3959: Item Effects
 Proc Chance      : 101%
-Real PPM         : 1.01
+Real PPM         : 2
 Proc Flags       : Yellow Melee, Yellow Ranged, Generic Helpful, Generic Hostile Spell, Magic Heal, Magic Hostile Spell
 Triggered By     : Sleepy Ruby Warmth (383813), Under Red Wings (389820), Fire Shot (389839), Lobbing Fire Nova (390234), Curing Whiff (390896), Mending Breath (390941)
 Attributes       : Passive (6), Do Not Display (Spellbook, Aura Icon, Combat Log) (7), No Aura Icon (60), Aura Points On Client (268), Scales with Casting Item's Level (354), Only Proc From Class Abilities (415)
 Effects          :
 #1 (id=1015966)  : Apply Aura (6) | Dummy (4) | Scaling Class: Replace Secondary (-9)
-                   Base Value: 0 | Scaled Value: 18307.77 (coefficient=143.2494) | Target: Self (1)
+                   Base Value: 0 | Scaled Value: 10618.51 (coefficient=83.08469) | Target: Self (1)
+Hotfixed         : Coefficient (143.249405 -> 83.084694)
 #2 (id=1027885)  : Apply Aura (6) | Dummy (4) | Scaling Class: Replace Secondary (-9)
-                   Base Value: 0 | Scaled Value: 15256.64 (coefficient=119.3758) | Target: Self (1)
+                   Base Value: 0 | Scaled Value: 8848.835 (coefficient=69.23783) | Target: Self (1)
+Hotfixed         : Coefficient (119.375763 -> 69.237831)
 #3 (id=1027886)  : Apply Aura (6) | Dummy (4) | Scaling Class: Replace Secondary (-9)
-                   Base Value: 0 | Scaled Value: 27438.44 (coefficient=214.6924) | Target: Self (1)
+                   Base Value: 0 | Scaled Value: 37590.67 (coefficient=294.1287) | Target: Self (1)
+Hotfixed         : Coefficient (214.692444 -> 294.128693)
 #4 (id=1027887)  : Apply Aura (6) | Dummy (4) | Scaling Class: Replace Secondary (-9)
-                   Base Value: 0 | Scaled Value: 22865.58 (coefficient=178.912) | Target: Self (1)
+                   Base Value: 0 | Scaled Value: 24008.86 (coefficient=187.8576) | Target: Self (1)
+Hotfixed         : Coefficient (178.912018 -> 187.857635)
 #5 (id=1027888)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
-                   Base Value: 0 | Scaled Value: 316.9404 (coefficient=2.417907) | Target: Self (1)
+                   Base Value: 0 | Scaled Value: 158.4701 (coefficient=1.208953) | Target: Self (1)
+Hotfixed         : Coefficient (2.417907 -> 1.208953)
 #6 (id=1027889)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
-                   Base Value: 0 | Scaled Value: 316.9403 (coefficient=2.417906) | Target: Self (1)
+                   Base Value: 0 | Scaled Value: 158.4701 (coefficient=1.208953) | Target: Self (1)
+Hotfixed         : Coefficient (2.417906 -> 1.208953)
 Description      : Your spells and abilities have a chance to call a Ruby Whelpling, which will try to be helpful and assist you in combat.
 
 
@@ -176127,7 +176134,7 @@ Spell Type       : Magic
 Duration         : 30 seconds
 Labels           : 292
                  : 1218
-                 : 1387
+                 : 1387: Avoid CC Targets
 Stacks           : 5 maximum
 Proc Chance      : 101%
 Attributes       : Allow While Stealthed (37), Can't Crit (93), Aura Is Buff (140), Aura Points On Client (268), Ignore Damage Cancels Aura Interrupt (394)
@@ -176254,7 +176261,7 @@ School           : Physical
 Spell Type       : None
 Cast Time        : 3 seconds
 GCD              : 1.5 seconds
-Labels           : 1387
+Labels           : 1387: Avoid CC Targets
 Attributes       : Allow While Stealthed (37), Suppress Caster Procs (112), Suppress Target Procs (113), Do Not Display Range (126), Suppress Weapon Procs (151), Aura Points On Client (268)
 Effects          :
 #1 (id=1047406)  : Dummy (3)
@@ -176265,7 +176272,7 @@ Name             : Ruby Resonance (id=401516)
 School           : Physical
 Spell Type       : None
 Duration         : Aura (infinite)
-Labels           : 1387
+Labels           : 1387: Avoid CC Targets
 Attributes       : No Aura Cancel (31), Allow While Stealthed (37), Allow Aura While Dead (116), Aura Is Buff (140), Aura Points On Client (268)
 Effects          :
 #1 (id=1047407)  : Dummy (3)
@@ -176279,7 +176286,7 @@ Name             : Bronze Resonance (id=401518)
 School           : Physical
 Spell Type       : None
 Duration         : Aura (infinite)
-Labels           : 1387
+Labels           : 1387: Avoid CC Targets
 Attributes       : No Aura Cancel (31), Allow While Stealthed (37), Allow Aura While Dead (116), Aura Is Buff (140), Aura Points On Client (268)
 Effects          :
 #1 (id=1047409)  : Dummy (3)
@@ -176293,7 +176300,7 @@ Name             : Azure Resonance (id=401519)
 School           : Physical
 Spell Type       : None
 Duration         : Aura (infinite)
-Labels           : 1387
+Labels           : 1387: Avoid CC Targets
 Attributes       : No Aura Cancel (31), Allow While Stealthed (37), Allow Aura While Dead (116), Aura Is Buff (140), Aura Points On Client (268)
 Effects          :
 #1 (id=1047410)  : Dummy (3)
@@ -176307,7 +176314,7 @@ Name             : Emerald Resonance (id=401521)
 School           : Physical
 Spell Type       : None
 Duration         : Aura (infinite)
-Labels           : 1387
+Labels           : 1387: Avoid CC Targets
 Attributes       : No Aura Cancel (31), Allow While Stealthed (37), Allow Aura While Dead (116), Aura Is Buff (140), Aura Points On Client (268)
 Effects          :
 #1 (id=1047412)  : Dummy (3)
@@ -176369,7 +176376,7 @@ Name             : Obsidian Resonance (id=402221)
 School           : Physical
 Spell Type       : None
 Duration         : Aura (infinite)
-Labels           : 1387
+Labels           : 1387: Avoid CC Targets
 Attributes       : No Aura Cancel (31), Allow While Stealthed (37), Allow Aura While Dead (116), Aura Is Buff (140), Aura Points On Client (268)
 Effects          :
 #1 (id=1048544)  : Dummy (3)
@@ -179414,7 +179421,7 @@ School           : Physical
 Spell Type       : None
 Range            : 100 yards
 Duration         : Aura (infinite)
-Labels           : 1387
+Labels           : 1387: Avoid CC Targets
 Attributes       : No Aura Cancel (31), Allow While Stealthed (37), Aura Unique (43), Allow Aura While Dead (116), Aura Is Buff (140), Aura Points On Client (268)
 Effects          :
 #1 (id=1053961)  : Dummy (3)
@@ -179429,7 +179436,7 @@ School           : Physical
 Spell Type       : None
 Range            : 100 yards
 Duration         : Aura (infinite)
-Labels           : 1387
+Labels           : 1387: Avoid CC Targets
 Attributes       : No Aura Cancel (31), Allow While Stealthed (37), Aura Unique (43), Allow Aura While Dead (116), Aura Is Buff (140), Aura Points On Client (268)
 Effects          :
 #1 (id=1053968)  : Dummy (3)
@@ -179444,7 +179451,7 @@ School           : Physical
 Spell Type       : None
 Range            : 100 yards
 Duration         : Aura (infinite)
-Labels           : 1387
+Labels           : 1387: Avoid CC Targets
 Attributes       : No Aura Cancel (31), Allow While Stealthed (37), Aura Unique (43), Allow Aura While Dead (116), Aura Is Buff (140), Aura Points On Client (268)
 Effects          :
 #1 (id=1053970)  : Dummy (3)
@@ -179459,7 +179466,7 @@ School           : Physical
 Spell Type       : None
 Range            : 100 yards
 Duration         : Aura (infinite)
-Labels           : 1387
+Labels           : 1387: Avoid CC Targets
 Attributes       : No Aura Cancel (31), Allow While Stealthed (37), Aura Unique (43), Allow Aura While Dead (116), Aura Is Buff (140), Aura Points On Client (268)
 Effects          :
 #1 (id=1053972)  : Dummy (3)
@@ -179474,7 +179481,7 @@ School           : Physical
 Spell Type       : None
 Range            : 100 yards
 Duration         : Aura (infinite)
-Labels           : 1387
+Labels           : 1387: Avoid CC Targets
 Attributes       : No Aura Cancel (31), Allow While Stealthed (37), Aura Unique (43), Allow Aura While Dead (116), Aura Is Buff (140), Aura Points On Client (268)
 Effects          :
 #1 (id=1053975)  : Dummy (3)
@@ -179494,7 +179501,7 @@ Name             : Glimmering Chromatic Orb (id=405620)
 School           : Physical
 Spell Type       : None
 Range            : 100 yards
-Labels           : 1387
+Labels           : 1387: Avoid CC Targets
 Triggered By     : Glimmering Chromatic Orb (401513)
 Attributes       : Do Not Sheath (18), No Active Defense (21), Allow Cast While Dead (23), Allow While Mounted (24), Allow While Sitting (27), No Immunities (29), No Redirection (35), Allow While Stealthed (37), No Reflection (39), No Threat (42), Ignore Line of Sight (66), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), No Initial Threat (86), Not an Action (92), Suppress Caster Procs (112), Suppress Target Procs (113), Always Hit (114), Allow Cast While Casting (135), Suppress Weapon Procs (151), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Allow While Riding Vehicle (204), Don't Cause Spell Pushback (230), Allow Cast While Channeling (308)
 Effects          :
@@ -180928,7 +180935,7 @@ School           : Shadow
 Spell Type       : Magic
 Duration         : 12 seconds
 Labels           : 1218
-                 : 1387
+                 : 1387: Avoid CC Targets
 Triggered By     : Call to Suffering (403386)
 Attributes       : Allow While Stealthed (37), No Aura Icon (60), No Aura Log (202), Aura Points On Client (268), Ignore Damage Cancels Aura Interrupt (394)
 Effects          :
@@ -187663,7 +187670,7 @@ School           : Physical
 Spell Type       : None
 Duration         : 8 seconds
 Cooldown         : 60 seconds
-Labels           : 1387
+Labels           : 1387: Avoid CC Targets
                  : 3294
 Attributes       : Is Ability (4), Allow While Stealthed (37), No Threat (42), Not a Proc (105), Aura Points On Client (268), Visible only to caster (conversations only) (343), Don't close loot window (379), Allow Class Ability Procs (416)
 Effects          :
@@ -195835,7 +195842,7 @@ Name             : Vanish (id=441478)
 School           : Physical
 Spell Type       : None
 Duration         : 10 seconds
-Labels           : 1387
+Labels           : 1387: Avoid CC Targets
 Stacks           : 1 initial, 1 maximum
 Proc Chance      : 100%
 Proc Flags       : White Melee, Yellow Melee, White Ranged, Yellow Ranged, Generic Hostile Spell, Magic Hostile Spell
@@ -195853,7 +195860,7 @@ Name             : Vanish (id=441479)
 School           : Physical
 Spell Type       : Melee
 Cooldown         : 120 seconds
-Labels           : 1387
+Labels           : 1387: Avoid CC Targets
                  : 3294
 Attributes       : Is Ability (4), Do Not Sheath (18), Cancels Auto Attack Combat (20), Allow While Sitting (27), No Immunities (29), Allow While Stealthed (37), No Threat (42), No shapeshift UI (65), Ignore Line of Sight (66), Not a Proc (105), Suppress Caster Procs (112), Suppress Target Procs (113), Always Hit (114), Not an Attack (194), Reset cooldown upon ending an encounter (333), Visible only to caster (conversations only) (343), Don't close loot window (379), Enable Procs from Suppressed Caster Procs (384), Allow Class Ability Procs (416)
 Aura Interrupt   : Hostile Action Received (0), Looting (11), Use Item (13)
@@ -226476,7 +226483,7 @@ Labels           : 959
                  : 4370
 Proc Chance      : 101%
 Proc Flags       : Death
-Triggered By     : Well Fed (1219182), Well Fed (1219183), Well Fed (1219184), Well Fed (1219185), Refreshment (1219187), Hearty Well Fed (1232076), Hearty Well Fed (1232078), Well Fed (1232086), Well Fed (1232087), Well Fed (1232089), Well Fed (1232091), Refreshment (1232246), Refreshment (1232249), Refreshment (1232250), Refreshment (1232251), Refreshment (1232252), Refreshment (1232253), Refreshment (1232256), Refreshment (1232257), Well Fed (1232313), Well Fed (1232316), Well Fed (1232317), Well Fed (1232318), Well Fed (1232320), Well Fed (1232321), Well Fed (1232324), Well Fed (1232325), Refreshment (1232481), Refreshment (1232483), Refreshment (1232484), Refreshment (1232485), Refreshment (1232486), Refreshment (1232487), Refreshment (1232488), Refreshment (1232489), Well Fed (1232490), Well Fed (1232491), Well Fed (1232492), Well Fed (1232493), Well Fed (1232496), Well Fed (1232498), Well Fed (1232500), Well Fed (1232501), Well Fed (1232582), Well Fed (1232584), Well Fed (1232585), Refreshment (1232901), Refreshment (1232902), Refreshment (1232903), Refreshment (1232905), Refreshment (1232906), Refreshment (1232907), Refreshment (1232908), Refreshment (1232909), Refreshment (1232910), Refreshment (1232913), Refreshment (1232914), Refreshment (1232915), Refreshment (1232916), Refreshment (1232917), Refreshment (1232919), Refreshment (1232920), Refreshment (1232921), Refreshment (1232925), Refreshment (1232926), Refreshment (1232927), Well Fed (1233400), Well Fed (1233401), Well Fed (1233402), Well Fed (1233403), Well Fed (1233404), Well Fed (1233405), Well Fed (1233406), Well Fed (1233407), Well Fed (1233408), Hearty Well Fed (1233733), Hearty Refreshment (1233738), Hearty Refreshment (1233739), Hearty Refreshment (1233740), Hearty Refreshment (1233741), Hearty Refreshment (1233742), Hearty Refreshment (1233743), Hearty Refreshment (1233744), Hearty Refreshment (1233745), Hearty Refreshment (1233746), Hearty Refreshment (1233747), Hearty Refreshment (1233748), Hearty Refreshment (1233749), Hearty Refreshment (1233750), Hearty Refreshment (1233751), Hearty Refreshment (1233752), Hearty Refreshment (1233753), Hearty Refreshment (1233754), Hearty Refreshment (1233755), Hearty Refreshment (1233756), Hearty Refreshment (1233757), Hearty Refreshment (1233758), Hearty Refreshment (1233759), Hearty Refreshment (1233760), Hearty Refreshment (1233761), Hearty Refreshment (1233762), Hearty Refreshment (1233763), Hearty Refreshment (1233764), Hearty Refreshment (1233765), Hearty Refreshment (1233766), Hearty Refreshment (1233767), Hearty Refreshment (1233768), Hearty Refreshment (1233769), Hearty Refreshment (1233770), Refreshment (1259662), Refreshment (1269305), Refreshment (1280485), Refreshment (1283374), Well Fed (1305151), Refreshment (1305158), Hearty Refreshment (1305159)
+Triggered By     : Well Fed (1219182), Well Fed (1219183), Well Fed (1219184), Well Fed (1219185), Refreshment (1219187), Hearty Well Fed (1232076), Hearty Well Fed (1232078), Well Fed (1232089), Well Fed (1232091), Refreshment (1232246), Refreshment (1232249), Refreshment (1232250), Refreshment (1232251), Refreshment (1232252), Refreshment (1232253), Refreshment (1232256), Refreshment (1232257), Well Fed (1232313), Well Fed (1232316), Well Fed (1232317), Well Fed (1232318), Well Fed (1232320), Well Fed (1232321), Well Fed (1232324), Well Fed (1232325), Refreshment (1232481), Refreshment (1232483), Refreshment (1232484), Refreshment (1232485), Refreshment (1232486), Refreshment (1232487), Refreshment (1232488), Refreshment (1232489), Well Fed (1232490), Well Fed (1232491), Well Fed (1232492), Well Fed (1232493), Well Fed (1232500), Well Fed (1232501), Well Fed (1232585), Refreshment (1232901), Refreshment (1232902), Refreshment (1232903), Refreshment (1232905), Refreshment (1232906), Refreshment (1232907), Refreshment (1232908), Refreshment (1232909), Refreshment (1232910), Refreshment (1232913), Refreshment (1232914), Refreshment (1232915), Refreshment (1232916), Refreshment (1232917), Refreshment (1232919), Refreshment (1232920), Refreshment (1232921), Refreshment (1232925), Refreshment (1232926), Refreshment (1232927), Well Fed (1233400), Well Fed (1233401), Well Fed (1233402), Well Fed (1233404), Well Fed (1233405), Well Fed (1233406), Hearty Well Fed (1233733), Hearty Refreshment (1233738), Hearty Refreshment (1233739), Hearty Refreshment (1233740), Hearty Refreshment (1233741), Hearty Refreshment (1233742), Hearty Refreshment (1233743), Hearty Refreshment (1233744), Hearty Refreshment (1233745), Hearty Refreshment (1233746), Hearty Refreshment (1233747), Hearty Refreshment (1233748), Hearty Refreshment (1233749), Hearty Refreshment (1233750), Hearty Refreshment (1233751), Hearty Refreshment (1233752), Hearty Refreshment (1233753), Hearty Refreshment (1233754), Hearty Refreshment (1233755), Hearty Refreshment (1233756), Hearty Refreshment (1233757), Hearty Refreshment (1233758), Hearty Refreshment (1233759), Hearty Refreshment (1233760), Hearty Refreshment (1233761), Hearty Refreshment (1233762), Hearty Refreshment (1233763), Hearty Refreshment (1233764), Hearty Refreshment (1233765), Hearty Refreshment (1233766), Hearty Refreshment (1233767), Hearty Refreshment (1233768), Hearty Refreshment (1233769), Hearty Refreshment (1233770), Refreshment (1259662), Refreshment (1269305), Refreshment (1280485), Well Fed (1283372), Refreshment (1283374), Well Fed (1284619), Well Fed (1294727), Well Fed (1305151), Well Fed (1305154), Refreshment (1305158), Hearty Refreshment (1305159)
 Attributes       : Do Not Display (Spellbook, Aura Icon, Combat Log) (7), Allow While Sitting (27), Allow While Stealthed (37), Retain Item Cast (95), Allow Aura While Dead (116), Do Not Display Range (126), No Cooldown On Tooltip (192), Aura Points On Client (268), Recompute Aura On Level Scale (446), Unknown (467)
 Effects          :
 #1 (id=1204679)  : Apply Aura (6) | Dummy (4)
@@ -231586,88 +231593,6 @@ Effects          :
 Description      : Increases Haste by $s1 for $d.
 Tooltip          : Stamina increased by $w10 and Haste increased by $w9. This aura persists through death.
 
-Name             : Well Fed (id=1232086) 
-School           : Physical
-Spell Type       : None
-Duration         : 3600 seconds
-Labels           : 959
-                 : 4370
-                 : 4376: W-47CH D0G (1259647 effect#1)
-                 : 4898
-                 : 4902
-                 : 4905
-                 : 4906
-                 : 6103
-Proc Chance      : 101%
-Proc Flags       : Death
-Attributes       : Allow While Sitting (27), Allow While Stealthed (37), Include In Advanced Combat Log (72), Retain Item Cast (95), Allow Aura While Dead (116), Aura Points On Client (268), Scales with Casting Item's Level (354), Recompute Aura On Level Scale (446)
-Effects          :
-#1 (id=1224459)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 0 | Scaled Value: 0 | Trigger Spell: 1219179 | Target: Self (1)
-#2 (id=1224460)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 0 | Scaled Value: 0 | Target: Self (1)
-#3 (id=1224461)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#4 (id=1224462)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#5 (id=1224463)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#6 (id=1224464)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#7 (id=1224465)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#8 (id=1224466)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#9 (id=1224467)  : Apply Aura (6) | Modify Rating (189)
-                   Base Value: 0 | Scaled Value: 0 | Rating: Crit | Target: Self (1)
-#10 (id=1224468) : Apply Aura (6) | Attribute (29)
-                   Base Value: 0 | Scaled Value: 0 | Stat: Sta | Target: Self (1)
-#11 (id=1224469) : Apply Aura (6) | Attribute (29)
-                   Base Value: 0 | Scaled Value: 0 | Stat: StrAgiInt | Target: Self (1)
-Description      : Increases Critical Strike by $s1 for $d.
-Tooltip          : Stamina increased by $w10 and Critical Strike increased by $w9.
-
-Name             : Well Fed (id=1232087) 
-School           : Physical
-Spell Type       : None
-Duration         : 3600 seconds
-Labels           : 959
-                 : 4370
-                 : 4376: W-47CH D0G (1259647 effect#1)
-                 : 4898
-                 : 4902
-                 : 4905
-                 : 4906
-                 : 6103
-Proc Chance      : 101%
-Proc Flags       : Death
-Attributes       : Allow While Sitting (27), Allow While Stealthed (37), Include In Advanced Combat Log (72), Retain Item Cast (95), Allow Aura While Dead (116), Aura Points On Client (268), Scales with Casting Item's Level (354), Recompute Aura On Level Scale (446)
-Effects          :
-#1 (id=1224470)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 0 | Scaled Value: 0 | Trigger Spell: 1219179 | Target: Self (1)
-#2 (id=1224471)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 0 | Scaled Value: 0 | Target: Self (1)
-#3 (id=1224472)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#4 (id=1224473)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#5 (id=1224474)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#6 (id=1224475)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#7 (id=1224476)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#8 (id=1224477)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#9 (id=1224478)  : Apply Aura (6) | Modify Rating (189)
-                   Base Value: 0 | Scaled Value: 0 | Rating: Haste | Target: Self (1)
-#10 (id=1224479) : Apply Aura (6) | Attribute (29)
-                   Base Value: 0 | Scaled Value: 0 | Stat: Sta | Target: Self (1)
-#11 (id=1224480) : Apply Aura (6) | Attribute (29)
-                   Base Value: 0 | Scaled Value: 0 | Stat: StrAgiInt | Target: Self (1)
-Description      : Increases Haste by $s1 for $d.
-Tooltip          : Stamina increased by $w10 and Haste increased by $w9.
-
 Name             : Well Fed (id=1232089) 
 School           : Physical
 Spell Type       : None
@@ -232311,6 +232236,37 @@ Effects          :
 Description      : $@spellicon457049 $@spellname457049|nIf you spend at least 10 seconds eating, you will become $@spellname457049 and gain $1219179s2 primary stat for $d.
 Tooltip          : Your primary stats have been increased by $w11.
 
+Name             : Unstable Surge (id=1232407) [Hidden] 
+School           : Arcane
+Spell Type       : None
+Range            : 50000 yards
+Max Targets      : 3
+Attributes       : Do Not Display (Spellbook, Aura Icon, Combat Log) (7), Do Not Log (8), Do Not Sheath (18), No Active Defense (21), Allow While Mounted (24), Allow While Sitting (27), No Immunities (29), No Redirection (35), Allow While Stealthed (37), No Reflection (39), No Threat (42), Ignore Line of Sight (66), Allow While Invisible (78), Allow While Not Shapeshifted (caster form) (83), No Initial Threat (86), Not an Action (92), Suppress Caster Procs (112), Suppress Target Procs (113), Always Hit (114), Casting Cancels Autorepeat (Mainline: Do Not Trigger Target Stand) (118), Allow Cast While Casting (135), Suppress Weapon Procs (151), Allow While Stunned (163), Not On Player Controlled NPC (168), Allow While Fleeing (177), Allow While Confused (178), AI Doesn't Face Target (179), Allow While Riding Vehicle (204), Don't Cause Spell Pushback (230), Allow Cast While Channeling (308)
+Effects          :
+#1 (id=1225056)  : Dummy (3)
+                   Base Value: 0 | Scaled Value: 0 | Radius: 0 - 300 yards | Target: at Self (18) -> at Enemy in Area (16)
+
+Name             : Unstable Surge (id=1232408) [Hidden] 
+School           : Arcane
+Spell Type       : None
+Range            : 300 yards
+Travel Time      : 4 seconds
+Attributes       : Do Not Display (Spellbook, Aura Icon, Combat Log) (7), Do Not Log (8), No Redirection (35), No Reflection (39), Ignore Line of Sight (66), Not an Action (92), Do Not Display Range (126), AI Doesn't Face Target (179), Always Show Ground Texture (190), Missile Speed is Delay (in sec) (292)
+Effects          :
+#1 (id=1225057)  : Trigger Missiles (32): Unstable Surge
+                   Base Value: 0 | Scaled Value: 0 | Trigger Spell: 1232409 | Radius: 0 - 3 yards | Target: at Area (87) -> at Radius in Area (91)
+
+Name             : Unstable Surge (id=1232409) 
+School           : Arcane
+Spell Type       : Magic
+Range            : 300 yards
+Triggered By     : Unstable Surge (1232408)
+Attributes       : Allow While Mounted (24), Aura Is Debuff (26), Allow While Sitting (27), No Redirection (35), Allow While Stealthed (37), No Reflection (39), Ignore Line of Sight (66), Allow While Invisible (78), Not an Action (92), Do Not Display Range (126), No Cast Log (128), Allow Cast While Casting (135), Allow While Stunned (163), Not On Player Controlled NPC (168), Allow While Fleeing (177), Allow While Confused (178), AI Doesn't Face Target (179), Allow While Charmed (261), Allow Cast While Channeling (308), Do Not Display Cast Time (441), Unknown (502)
+Effects          :
+#1 (id=1264232)  : School Damage (2): arcane
+                   Base Value: 75.0499 | Scaled Value: 75.0499 | Radius: 0 - 3 yards | Target: at Area (87) -> at Enemy in Area (16)
+Description      : The Manaforge becomes unstable causing energy to erupt at random destinations, inflicting $s1 Arcane damage to players within $a1 yards of the impact locations.
+
 Name             : Refreshment (id=1232481) 
 School           : Physical
 Spell Type       : None
@@ -232597,84 +232553,6 @@ Effects          :
 Description      : Increases Haste by $s1 for $d.
 Tooltip          : Haste increased by $w9.
 
-Name             : Well Fed (id=1232496) 
-School           : Physical
-Spell Type       : None
-Duration         : 3600 seconds
-Labels           : 959
-                 : 4370
-                 : 4376: W-47CH D0G (1259647 effect#1)
-                 : 4898
-                 : 4905
-                 : 6102
-Proc Chance      : 101%
-Proc Flags       : Death
-Attributes       : Allow While Sitting (27), Allow While Stealthed (37), Include In Advanced Combat Log (72), Retain Item Cast (95), Allow Aura While Dead (116), Aura Points On Client (268), Recompute Aura On Level Scale (446)
-Effects          :
-#1 (id=1225247)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 0 | Scaled Value: 0 | Trigger Spell: 1219179 | Target: Self (1)
-#2 (id=1225248)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 0 | Scaled Value: 0 | Target: Self (1)
-#3 (id=1225249)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#4 (id=1225250)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#5 (id=1225251)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#6 (id=1225252)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#7 (id=1225253)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#8 (id=1225254)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#9 (id=1225255)  : Apply Aura (6) | Modify Rating (189)
-                   Base Value: 0 | Scaled Value: 0 | Rating: Crit, Avoidance | Target: Self (1)
-#10 (id=1225256) : Apply Aura (6) | Attribute (29)
-                   Base Value: 0 | Scaled Value: 0 | Stat: Sta | Target: Self (1)
-#11 (id=1225257) : Apply Aura (6) | Attribute (29)
-                   Base Value: 0 | Scaled Value: 0 | Stat: StrAgiInt | Target: Self (1)
-Description      : Increases Critical Strike by $s1 for $d.
-Tooltip          : Critical Strike increased by $w9.
-
-Name             : Well Fed (id=1232498) 
-School           : Physical
-Spell Type       : None
-Duration         : 3600 seconds
-Labels           : 959
-                 : 4370
-                 : 4376: W-47CH D0G (1259647 effect#1)
-                 : 4898
-                 : 4905
-                 : 6102
-Proc Chance      : 101%
-Proc Flags       : Death
-Attributes       : Allow While Sitting (27), Allow While Stealthed (37), Include In Advanced Combat Log (72), Retain Item Cast (95), Allow Aura While Dead (116), Aura Points On Client (268), Recompute Aura On Level Scale (446)
-Effects          :
-#1 (id=1225259)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 0 | Scaled Value: 0 | Trigger Spell: 1219179 | Target: Self (1)
-#2 (id=1225260)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 0 | Scaled Value: 0 | Target: Self (1)
-#3 (id=1225261)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#4 (id=1225262)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#5 (id=1225263)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#6 (id=1225264)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#7 (id=1225265)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#8 (id=1225266)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#9 (id=1225267)  : Apply Aura (6) | Modify Rating (189)
-                   Base Value: 0 | Scaled Value: 0 | Rating: Avoidance, Mastery | Target: Self (1)
-#10 (id=1225268) : Apply Aura (6) | Attribute (29)
-                   Base Value: 0 | Scaled Value: 0 | Stat: Sta | Target: Self (1)
-#11 (id=1225269) : Apply Aura (6) | Attribute (29)
-                   Base Value: 0 | Scaled Value: 0 | Stat: StrAgiInt | Target: Self (1)
-Description      : Increases Critical Strike by $s1 for $d.
-Tooltip          : Critical Strike increased by $w9.
-
 Name             : Well Fed (id=1232500) 
 School           : Physical
 Spell Type       : None
@@ -232842,83 +232720,6 @@ Effects          :
                    Affected School(s): All
 Description      : $@spelldesc355312
 Tooltip          : $@auracaster's animated remains.
-
-Name             : Well Fed (id=1232582) 
-School           : Physical
-Spell Type       : None
-Duration         : 3600 seconds
-Labels           : 959
-                 : 4370
-                 : 4376: W-47CH D0G (1259647 effect#1)
-                 : 4897
-                 : 6103
-Proc Chance      : 101%
-Proc Flags       : Death
-Attributes       : Allow While Sitting (27), Allow While Stealthed (37), Include In Advanced Combat Log (72), Retain Item Cast (95), Allow Aura While Dead (116), Aura Points On Client (268), Recompute Aura On Level Scale (446)
-Effects          :
-#1 (id=1225411)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 0 | Scaled Value: 0 | Trigger Spell: 1219179 | Target: Self (1)
-#2 (id=1225412)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 0 | Scaled Value: 0 | Target: Self (1)
-#3 (id=1225413)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#4 (id=1225414)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#5 (id=1225415)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#6 (id=1225416)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#7 (id=1225417)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#8 (id=1225418)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#9 (id=1225419)  : Apply Aura (6) | Modify Rating (189)
-                   Base Value: 0 | Scaled Value: 0 | Rating:  | Target: Self (1)
-#10 (id=1225420) : Apply Aura (6) | Attribute (29)
-                   Base Value: 0 | Scaled Value: 0 | Stat: Sta | Target: Self (1)
-#11 (id=1225421) : Apply Aura (6) | Attribute (29)
-                   Base Value: 0 | Scaled Value: 0 | Stat: StrAgiInt | Target: Self (1)
-Description      : $@spellicon457049 $@spellname457049|nIf you spend at least 10 seconds eating, you will become $@spellname457049 and gain $1219179s2 primary stat for $d.
-Tooltip          : Your primary stats have been increased by $w11.
-
-Name             : Well Fed (id=1232584) 
-School           : Physical
-Spell Type       : None
-Duration         : 3600 seconds
-Labels           : 959
-                 : 4370
-                 : 4376: W-47CH D0G (1259647 effect#1)
-                 : 4897
-                 : 4907
-                 : 6103
-Proc Chance      : 101%
-Proc Flags       : Death
-Attributes       : Allow While Sitting (27), Allow While Stealthed (37), Include In Advanced Combat Log (72), Retain Item Cast (95), Allow Aura While Dead (116), Aura Points On Client (268), Recompute Aura On Level Scale (446)
-Effects          :
-#1 (id=1225423)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 0 | Scaled Value: 0 | Trigger Spell: 1219179 | Target: Self (1)
-#2 (id=1225424)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 0 | Scaled Value: 0 | Target: Self (1)
-#3 (id=1225425)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#4 (id=1225426)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#5 (id=1225427)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#6 (id=1225428)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#7 (id=1225429)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#8 (id=1225430)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#9 (id=1225431)  : Apply Aura (6) | Modify Rating (189)
-                   Base Value: 0 | Scaled Value: 0 | Rating:  | Target: Self (1)
-#10 (id=1225432) : Apply Aura (6) | Attribute (29)
-                   Base Value: 0 | Scaled Value: 0 | Stat: Sta | Target: Self (1)
-#11 (id=1225433) : Apply Aura (6) | Attribute (29)
-                   Base Value: 0 | Scaled Value: 0 | Stat: StrAgiInt | Target: Self (1)
-Description      : $@spellicon457049 $@spellname457049|nIf you spend at least 10 seconds eating, you will become $@spellname457049 and gain $1219179s7 Stamina for $d.
-Tooltip          : Your primary stats have been increased by $w11.
 
 Name             : Well Fed (id=1232585) 
 School           : Physical
@@ -233962,45 +233763,6 @@ Effects          :
 Description      : Increases Critical Strike and Versatility by $s1 for $d.
 Tooltip          : Critical Strike and Versatility  increased by $w9.
 
-Name             : Well Fed (id=1233403) 
-School           : Physical
-Spell Type       : None
-Duration         : 3600 seconds
-Labels           : 959
-                 : 4370
-                 : 4376: W-47CH D0G (1259647 effect#1)
-                 : 4900
-                 : 4905
-                 : 6101
-Proc Chance      : 101%
-Proc Flags       : Death
-Attributes       : Allow While Sitting (27), Allow While Stealthed (37), Include In Advanced Combat Log (72), Retain Item Cast (95), Allow Aura While Dead (116), Aura Points On Client (268), Recompute Aura On Level Scale (446)
-Effects          :
-#1 (id=1226793)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 0 | Scaled Value: 0 | Trigger Spell: 1219179 | Target: Self (1)
-#2 (id=1226794)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 0 | Scaled Value: 0 | Target: Self (1)
-#3 (id=1226795)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#4 (id=1226796)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#5 (id=1226797)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#6 (id=1226798)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#7 (id=1226799)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#8 (id=1226800)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#9 (id=1226801)  : Apply Aura (6) | Modify Rating (189)
-                   Base Value: 0 | Scaled Value: 0 | Rating: Mastery, Vers | Target: Self (1)
-#10 (id=1226802) : Apply Aura (6) | Attribute (29)
-                   Base Value: 0 | Scaled Value: 0 | Stat: Sta | Target: Self (1)
-#11 (id=1226803) : Apply Aura (6) | Attribute (29)
-                   Base Value: 0 | Scaled Value: 0 | Stat: StrAgiInt | Target: Self (1)
-Description      : Increases Mastery and Versatility by $s1 for $d.
-Tooltip          : Mastery and Versatility  increased by $w9.
-
 Name             : Well Fed (id=1233404) 
 School           : Physical
 Spell Type       : None
@@ -234117,84 +233879,6 @@ Effects          :
                    Base Value: 0 | Scaled Value: 0 | Stat: StrAgiInt | Target: Self (1)
 Description      : Increases Mastery and Versatility by $s1 for $d.
 Tooltip          : Mastery and Versatility increased by $w9.
-
-Name             : Well Fed (id=1233407) 
-School           : Physical
-Spell Type       : None
-Duration         : 3600 seconds
-Labels           : 959
-                 : 4370
-                 : 4376: W-47CH D0G (1259647 effect#1)
-                 : 4897
-                 : 4907
-                 : 6101
-Proc Chance      : 101%
-Proc Flags       : Death
-Attributes       : Allow While Sitting (27), Allow While Stealthed (37), Include In Advanced Combat Log (72), Retain Item Cast (95), Allow Aura While Dead (116), Aura Points On Client (268), Recompute Aura On Level Scale (446)
-Effects          :
-#1 (id=1226837)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 0 | Scaled Value: 0 | Trigger Spell: 1219179 | Target: Self (1)
-#2 (id=1226838)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 0 | Scaled Value: 0 | Target: Self (1)
-#3 (id=1226839)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#4 (id=1226840)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#5 (id=1226841)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#6 (id=1226842)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#7 (id=1226843)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#8 (id=1226844)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#9 (id=1226845)  : Apply Aura (6) | Modify Rating (189)
-                   Base Value: 0 | Scaled Value: 0 | Rating:  | Target: Self (1)
-#10 (id=1226846) : Apply Aura (6) | Attribute (29)
-                   Base Value: 0 | Scaled Value: 0 | Stat: Sta | Target: Self (1)
-#11 (id=1226847) : Apply Aura (6) | Attribute (29)
-                   Base Value: 0 | Scaled Value: 0 | Stat: StrAgiInt | Target: Self (1)
-Description      : Your primary stats have been increased by $s11 for $d.
-Tooltip          : Your primary stats have been increased by $w11.
-
-Name             : Well Fed (id=1233408) 
-School           : Physical
-Spell Type       : None
-Duration         : 3600 seconds
-Labels           : 959
-                 : 4370
-                 : 4376: W-47CH D0G (1259647 effect#1)
-                 : 4897
-                 : 4907
-                 : 6101
-Proc Chance      : 101%
-Proc Flags       : Death
-Attributes       : Allow While Sitting (27), Allow While Stealthed (37), Include In Advanced Combat Log (72), Retain Item Cast (95), Allow Aura While Dead (116), Aura Points On Client (268), Recompute Aura On Level Scale (446)
-Effects          :
-#1 (id=1226848)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 0 | Scaled Value: 0 | Trigger Spell: 1219179 | Target: Self (1)
-#2 (id=1226849)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 0 | Scaled Value: 0 | Target: Self (1)
-#3 (id=1226850)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#4 (id=1226851)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#5 (id=1226852)  : Apply Aura (6) | Dummy (4)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#6 (id=1226853)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#7 (id=1226854)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#8 (id=1226855)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
-                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
-#9 (id=1226856)  : Apply Aura (6) | Modify Rating (189)
-                   Base Value: 0 | Scaled Value: 0 | Rating:  | Target: Self (1)
-#10 (id=1226857) : Apply Aura (6) | Attribute (29)
-                   Base Value: 0 | Scaled Value: 0 | Stat: Sta | Target: Self (1)
-#11 (id=1226858) : Apply Aura (6) | Attribute (29)
-                   Base Value: 0 | Scaled Value: 0 | Stat: StrAgiInt | Target: Self (1)
-Description      : Your primary stats have been increased by $s11 for $d.
-Tooltip          : Your primary stats have been increased by $w11.
 
 Name             : Durable Information Securing Container (id=1233515) [Passive] 
 School           : Physical
@@ -245127,15 +244811,17 @@ Name             : Mycolic Medicine (id=1250591) [Passive, Hidden]
 School           : Nature
 Spell Type       : None
 Proc Chance      : 101%
-Real PPM         : 3 (Haste multiplier)
+Real PPM         : 4 (Haste multiplier)
 Proc Flags       : Generic Helpful, Magic Heal, Helpful Periodic
 Triggered By     : Mycolic Medicine (1264293), Glowcap Mushroom's Rejuvenation (1264305)
 Attributes       : Passive (6), Do Not Display (Spellbook, Aura Icon, Combat Log) (7), Aura Points On Client (268), Scales with Casting Item's Level (354)
 Effects          :
 #1 (id=1254732)  : Apply Aura (6) | Proc Trigger Spell (42) | Scaling Class: Replace Secondary (-9)
-                   Base Value: 0 | Scaled Value: 12788.22 (coefficient=100.0616) | Misc Value: 127 | Target: Self (1)
+                   Base Value: 0 | Scaled Value: 20205.54 (coefficient=158.0985) | Misc Value: 127 | Target: Self (1)
+Hotfixed         : Coefficient (100.0616 -> 158.098511)
 #2 (id=1254733)  : Apply Aura (6) | Dummy (4) | Scaling Class: Replace Secondary (-9)
-                   Base Value: 2.5 | Scaled Value: 7307.672 (coefficient=57.17898) | Target: Self (1)
+                   Base Value: 2.5 | Scaled Value: 11546.02 (coefficient=90.34201) | Target: Self (1)
+Hotfixed         : Coefficient (57.178978 -> 90.34201)
 Description      : You gain Nalorakk's Favor of Growth. Your healing spells and abilities have a chance to instantly heal your target for $s1 and spawn a glowing mushroom near them that lasts for $1264294d.
 
 If an ally steps on and consumes the mushroom, they are healed for an additional $s2.
@@ -246525,10 +246211,11 @@ Description      : While echoing Xathuux's furious roar, each of your attacks gr
 Tooltip          : Critical Strike increased by $w1.
 
 Name             : Unstable Felheart Crystal (id=1254339) 
+Hotfixed         : Cooldown (120000 -> 90000)
 School           : Shadowflame
 Spell Type       : Magic
 Range            : 40 yards
-Cooldown         : 120 seconds
+Cooldown         : 90 seconds
 Category         : 1141 (Type 0x0)
 Category Cooldown: 20 seconds
 Attributes       : Can't Crit (93), Aura Points On Client (268), Reset cooldown upon ending an encounter (333), Scales with Casting Item's Level (354)
@@ -247111,7 +246798,8 @@ Proc Flags       : White Melee, Yellow Melee, White Ranged, Yellow Ranged, Gener
 Attributes       : Passive (6), No Aura Icon (60), Can Proc From Procs (122), No Aura Log (202), Aura Points On Client (268), Scales with Casting Item's Level (354)
 Effects          :
 #1 (id=1264645)  : Apply Aura (6) | Proc Trigger Spell (42): Alnsight | Scaling Class: Primary Attribute (-1)
-                   Base Value: 0 | Scaled Value: 15.14202 (coefficient=0.115517) | PvP Coefficient: 0.5 | Trigger Spell: 1266686 | Target: Self (1)
+                   Base Value: 0 | Scaled Value: 13.62778 (coefficient=0.103965) | PvP Coefficient: 0.5 | Trigger Spell: 1266686 | Target: Self (1)
+Hotfixed         : Coefficient (0.115517 -> 0.103965)
 Description      : Your damage and healing has a chance to grant you Alnsight for $1266686d. While active, casting spells and abilities manifests unstable Alnscorned and consumes their essence to grant you $s1 $pri for $1266687d. Multiple applications may overlap.
 
 Name             : Nalorakk's Call to War (id=1257183) 
@@ -247986,7 +247674,8 @@ Labels           : 292
 Attributes       : Passive (6), No Aura Icon (60), Can Proc From Procs (122), No Aura Log (202), Aura Points On Client (268), Scales with Casting Item's Level (354)
 Effects          :
 #1 (id=1268341)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
-                   Base Value: 0 | Scaled Value: 679.7151 (coefficient=5.185479) | PvP Coefficient: 0.5 | Target: Self (1)
+                   Base Value: 0 | Scaled Value: 611.7436 (coefficient=4.666931) | PvP Coefficient: 0.5 | Target: Self (1)
+Hotfixed         : Coefficient (5.185479 -> 4.666931)
 
 Name             : Murder Row Materials (id=1259297) [Passive, Hidden] 
 School           : Physical
@@ -248232,7 +247921,7 @@ Attributes       : Allow Item Spell In PvP (13), Aura Unique (43), Not an Action
 Effects          :
 #1 (id=1268811)  : Apply Aura Raid (65) | Modify Time Rate (Label) (470)
                    Base Value: -100 | Scaled Value: -100 | Misc Value: 4376 (Label) | Radius: 15 yards | Target: Self (1)
-                   Affected Spells (Label): Well Fed (1219182), Well Fed (1219183), Well Fed (1219184), Well Fed (1219185), Well Fed (1232086), Well Fed (1232087), Well Fed (1232089), Well Fed (1232091), Well Fed (1232313), Well Fed (1232316), Well Fed (1232317), Well Fed (1232318), Well Fed (1232320), Well Fed (1232321), Well Fed (1232324), Well Fed (1232325), Well Fed (1232490), Well Fed (1232491), Well Fed (1232492), Well Fed (1232493), Well Fed (1232496), Well Fed (1232498), Well Fed (1232500), Well Fed (1232501), Well Fed (1232582), Well Fed (1232584), Well Fed (1232585), Well Fed (1233400), Well Fed (1233401), Well Fed (1233402), Well Fed (1233403), Well Fed (1233404), Well Fed (1233405), Well Fed (1233406), Well Fed (1233407), Well Fed (1233408), Refreshment (1259662), Relaxed (1269152), Refreshment (1280485), Refreshment (1283374), Well Fed (1305151), Refreshment (1305158)
+                   Affected Spells (Label): Well Fed (1219182), Well Fed (1219183), Well Fed (1219184), Well Fed (1219185), Well Fed (1232089), Well Fed (1232091), Well Fed (1232313), Well Fed (1232316), Well Fed (1232317), Well Fed (1232318), Well Fed (1232320), Well Fed (1232321), Well Fed (1232324), Well Fed (1232325), Well Fed (1232490), Well Fed (1232491), Well Fed (1232492), Well Fed (1232493), Well Fed (1232500), Well Fed (1232501), Well Fed (1232585), Well Fed (1233400), Well Fed (1233401), Well Fed (1233402), Well Fed (1233404), Well Fed (1233405), Well Fed (1233406), Refreshment (1259662), Relaxed (1269152), Refreshment (1280485), Well Fed (1283372), Refreshment (1283374), Well Fed (1284619), Well Fed (1294727), Well Fed (1305151), Well Fed (1305154), Refreshment (1305158)
 #2 (id=1268812)  : Apply Aura Raid (65) | Modify Time Rate (Label) (470)
                    Base Value: -100 | Scaled Value: -100 | Misc Value: 4876 (Label) | Radius: 15 yards | Target: Self (1)
                    Affected Spells (Label): Flask of Thalassian Resistance (1235057), Flask of the Magisters (1235108), Flask of the Blood Knights (1235110), Flask of the Shattered Sun (1235111), Vicious Thalassian Flask of Honor (1239355)
@@ -250643,7 +250332,6 @@ Attributes       : Can't Crit (93)
 Effects          :
 #1 (id=1273548)  : Direct Heal (10)
                    Base Value: 0 | Scaled Value: 0 | Radius: 0 - 45 yards | Target: Source (22) -> Ally in Area (30)
-Hotfixed         : Target 1 (30 -> 22), Target 2 (0 -> 30)
 #2 (id=1305384)  : Dummy (3)
                    Base Value: 2051 | Scaled Value: 2051 | Target: Targeted Ally (21)
 Description      : $@spelldesc1279599
@@ -250858,17 +250546,19 @@ Effects          :
 Description      : $@spelldesc1259153
 
 Name             : Seed of Radiant Hope (id=1263644) 
+Hotfixed         : Cooldown (90000 -> 60000)
 School           : Nature
 Spell Type       : None
 Range            : 40 yards
 Duration         : 12 seconds
-Cooldown         : 90 seconds
+Cooldown         : 60 seconds
 Category         : 1141 (Type 0x0)
 Category Cooldown: 20 seconds
 Attributes       : DoT Stacking Rule (103), Periodic Can Crit (265), Aura Points On Client (268), Reset cooldown upon ending an encounter (333), Scales with Casting Item's Level (354)
 Effects          :
 #1 (id=1274441)  : Apply Aura (6) | Periodic Heal (8): every 1.5 seconds | Scaling Class: Replace Secondary (-9)
-                   Base Value: 0 | Scaled Value: 4702.232 (coefficient=36.79268) | PvP Coefficient: 0.5 | Target: Targeted Ally (21)
+                   Base Value: 0 | Scaled Value: 6583.125 (coefficient=51.50975) | PvP Coefficient: 0.5 | Target: Targeted Ally (21)
+Hotfixed         : Coefficient (36.792675 -> 51.509747)
 #2 (id=1274442)  : Apply Aura (6) | Trigger Spell Based on Health% (468): Seed of Radiant Hope
                    Base Value: 50 | Scaled Value: 50 | Misc Value: 1 | Trigger Spell: 1263652 | Target: Targeted Ally (21)
 Description      : Surround your target ally with Lightblossoms, healing them for ${$s1*($d/$t1)} over $d.
@@ -252335,7 +252025,8 @@ Spell Type       : None
 Attributes       : Passive (6), No Aura Icon (60), No Aura Log (202), Aura Points On Client (268), Scales with Casting Item's Level (354)
 Effects          :
 #1 (id=1279509)  : Apply Aura (6) | Dummy (4) | Scaling Class: Replace Secondary (-9)
-                   Base Value: 0 | Scaled Value: 97819.75 (coefficient=765.392) | PvP Coefficient: 0.5 | Target: Self (1)
+                   Base Value: 0 | Scaled Value: 154555.2 (coefficient=1209.319) | PvP Coefficient: 0.5 | Target: Self (1)
+Hotfixed         : Coefficient (765.391968 -> 1209.319214)
 
 Name             : Deepening Temptation (id=1268058) 
 School           : Physical
@@ -253688,6 +253379,45 @@ Upon reaching $w6 blessings, your companion becomes a Sanctum's Champion, conver
 
 Slaying an Elite enemy grants $w4 Sanctum's Blessings, while normal foes yield $w3.
 
+Name             : Well Fed (id=1283372) 
+School           : Physical
+Spell Type       : None
+Duration         : 3600 seconds
+Labels           : 959
+                 : 4370
+                 : 4376: W-47CH D0G (1259647 effect#1)
+                 : 4898
+                 : 4905
+                 : 6101
+Proc Chance      : 101%
+Proc Flags       : Death
+Attributes       : Allow While Sitting (27), Allow While Stealthed (37), Include In Advanced Combat Log (72), Retain Item Cast (95), Allow Aura While Dead (116), Aura Points On Client (268), Recompute Aura On Level Scale (446)
+Effects          :
+#1 (id=1297618)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 0 | Scaled Value: 0 | Trigger Spell: 1219179 | Target: Self (1)
+#2 (id=1297619)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 0 | Scaled Value: 0 | Target: Self (1)
+#3 (id=1297620)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#4 (id=1297621)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#5 (id=1297622)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#6 (id=1297623)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#7 (id=1297624)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#8 (id=1297625)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#9 (id=1297626)  : Apply Aura (6) | Modify Rating (189)
+                   Base Value: 0 | Scaled Value: 0 | Rating: Vers | Target: Self (1)
+#10 (id=1297627) : Apply Aura (6) | Attribute (29)
+                   Base Value: 0 | Scaled Value: 0 | Stat: Sta | Target: Self (1)
+#11 (id=1297628) : Apply Aura (6) | Attribute (29)
+                   Base Value: 0 | Scaled Value: 0 | Stat: StrAgiInt | Target: Self (1)
+Description      : Increases Versatility by $s1 for $d.
+Tooltip          : Versatility increased by $w9.
+
 Name             : Binding Flame (id=1283373) [Passive] 
 School           : Physical
 Spell Type       : None
@@ -253810,6 +253540,45 @@ Effects          :
                    Base Value: 10 | Scaled Value: 10
 Description      : Opens your mind to the touch of the Void. This effect enhances your appearance for $s2 sec to $d  but has no bearing on your combat abilities.
 Tooltip          : Communing with the Void.
+
+Name             : Well Fed (id=1284619) 
+School           : Physical
+Spell Type       : None
+Duration         : 3600 seconds
+Labels           : 959
+                 : 4370
+                 : 4376: W-47CH D0G (1259647 effect#1)
+                 : 4898
+                 : 4905
+                 : 6103
+Proc Chance      : 101%
+Proc Flags       : Death
+Attributes       : Allow While Sitting (27), Allow While Stealthed (37), Include In Advanced Combat Log (72), Retain Item Cast (95), Allow Aura While Dead (116), Aura Points On Client (268), Scales with Casting Item's Level (354), Recompute Aura On Level Scale (446)
+Effects          :
+#1 (id=1299864)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 0 | Scaled Value: 0 | Trigger Spell: 1219179 | Target: Self (1)
+#2 (id=1299865)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 0 | Scaled Value: 0 | Target: Self (1)
+#3 (id=1299866)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#4 (id=1299867)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#5 (id=1299868)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#6 (id=1299869)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#7 (id=1299870)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#8 (id=1299871)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#9 (id=1299872)  : Apply Aura (6) | Modify Rating (189)
+                   Base Value: 0 | Scaled Value: 0 | Rating: Vers | Target: Self (1)
+#10 (id=1299873) : Apply Aura (6) | Attribute (29)
+                   Base Value: 0 | Scaled Value: 0 | Stat: Sta | Target: Self (1)
+#11 (id=1299874) : Apply Aura (6) | Attribute (29)
+                   Base Value: 0 | Scaled Value: 0 | Stat: StrAgiInt | Target: Self (1)
+Description      : Increases Versatility by $s1 for $d.
+Tooltip          : Versatility increased by $w9.
 
 Name             : Sporelord's Mycelium (id=1284696) [Passive] 
 School           : Physical
@@ -253951,7 +253720,8 @@ Spell Type       : None
 Attributes       : Passive (6), No Aura Icon (60), No Aura Log (202), Aura Points On Client (268), Scales with Casting Item's Level (354)
 Effects          :
 #1 (id=1302330)  : Apply Aura (6) | Dummy (4) | Scaling Class: Replace Secondary (-9)
-                   Base Value: 0 | Scaled Value: 42325.53 (coefficient=331.1767) | PvP Coefficient: 0.5 | Target: Self (1)
+                   Base Value: 0 | Scaled Value: 59255.74 (coefficient=463.6473) | PvP Coefficient: 0.5 | Target: Self (1)
+Hotfixed         : Coefficient (331.176697 -> 463.647339)
 
 Name             : Rotbloom (id=1286135) 
 School           : Nature
@@ -256647,6 +256417,45 @@ Effects          :
                    Base Value: 5 | Scaled Value: 5 | Target: Self (1)
 Description      : Taking damage has a high chance to cause you to spew venomous bile, dealing $s2 Nature damage split among nearby enemies. You then reabsorb the bile, gaining $s1 Leech per affected enemy, up to ${$s1*$s3}, for $1296742d.
 
+Name             : Well Fed (id=1294727) 
+School           : Physical
+Spell Type       : None
+Duration         : 3600 seconds
+Labels           : 959
+                 : 4370
+                 : 4376: W-47CH D0G (1259647 effect#1)
+                 : 4897
+                 : 4907
+                 : 6103
+Proc Chance      : 101%
+Proc Flags       : Death
+Attributes       : Allow While Sitting (27), Allow While Stealthed (37), Include In Advanced Combat Log (72), Retain Item Cast (95), Allow Aura While Dead (116), Aura Points On Client (268), Recompute Aura On Level Scale (446)
+Effects          :
+#1 (id=1316244)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 0 | Scaled Value: 0 | Trigger Spell: 1219179 | Target: Self (1)
+#2 (id=1316245)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 0 | Scaled Value: 0 | Target: Self (1)
+#3 (id=1316246)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#4 (id=1316247)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#5 (id=1316248)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#6 (id=1316249)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#7 (id=1316250)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#8 (id=1316251)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#9 (id=1316252)  : Apply Aura (6) | Modify Rating (189)
+                   Base Value: 0 | Scaled Value: 0 | Rating:  | Target: Self (1)
+#10 (id=1316253) : Apply Aura (6) | Attribute (29)
+                   Base Value: 0 | Scaled Value: 0 | Stat: Sta | Target: Self (1)
+#11 (id=1316254) : Apply Aura (6) | Attribute (29)
+                   Base Value: 0 | Scaled Value: 0 | Stat: StrAgiInt | Target: Self (1)
+Description      : $@spellicon457049 $@spellname457049|nIf you spend at least 10 seconds eating, you will become $@spellname457049  gaining $1219179s7 Stamina and$1219179s2 primary stat for$d.
+Tooltip          : Primary stat increased by $w11.
+
 Name             : The King's Unyielding Wind (id=1294744) [Passive] 
 School           : Physical
 Spell Type       : None
@@ -256824,7 +256633,7 @@ Duration         : 15 seconds
 Labels           : 292
                  : 3959: Item Effects
 Triggered By     : Empowering Venom (1293316), Vile Vial of Volatile Venom (1295179)
-Attributes       : Allow While Mounted (24), Aura Is Debuff (26), Allow While Sitting (27), No Aura Cancel (31), Allow Cast While Casting (135), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Allow While Charmed (261), Aura Points On Client (268), Allow Cast While Channeling (308), Allow While Stunned By Horror Mechanic (342), Scales with Casting Item's Level (354), Allow While Stunned by Stun Mechanic (378), Allow While Feared By Fear Mechanic (417)
+Attributes       : Allow While Mounted (24), Aura Is Debuff (26), Allow While Sitting (27), No Aura Cancel (31), Allow Cast While Casting (135), Allow While Stunned (163), Allow While Fleeing (177), Allow While Confused (178), Aura Icon Only For Caster (Limit 10) (212), Allow While Charmed (261), Aura Points On Client (268), Allow Cast While Channeling (308), Allow While Stunned By Horror Mechanic (342), Scales with Casting Item's Level (354), Allow While Stunned by Stun Mechanic (378), Allow While Feared By Fear Mechanic (417)
 Effects          :
 #1 (id=1316975)  : Apply Aura (6) | Modify Rating (189) | Scaling Class: Secondary Rating (-7)
                    Base Value: 0 | Scaled Value: -62.93292 (coefficient=-0.480109) | Rating: Crit | Target: Self (1)
@@ -257307,11 +257116,11 @@ Labels           : 292
 Proc Chance      : 101%
 Real PPM         : 2.5 (Haste multiplier)
 Proc Flags       : Yellow Melee, Generic Helpful, Magic Heal, Helpful Periodic
-Triggered By     : Preternatural Antivenom (1305846)
 Attributes       : Passive (6), No Aura Icon (60), Can Proc From Procs (122), No Aura Log (202), Aura Points On Client (268), Scales with Casting Item's Level (354)
 Effects          :
 #1 (id=1318047)  : Apply Aura (6) | Dummy (4) | Scaling Class: Replace Primary (-8)
-                   Base Value: 0 | Scaled Value: 61573.15 (coefficient=481.78) | PvP Coefficient: 0.5 | Target: Self (1)
+                   Base Value: 0 | Scaled Value: 107752.7 (coefficient=843.1122) | PvP Coefficient: 0.5 | Target: Self (1)
+Hotfixed         : Coefficient (481.779968 -> 843.112244)
 #2 (id=1333118)  : Dummy (3)
                    Base Value: 75 | Scaled Value: 75 | Target: Self (1)
 Description      : Your healing has a high chance to infuse the target with Preternatural Antivenom for $1305846d, healing your ally for $s2% of any damage they take until $s1 health has been restored.
@@ -257477,6 +257286,7 @@ Labels           : 292
                  : 3959: Item Effects
 Category Cooldown: 30 seconds
 Attributes       : Aura Points On Client (268)
+Aura Interrupt   : Enter Instance (43), Encounter Start (55)
 Effects          :
 #1 (id=1318227)  : Apply Aura (6) | Attribute (29)
                    Base Value: 0 | Scaled Value: 0 | Stat: Int | Target: Self (1)
@@ -258287,7 +258097,7 @@ Name             : Pulse Seeker's Oculus (id=1296971)
 School           : Physical
 Spell Type       : None
 Duration         : 300 seconds
-Attributes       : Allow Cast While Dead (23), Aura Is Debuff (26), No Aura Cancel (31), Allow Dead Target (64), Allow Aura While Dead (116), No Aura Log (202)
+Attributes       : Allow Cast While Dead (23), Aura Is Debuff (26), No Aura Cancel (31), Allow Dead Target (64), Hide In Raid Filter (110), Allow Aura While Dead (116), No Aura Log (202)
 Aura Interrupt   : Raid Encounter End or M+ Start (41)
 Effects          :
 #1 (id=1319825)  : Apply Aura (6) | Dummy (4)
@@ -258718,7 +258528,7 @@ Labels           : 292
                  : 3959: Item Effects
 Category Cooldown: 20 seconds
 Attributes       : Is Channelled (34), Track Target in Channel (46), Name in Channel Bar (61), DoT Stacking Rule (103), Extra Initial Period (169), Periodic Can Crit (265), Aura Points On Client (268), Allow Class Ability Procs (416)
-Channel Interrupt: Damage (2), Sheathing (10), Interacting (11), Looting (12), Attacking (13), Use Item (14)
+Channel Interrupt: Damage (2), Sheathing (10), Interacting (11), Looting (12), Attacking (13)
 Effects          :
 #1 (id=1321357)  : Apply Aura (6) | Periodic Damage (3): nature every 0.5 seconds
                    Base Value: 0 | Scaled Value: 0 | Target: Targeted Enemy (6)
@@ -258735,9 +258545,11 @@ Triggered By     : Venom Splatter (1307222)
 Attributes       : Passive (6), No Aura Icon (60), Can Proc From Procs (122), No Aura Log (202), Aura Points On Client (268), Scales with Casting Item's Level (354)
 Effects          :
 #1 (id=1321360)  : Apply Aura (6) | Dummy (4) | Scaling Class: Replace Primary (-8)
-                   Base Value: 0 | Scaled Value: 329056.3 (coefficient=2574.705) | PvP Coefficient: 0.5 | Target: Self (1)
+                   Base Value: 0 | Scaled Value: 411320.8 (coefficient=3218.385) | PvP Coefficient: 0.25 | Target: Self (1)
+Hotfixed         : Coefficient (2574.705078 -> 3218.38501)
 #2 (id=1321379)  : Apply Aura (6) | Dummy (4) | Scaling Class: Replace Primary (-8)
-                   Base Value: 0 | Scaled Value: 57909.32 (coefficient=453.1122) | PvP Coefficient: 0.5 | Target: Self (1)
+                   Base Value: 0 | Scaled Value: 72386.39 (coefficient=566.3883) | PvP Coefficient: 0.25 | Target: Self (1)
+Hotfixed         : Coefficient (453.112244 -> 566.388306)
 
 Name             : Zatha'tek, Breath of Corruption (id=1298023) [Passive] 
 School           : Physical
@@ -259780,6 +259592,48 @@ Effects          :
 Description      : Increases Critical Strike by $s1 for $d.
 Tooltip          : Stamina increased by $w10 and Critical Strike increased by $w9.
 
+Name             : Well Fed (id=1305154) 
+School           : Physical
+Spell Type       : None
+Duration         : 3600 seconds
+Labels           : 959
+                 : 4370
+                 : 4376: W-47CH D0G (1259647 effect#1)
+                 : 4898
+                 : 4902
+                 : 4905
+                 : 4906
+                 : 6103
+                 : 6881
+Proc Chance      : 101%
+Proc Flags       : Death
+Attributes       : Allow While Sitting (27), Allow While Stealthed (37), Include In Advanced Combat Log (72), Retain Item Cast (95), Allow Aura While Dead (116), Aura Points On Client (268), Scales with Casting Item's Level (354), Recompute Aura On Level Scale (446)
+Effects          :
+#1 (id=1332213)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 0 | Scaled Value: 0 | Trigger Spell: 1219179 | Target: Self (1)
+#2 (id=1332214)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 0 | Scaled Value: 0 | Target: Self (1)
+#3 (id=1332215)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#4 (id=1332216)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#5 (id=1332217)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#6 (id=1332218)  : Apply Aura (6) | Dummy (4) | Scaling Class: Secondary Rating (-7)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#7 (id=1332219)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#8 (id=1332220)  : Apply Aura (6) | Dummy (4) | Scaling Class: Primary Attribute (-1)
+                   Base Value: 50 | Scaled Value: 50 | Target: Self (1)
+#9 (id=1332221)  : Apply Aura (6) | Modify Rating (189)
+                   Base Value: 0 | Scaled Value: 0 | Rating: Haste | Target: Self (1)
+#10 (id=1332222) : Apply Aura (6) | Attribute (29)
+                   Base Value: 0 | Scaled Value: 0 | Stat: Sta | Target: Self (1)
+#11 (id=1332223) : Apply Aura (6) | Attribute (29)
+                   Base Value: 0 | Scaled Value: 0 | Stat: StrAgiInt | Target: Self (1)
+Description      : Increases Haste by $s1 for $d.
+Tooltip          : Stamina increased by $w10 and Haste increased by $w9.
+
 Name             : Refreshment (id=1305158) 
 School           : Physical
 Spell Type       : None
@@ -260558,8 +260412,8 @@ Attributes       : DoT Stacking Rule (103), Can Proc From Procs (122), Aura Is B
 Effects          :
 #1 (id=1333048)  : Apply Aura (6) | Dummy (4)
                    Base Value: 0 | Scaled Value: 0 | Target: Targeted Ally (21)
-#2 (id=1333049)  : Dummy (3)
-                   Base Value: 0 | Scaled Value: 0 | Trigger Spell: 1295775 | Target: Self (1)
+#2 (id=1333049)  : Apply Aura (6) | Dummy (4)
+                   Base Value: 0 | Scaled Value: 0 | Target: Targeted Ally (21)
 Description      : $@spelldesc1295775
 Tooltip          : Protected by a Preternatural Antivenom, which will heal you for 50% of any damage you take until $w1 health has been restored.
 

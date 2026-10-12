@@ -456,7 +456,6 @@ public:
     bool trigger_overpowered_missiles;
     bool gained_initial_clearcasting; // Used to prevent queueing Arcane Missiles immediately after gaining the first stack Clearclasting.
     timespan_t last_random_clearcasting; // Brainstorm cannot be triggered twice if a singular spell/action triggers Clearcasting twice.
-    bool thermal_void_active;
     int glorious_incandescence_snapshot;
     int fired_up_count; // number of Fired Up procs in this Combustion
   } state;
@@ -2361,18 +2360,12 @@ struct hot_streak_spell_t : public custom_state_spell_t<fire_mage_spell_t, hot_s
 
     c += p()->buffs.hyperthermia->check_value();
 
+    // The spelldata for Pyroclasm and the 12.1 2pc doesn't seem to be used,
+    // so we're hardcoding it here as they probably did serverside.
+    if ( pyroclasm_active() && p()->sets->has_set_bonus( MAGE_FIRE, MID2, B2 ) )
+      c += 1.0;
+
     return c;
-  }
-
-  result_e calculate_result( action_state_t* s ) const override
-  {
-    result_e r = custom_state_spell_t::calculate_result( s );
-
-    // TODO: Pyroclasm 2pc is likely scripted. Fuel the Fire does not see the increased crit chance.
-    if ( r == RESULT_HIT && pyroclasm_active() && p()->sets->has_set_bonus( MAGE_FIRE, MID2, B2 ) )
-      r = RESULT_CRIT;
-
-    return r;
   }
 
   double composite_da_multiplier( const action_state_t* s ) const override
@@ -3718,14 +3711,94 @@ struct evocation_t final : public arcane_mage_spell_t
   }
 };
 
-struct fireball_t final : public fire_mage_spell_t
+// Common Frostfire Bolt behavior used by both fireball_t and frostbolt_t
+struct frostfire_data_t
+{
+  bool frostfire_empowerment = false;
+  void debug( std::ostringstream& s ) const { s << " ffe=" << frostfire_empowerment; }
+};
+
+template <typename Base>
+struct filler_spell_t : custom_state_spell_t<Base, frostfire_data_t>
 {
   const bool frostfire;
+
+  template <typename... Args>
+  filler_spell_t( bool frostfire_, Args&&... args ) :
+    super_t( std::forward<Args>( args )... ),
+    frostfire( frostfire_ )
+  { }
+
+  void snapshot_state( action_state_t* s, result_amount_type rt ) override
+  {
+    this->cast_state( s )->data.frostfire_empowerment = frostfire && this->p()->buffs.frostfire_empowerment->check();
+    super_t::snapshot_state( s, rt );
+  }
+
+  timespan_t execute_time() const override
+  {
+    if ( frostfire && this->p()->buffs.frostfire_empowerment->check() )
+      return 0_ms;
+
+    return super_t::execute_time();
+  }
+
+  bool apply_frostfire_empowerment( const action_state_t* s ) const
+  {
+    if ( this->sim->dbc->wowv() < wowv_t{ 12, 1, 5 } )
+      return frostfire && this->p()->state.trigger_ff_empowerment;
+    else
+      return frostfire && this->cast_state( s )->data.frostfire_empowerment;
+  }
+
+  void execute() override
+  {
+    super_t::execute();
+
+    if ( frostfire && this->p()->buffs.frostfire_empowerment->check() )
+    {
+      // Buff is decremented with a short delay, allowing two spells to benefit.
+      make_event( *this->sim, 15_ms, [ this ] { this->p()->buffs.frostfire_empowerment->decrement(); } );
+      this->p()->state.trigger_ff_empowerment = true;
+    }
+  }
+
+  void impact( action_state_t* s ) override
+  {
+    super_t::impact( s );
+
+    if ( this->result_is_hit( s->result ) && apply_frostfire_empowerment( s ) )
+    {
+      this->p()->state.trigger_ff_empowerment = false;
+
+      double amount = s->result_total;
+      // TODO: Doesn't seem to benefit from crits on the main target
+      if ( this->sim->dbc->wowv() >= wowv_t{ 12, 1, 5 } )
+        amount /= 1.0 + s->result_crit_bonus;
+      this->p()->action.frostfire_empowerment->execute_on_target( s->target, this->p()->talents.frostfire_empowerment->effectN( 2 ).percent() * amount );
+    }
+  }
+
+  double composite_da_multiplier( const action_state_t* s ) const override
+  {
+    double m = super_t::composite_da_multiplier( s );
+
+    if ( apply_frostfire_empowerment( s ) )
+      m *= 1.0 + this->p()->buffs.frostfire_empowerment->data().effectN( 3 ).percent();
+
+    return m;
+  }
+
+private:
+  using super_t = custom_state_spell_t<Base, frostfire_data_t>;
+};
+
+struct fireball_t final : public filler_spell_t<fire_mage_spell_t>
+{
   double master_of_flame_mult;
 
   fireball_t( std::string_view n, mage_t* p, std::string_view options_str, bool frostfire_ = false ) :
-    fire_mage_spell_t( n, p, frostfire_ ? p->talents.frostfire_bolt : p->find_specialization_spell( "Fireball" ) ),
-    frostfire( frostfire_ ),
+    filler_spell_t( frostfire_, n, p, frostfire_ ? p->talents.frostfire_bolt : p->find_specialization_spell( "Fireball" ) ),
     master_of_flame_mult( 1.0 )
   {
     parse_options( options_str );
@@ -3744,44 +3817,18 @@ struct fireball_t final : public fire_mage_spell_t
 
   timespan_t travel_time() const override
   {
-    timespan_t t = fire_mage_spell_t::travel_time();
+    timespan_t t = filler_spell_t::travel_time();
     // TODO: Frostfire Bolt currently doesn't respect the max travel time
     return frostfire && p()->bugs ? t : std::min( t, 0.75_s );
   }
 
-  timespan_t execute_time() const override
-  {
-    if ( frostfire && p()->buffs.frostfire_empowerment->check() )
-      return 0_ms;
-
-    return fire_mage_spell_t::execute_time();
-  }
-
-  void execute() override
-  {
-    fire_mage_spell_t::execute();
-
-    if ( frostfire && p()->buffs.frostfire_empowerment->check() )
-    {
-      // Buff is decremented with a short delay, allowing two spells to benefit.
-      make_event( *sim, 15_ms, [ this ] { p()->buffs.frostfire_empowerment->decrement(); } );
-      p()->state.trigger_ff_empowerment = true;
-    }
-  }
-
   void impact( action_state_t* s ) override
   {
-    fire_mage_spell_t::impact( s );
+    filler_spell_t::impact( s );
 
     if ( result_is_hit( s->result ) )
     {
       get_td( s->target )->debuffs.controlled_destruction->trigger();
-
-      if ( frostfire && p()->state.trigger_ff_empowerment )
-      {
-        p()->state.trigger_ff_empowerment = false;
-        p()->action.frostfire_empowerment->execute_on_target( s->target, p()->talents.frostfire_empowerment->effectN( 2 ).percent() * s->result_total );
-      }
 
       if ( rng().roll( p()->talents.pyrocosm->effectN( 2 ).percent() ) )
         trigger_meteorite( s->target );
@@ -3790,7 +3837,7 @@ struct fireball_t final : public fire_mage_spell_t
 
   double composite_target_crit_chance( player_t* target ) const override
   {
-    double c = fire_mage_spell_t::composite_target_crit_chance( target );
+    double c = filler_spell_t::composite_target_crit_chance( target );
 
     if ( firestarter_active( target ) || fireball_execute_active( target ) )
       c += 1.0;
@@ -3800,13 +3847,10 @@ struct fireball_t final : public fire_mage_spell_t
 
   double composite_da_multiplier( const action_state_t* s ) const override
   {
-    double m = fire_mage_spell_t::composite_da_multiplier( s );
+    double m = filler_spell_t::composite_da_multiplier( s );
 
     if ( !p()->buffs.combustion->check() )
       m *= master_of_flame_mult;
-
-    if ( frostfire && p()->state.trigger_ff_empowerment )
-      m *= 1.0 + p()->buffs.frostfire_empowerment->data().effectN( 3 ).percent();
 
     if ( fireball_execute_active( s->target ) )
       m *= 1.0 + p()->talents.scald->effectN( 1 ).percent();
@@ -3981,16 +4025,13 @@ struct flurry_t final : public custom_state_spell_t<frost_mage_spell_t, flurry_d
   }
 };
 
-struct frostbolt_t final : public frost_mage_spell_t
+struct frostbolt_t final : public filler_spell_t<frost_mage_spell_t>
 {
-  const bool frostfire;
-
   double fof_chance = 0.0;
   double bf_chance = 0.0;
 
   frostbolt_t( std::string_view n, mage_t* p, std::string_view options_str, bool frostfire_ = false ) :
-    frost_mage_spell_t( n, p, frostfire_ ? p->talents.frostfire_bolt : p->find_class_spell( "Frostbolt" ) ),
-    frostfire( frostfire_ )
+    filler_spell_t( frostfire_, n, p, frostfire_ ? p->talents.frostfire_bolt : p->find_class_spell( "Frostbolt" ) )
   {
     parse_options( options_str );
     enable_calculate_on_impact( frostfire ? 468655 : 228597 );
@@ -4002,23 +4043,9 @@ struct frostbolt_t final : public frost_mage_spell_t
     freezing_stacks = as<int>( p->spec.shatter->effectN( 1 ).base_value() );
 
     chain_multiplier = p->talents.splitting_ice->effectN( 2 ).percent();
-    // TODO: Splitting Ice has a couple of issues that affect Frostbolt and Frostfire Bolt
-    //
-    // 1) Frostbolt cleave distance is much smaller than the other SI spells (including FFB)
-    // 2) The secondary target reduction is applied by keeping track of the target
-    // of the last cast. The impact spell then deals full damage if its target matches the one
-    // above. This has its own set of (rather meaningless) bugs, e.g. casting another spell
-    // before the previous one hits can change how the previous spell deals damage.
-    //
-    // However, the bigger issue is that it's currently only Frostfire Bolt that sets this tracked
-    // target. Frostbolt uses it to deal damage but doesn't set it. This has the following consequences:
-    //
-    // * If you cast Frostfire Bolt and then switch to Spellslinger, your Frostbolt will only ever
-    // deal full damage to the last FFB target.
-    // * If you never cast Frostfire Bolt, Frostbolt simply deals full damage to everything.
-    //
-    // Since the last behavior is the most common one, that's what we'll model in simc.
-    if ( p->bugs && !frostfire )
+
+    // TODO: PTR check
+    if ( p->bugs && !frostfire && sim->dbc->wowv() < wowv_t{ 12, 1, 5 } )
       chain_multiplier = 1.0;
 
     if ( data().ok() && p->talents.frostfire_empowerment.ok() )
@@ -4030,55 +4057,34 @@ struct frostbolt_t final : public frost_mage_spell_t
     proc_brain_freeze = p()->get_proc( "Brain Freeze from Frostbolt" );
     proc_fof = p()->get_proc( "Fingers of Frost from Frostbolt" );
 
-    frost_mage_spell_t::init_finished();
+    filler_spell_t::init_finished();
   }
 
-  timespan_t execute_time() const override
+  void do_schedule_travel( action_state_t* s, timespan_t time ) override
   {
-    if ( frostfire && p()->buffs.frostfire_empowerment->check() )
-      return 0_ms;
-
-    return frost_mage_spell_t::execute_time();
-  }
-
-  double composite_da_multiplier( const action_state_t* s ) const override
-  {
-    double m = frost_mage_spell_t::composite_da_multiplier( s );
-
-    if ( frostfire && p()->state.trigger_ff_empowerment )
-      m *= 1.0 + p()->buffs.frostfire_empowerment->data().effectN( 3 ).percent();
-
-    return m;
+    // TODO: Frostfire Bolt seems to always impact the cleave target first, which means
+    // FFE triggers on the weaker hit. While this doesn't model it perfectly (it doesn't
+    // work with distance targeting), it should be sufficient for most sims.
+    if ( frostfire && p()->bugs && s->chain_target == 0 )
+      time += 1_ms;
+    filler_spell_t::do_schedule_travel( s, time );
   }
 
   void execute() override
   {
-    frost_mage_spell_t::execute();
+    filler_spell_t::execute();
 
     p()->trigger_fof( fof_chance, proc_fof );
     p()->trigger_brain_freeze( bf_chance, proc_brain_freeze, 150_ms );
     p()->trigger_splinter( p()->target );
-
-    if ( frostfire && p()->buffs.frostfire_empowerment->check() )
-    {
-      // Buff is decremented with a short delay, allowing two spells to benefit.
-      make_event( *sim, 15_ms, [ this ] { p()->buffs.frostfire_empowerment->decrement(); } );
-      p()->state.trigger_ff_empowerment = true;
-    }
   }
 
   void impact( action_state_t* s ) override
   {
-    frost_mage_spell_t::impact( s );
+    filler_spell_t::impact( s );
 
     if ( s->result == RESULT_CRIT && p()->talents.frostbite.ok() )
       p()->trigger_freezing( s->target, as<int>( p()->talents.frostbite->effectN( 1 ).base_value() ), freezing_source );
-
-    if ( result_is_hit( s->result ) && frostfire && p()->state.trigger_ff_empowerment )
-    {
-      p()->state.trigger_ff_empowerment = false;
-      p()->action.frostfire_empowerment->execute_on_target( s->target, p()->talents.frostfire_empowerment->effectN( 2 ).percent() * s->result_total );
-    }
   }
 
   bool ready() override
@@ -4087,7 +4093,7 @@ struct frostbolt_t final : public frost_mage_spell_t
     if ( p()->buffs.glacial_spike->check() && p()->executing != this )
       return false;
 
-    return frost_mage_spell_t::ready();
+    return filler_spell_t::ready();
   }
 };
 
@@ -4392,7 +4398,15 @@ struct winters_end_t final : public mage_spell_t
   }
 };
 
-struct ice_lance_t final : public frost_mage_spell_t
+struct ice_lance_data_t
+{
+  bool fingers_of_frost = false;
+  bool thermal_void = false;
+  void debug( std::ostringstream& s ) const
+  { s << " fof=" << fingers_of_frost << " thermal_void=" << thermal_void; }
+};
+
+struct ice_lance_t final : public custom_state_spell_t<frost_mage_spell_t, ice_lance_data_t>
 {
   int freezing_consume;
   shatter_source_t* shatter_source;
@@ -4402,7 +4416,7 @@ struct ice_lance_t final : public frost_mage_spell_t
   { return ( p->talents.thermal_void.ok() ? 2 : 1 ) * consume; }
 
   ice_lance_t( std::string_view n, mage_t* p, std::string_view options_str ) :
-    frost_mage_spell_t( n, p, p->talents.ice_lance ),
+    custom_state_spell_t( n, p, p->talents.ice_lance ),
     freezing_consume( as<int>( p->spec.shatter->effectN( 4 ).base_value() ) ),
     shatter_source( p->get_shatter_source( name_str, max_consume( p, freezing_consume ) ) ),
     shatter_source_cleave( p->get_shatter_source( "Ice Lance cleave", max_consume( p, freezing_consume ) ) )
@@ -4420,26 +4434,35 @@ struct ice_lance_t final : public frost_mage_spell_t
       add_child( p->action.shatter.ice_lance );
   }
 
+  void snapshot_state( action_state_t* s, result_amount_type rt ) override
+  {
+    cast_state( s )->data.fingers_of_frost = p()->buffs.fingers_of_frost->check();
+    cast_state( s )->data.thermal_void = p()->buffs.thermal_void->check();
+
+    custom_state_spell_t::snapshot_state( s, rt );
+  }
+
   void execute() override
   {
-    frost_mage_spell_t::execute();
+    custom_state_spell_t::execute();
 
+    // TODO: The state is still used for the S1 set bonus. Remove later.
     p()->state.fingers_of_frost_active = p()->buffs.fingers_of_frost->up();
     p()->buffs.fingers_of_frost->decrement();
 
-    p()->state.thermal_void_active = p()->buffs.thermal_void->up();
+    p()->buffs.thermal_void->up(); // Benefit tracking
     p()->buffs.thermal_void->decrement();
   }
 
   void impact( action_state_t* s ) override
   {
-    frost_mage_spell_t::impact( s );
+    custom_state_spell_t::impact( s );
 
     if ( result_is_hit( s->result ) && p()->action.shatter.ice_lance )
     {
-      int consume = ( p()->state.thermal_void_active ? 2 : 1 ) * freezing_consume;
+      int consume = ( cast_state( s )->data.thermal_void ? 2 : 1 ) * freezing_consume;
       int stacks = p()->trigger_shatter( s->target, p()->action.shatter.ice_lance, consume,
-                                         s->chain_target == 0 ? shatter_source : shatter_source_cleave, p()->state.fingers_of_frost_active );
+                                         s->chain_target == 0 ? shatter_source : shatter_source_cleave, cast_state( s )->data.fingers_of_frost );
 
       if ( s->chain_target == 0 && p()->talents.force_of_will.ok() )
         p()->trigger_splinter( s->target, stacks / as<int>( p()->talents.force_of_will->effectN( 3 ).base_value() ) );
@@ -4453,7 +4476,7 @@ struct ice_lance_t final : public frost_mage_spell_t
 
   size_t available_targets( std::vector<player_t*>& tl ) const override
   {
-    frost_mage_spell_t::available_targets( tl );
+    custom_state_spell_t::available_targets( tl );
 
     // Priority for target selection. Main target is always chosen, rest depends on Freezing stacks.
     auto value = [ this ] ( player_t* t )
@@ -4477,7 +4500,7 @@ struct ice_lance_t final : public frost_mage_spell_t
     // Freezing stacks change often enough that trying to do a more
     // fine-grained invalidation isn't worth it.
     target_cache.is_valid = false;
-    return frost_mage_spell_t::target_list();
+    return custom_state_spell_t::target_list();
   }
 };
 
@@ -5225,17 +5248,21 @@ struct arcane_echo_t final : public arcane_mage_spell_t
 struct frostfire_empowerment_t final : public spell_t
 {
   proc_t* freezing_source;
+  // Counts the excluded main target towards the soft cap.
+  double reduced_aoe_targets_2;
 
   frostfire_empowerment_t( std::string_view n, mage_t* p ) :
     spell_t( n, p, p->find_spell( 431186 ) ),
-    freezing_source( p->get_proc( "Freezing applied (Frostfire Empowerment)" ) )
+    freezing_source( p->get_proc( "Freezing applied (Frostfire Empowerment)" ) ),
+    reduced_aoe_targets_2( p->talents.frostfire_empowerment->effectN( 5 ).base_value() )
   {
     background = proc = true;
     target_filter_callback = secondary_targets_only();
     aoe = -1;
     base_dd_min = base_dd_max = 1.0;
-    // TODO: Check how it behaves wrt the excluded main target
-    reduced_aoe_targets = p->talents.frostfire_empowerment->effectN( 5 ).base_value();
+
+    if ( !p->bugs )
+      reduced_aoe_targets = reduced_aoe_targets_2;
   }
 
   void impact( action_state_t* s ) override
@@ -5245,6 +5272,30 @@ struct frostfire_empowerment_t final : public spell_t
     mage_t* p = debug_cast<mage_t*>( player );
     if ( result_is_hit( s->result ) )
       p->trigger_freezing( s->target, as<int>( p->talents.frostfire_empowerment->effectN( 4 ).base_value() ), freezing_source );
+  }
+
+  double composite_aoe_multiplier( const action_state_t* s ) const override
+  {
+    double m = spell_t::composite_aoe_multiplier( s );
+    if ( !player->bugs )
+      return m;
+
+    // FFE has a couple of weird quirks:
+    //  a) it hits dead targets which count towards the cap (not implemented here)
+    //  b) it somehow counts the excluded primary target towards the cap
+    //  c) it doesn't split damage past 20 targets
+    // There's no core support for these, so we have to reimplement that here.
+    // Consider moving this elsewhere if we find more spells that behave similarly.
+    assert( reduced_aoe_targets_2 > 0.0 );
+
+    int targets = s->n_targets + 1;
+    if ( as<double>( targets ) > reduced_aoe_targets_2 )
+      m *= std::sqrt( reduced_aoe_targets_2 / std::min( sim->max_aoe_enemies, targets ) );
+
+    if ( s->n_targets > static_cast<size_t>( sim->max_aoe_enemies ) )
+      m /= sim->max_aoe_enemies / static_cast<double>( s->n_targets );
+
+    return m;
   }
 };
 

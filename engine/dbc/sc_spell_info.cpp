@@ -1834,6 +1834,7 @@ static constexpr auto _label_strings = util::make_static_map<int, std::string_vi
   { LABEL_HEALING_SPELLS,       "Healing Spells"       },  // 741
   { LABEL_COVENANT,             "Covenant Spells"      },  // 976
   { LABEL_EVOKER_SPELLS,        "Evoker Spells"        },  // 1216
+  { LABEL_AVOID_CC_TARGETS,     "Avoid CC Targets"     },  // 1387
   { LABEL_EVOKER_RED_SPELLS,    "Red Evoker Spells"    },  // 1464
   { LABEL_EVOKER_BLUE_SPELLS,   "Blue Evoker Spells"   },  // 1465
   { LABEL_EVOKER_GREEN_SPELLS,  "Green Evoker Spells"  },  // 1466
@@ -3527,8 +3528,8 @@ void spell_info::effect_to_xml( const dbc_t& dbc, const spell_data_t* spell, con
 
   if ( level <= MAX_LEVEL )
   {
-    double v_min = dbc.effect_min( e->id(), level );
-    double v_max = dbc.effect_max( e->id(), level );
+    double v_min = dbc.effect_min( e, level );
+    double v_max = dbc.effect_max( e, level );
     node->add_parm( "scaled_value", v_min );
     if ( v_min != v_max )
     {

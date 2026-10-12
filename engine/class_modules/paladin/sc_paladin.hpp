@@ -5,8 +5,8 @@
 namespace paladin
 {
 // Forward declarations
-typedef std::pair<std::string, simple_sample_data_with_min_max_t> data_t;
-typedef std::pair<std::string, simple_sample_data_t> simple_data_t;
+using data_t = std::pair<std::string, simple_sample_data_with_min_max_t>;
+using simple_data_t = std::pair<std::string, simple_sample_data_t>;
 struct paladin_t;
 struct blessing_of_sacrifice_redirect_t;
 namespace buffs
@@ -59,7 +59,10 @@ enum grand_crusader_source : unsigned int
 {
   GC_NORMAL   = 0,
   GC_JUDGMENT = 1,
-  GC_ROR      = 2,
+  GC_ROR_SW   = 2,
+  GC_ROR_HB   = 3,
+  GC_CS       = 4,
+  GC_AVOID    = 5,
 };
 
 // ==========================================================================
@@ -148,6 +151,9 @@ public:
 
     action_t* background_avenging_wrath;
     action_t* background_crusade;
+
+    action_t* afterimage;
+    action_t* guided_prayer;
   } active;
 
   // Buffs
@@ -166,6 +172,7 @@ public:
     buff_t* blessing_of_protection;
     buff_t* faiths_armor;
     buff_t* hammer_of_wrath;
+    buff_t* afterimage;
 
     // Holy
     buff_t* divine_protection;
@@ -332,6 +339,7 @@ public:
     cooldown_t* ret_aura_icd;
     cooldown_t* consecrated_blade_icd;
     cooldown_t* righteous_cause_icd;
+    cooldown_t* divine_resonance_icd;
 
     cooldown_t* aurora_icd;
     cooldown_t* second_sunrise_icd;
@@ -339,6 +347,8 @@ public:
 
     cooldown_t* hammerfall_icd;
     cooldown_t* art_of_war;
+
+    cooldown_t* guided_prayer_icd;
   } cooldowns;
 
   // Passives
@@ -378,15 +388,14 @@ public:
 
     proc_t* as_grand_crusader;
     proc_t* as_grand_crusader_wasted;
-    proc_t* as_moment_of_glory;
-    proc_t* as_moment_of_glory_wasted;
+    proc_t* as_grand_crusader_avoid;
+    proc_t* as_grand_crusader_cs;
+    proc_t* as_grand_crusader_ror_sw;
+    proc_t* as_grand_crusader_ror_hb;
 
     proc_t* divine_inspiration;
 
     proc_t* templar_lights_judicator;
-
-    proc_t* grand_crusader_ror_sw;
-    proc_t* grand_crusader_ror_hb;
   } procs;
 
   struct proc_data_entries_t
@@ -763,11 +772,14 @@ public:
   // Paladin options
   struct options_t
   {
-    bool fake_sov                         = true;
-    bool fake_solidarity                  = true;
-    double ror_bulwark_additional_proc_chance = .3;
-    double blessed_hammer_strikes          = 2.0;
-    std::string starting_armament             = "sacred_weapon";
+    bool fake_sov                                           = true;
+    bool fake_solidarity                                    = true;
+    double ror_bulwark_additional_proc_chance               = 1.0;
+    double blessed_hammer_strikes                           = 2.0;
+    double reflection_of_radiance_proc_chance_sacred_weapon = .1;
+    double reflection_of_radiance_proc_chance_holy_bulwark  = .2;
+    std::string starting_armament                           = "holy_bulwark";
+    bool max_range_apex                                     = false;
   } options;
   player_t* beacon_target;
 
@@ -778,8 +790,7 @@ public:
   player_t* random_weapon_target;
   player_t* random_bulwark_target;
   int divine_inspiration_next;
-
-  double reflection_of_radiance_proc_chance;
+  timespan_t glory_of_the_vanguard_delay;
 
   paladin_t( sim_t* sim, util::string_view name, race_e r = RACE_TAUREN );
 
@@ -991,16 +1002,14 @@ struct holy_bulwark_absorb_t : public absorb_buff_t
   void absorb_used( double absorbed, player_t* source ) override
   {
     absorb_buff_t::absorb_used( absorbed, source );
-    double chance = caster->reflection_of_radiance_proc_chance;
+    double chance = caster->options.reflection_of_radiance_proc_chance_holy_bulwark;
     double stacks = caster->buffs.lightsmith.fake_solidarity_bulwark->stack();
-    // Holy Bulwarks on the group don't trigger all that often, so it shouldn't be a 100% increased chance
     double increasedChance = stacks * caster->options.ror_bulwark_additional_proc_chance;  
     if ( caster->options.fake_solidarity )
       chance = 1.0 - ( std::pow( 1.0 - chance, increasedChance  + 1 ) );
     if ( caster->talents.lightsmith.reflection_of_radiance->ok() && caster->rng().roll( chance ) )
     {
-      caster->trigger_grand_crusader( GC_ROR );
-      caster->procs.grand_crusader_ror_hb->occur();
+      caster->trigger_grand_crusader( GC_ROR_HB );
     }
   }
 };
@@ -1294,10 +1303,10 @@ template <class Base>
 struct paladin_spell_base_t : public paladin_action_t<Base>
 {
 private:
-  typedef paladin_action_t<Base> ab;
+  using ab = paladin_action_t<Base>;
 
 public:
-  typedef paladin_spell_base_t base_t;
+  using base_t = paladin_spell_base_t;
 
   paladin_spell_base_t( util::string_view n, paladin_t* player, const spell_data_t* s = spell_data_t::nil() )
     : ab( n, player, s )
@@ -1530,7 +1539,7 @@ public:
     // p variable just to make this look neater
     paladin_t* p = ab::p();
 
-    bool isFreeSLDPSpender = p->buffs.divine_purpose->up() || ( is_wog && p->buffs.shining_light_free->up() ) ||
+    bool isFreeSLDPSpender = p->buffs.divine_purpose->up() || ( is_wog && p->buffs.shining_light_free->up() && !ab::background ) ||
                              ( is_divine_storm && p->buffs.empyrean_power->up() );
 
     [[maybe_unused]] double num_hopo_spent = as<double>( holy_power_consumer_t::cost() );
@@ -1733,6 +1742,18 @@ public:
     if ( p->talents.lightsmith.blessed_assurance->ok() )
     {
       p->buffs.lightsmith.blessed_assurance->trigger();
+    }
+
+    if ( p->talents.afterimage->ok() )
+    {
+      int stacksBefore = p->buffs.afterimage->stack();
+      if ( num_hopo_spent > 0 )
+        p->buffs.afterimage->trigger( as<int>( num_hopo_spent ) );
+      if ( is_wog && !ab::background && stacksBefore >= p->talents.afterimage->effectN( 3 ).base_value() )
+      {
+        p->buffs.afterimage->decrement( as<int>( p->talents.afterimage->effectN( 3 ).base_value() ) );
+        p->active.afterimage->execute_on_target( p );
+      }
     }
   }
 };

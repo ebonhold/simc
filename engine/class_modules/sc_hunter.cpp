@@ -365,6 +365,7 @@ struct hunter_td_t: public actor_target_data_t
     buff_t* spotters_mark;
     buff_t* spotters_mark_rapid_fire;
     buff_t* sentinels_mark;
+    buff_t* blood_fletching;
   } debuffs;
 
   struct dots_t
@@ -791,7 +792,9 @@ public:
     spell_data_ptr_t windrunner_quiver;
     spell_data_ptr_t accuracy_by_volume;
     spell_data_ptr_t salvo;
-    spell_data_ptr_t unload;
+    spell_data_ptr_t blood_fletching;
+    spell_data_ptr_t blood_fletching_damage;
+    spell_data_ptr_t blood_fletching_debuff;
 
     spell_data_ptr_t take_aim_1;
     spell_data_ptr_t take_aim_2;
@@ -4466,7 +4469,7 @@ struct moonlight_chakram_t final : public hunter_ranged_attack_t
       {
         if ( auto pet = p()->pets.main )
         {
-          p()->pets.main->actions.strike_as_one->execute_on_target( target );
+          pet->actions.strike_as_one->execute_on_target( target );
           p()->cooldowns.strike_as_one->start();
         }
       }
@@ -4637,8 +4640,7 @@ struct black_arrow_base_t : public kill_shot_base_t
 
   bool target_ready( player_t* candidate_target ) override
   {
-    /* Black Arrow has different target ready conditionals than regular Kill Shot, so we don't call Kill Shot base.
-       Deathblow check moved to black_arrow_t for Unload. */
+    /* Black Arrow has different target ready conditionals than regular Kill Shot, so we don't call Kill Shot base. */
     return hunter_ranged_attack_t::target_ready( candidate_target ) &&
            ( candidate_target->health_percentage() <= lower_health_threshold_pct ||
              candidate_target->health_percentage() >= upper_health_threshold_pct );
@@ -5175,6 +5177,14 @@ struct master_marksman_t : public residual_bleed_base_t
   master_marksman_t( hunter_t* p ) : residual_bleed_base_t( "master_marksman", p, p->talents.master_marksman_bleed ) {}
 };
 
+struct blood_fletching_damage_t : public hunter_ranged_attack_t
+{
+  blood_fletching_damage_t( hunter_t* p ) : hunter_ranged_attack_t( "blood_fletching", p, p->talents.blood_fletching_damage )
+  {
+    background = dual = true;
+  }
+};
+
 // Multi-Shot =================================================================
 
 struct multishot_t: public hunter_ranged_attack_t
@@ -5390,6 +5400,9 @@ struct aimed_shot_base_t : public hunter_ranged_attack_t
     hunter_ranged_attack_t::impact( s );
 
     hunter_td_t* target_data = td( s->target );
+
+    if ( p()->talents.blood_fletching.ok() && s->result == RESULT_CRIT )
+      target_data->debuffs.blood_fletching->trigger();
 
     if ( target_data->debuffs.spotters_mark->check() || target_data->debuffs.sentinels_mark->check() )
     {
@@ -5715,109 +5728,6 @@ struct rapid_fire_t: public hunter_ranged_attack_t
     }
   };
 
-  struct arcane_shot_unload_t : public attacks::arcane_shot_base_t
-  {
-    unsigned int sequence = 0;
-
-    arcane_shot_unload_t( util::string_view n, hunter_t* p ) : arcane_shot_base_t( n, p )
-    {
-      background = dual = true;
-      base_costs[ RESOURCE_FOCUS ] = 0;
-      base_dd_multiplier *= p->talents.unload->effectN( 1 ).percent();
-
-      // TODO can't guarantee action exists here, find a better solution
-      auto arcane_shot = p->find_action( "arcane_shot" );
-      if ( arcane_shot )
-        arcane_shot->add_child( this );
-    }
-
-    void impact( action_state_t* s ) override
-    {
-      arcane_shot_base_t::impact( s );
-
-      if ( debug_cast<state_t*>( s )->empowered_by_precise_shots )
-      {
-        // 2026-07-22: Only the second shot of Unload can trigger Eagle's Mark normally. Probably a scripting side effect 
-        //             of Rapid Fire casts being able to trigger Marks with Unload & No Scope talented.
-        if ( !p()->bugs || sequence == 2 )
-        {
-          p()->trigger_eagles_mark( s->target, p()->talents.sentinel.ok(), false );
-        }
-      }
-    }
-  };
-
-  struct kill_shot_unload_t : public attacks::kill_shot_base_t
-  {
-    unsigned int sequence = 0;
-
-    kill_shot_unload_t( util::string_view n, hunter_t* p ) : kill_shot_base_t( n, p, p->talents.kill_shot )
-    {
-      background = dual = true;
-      base_costs[ RESOURCE_FOCUS ] = 0;
-      base_dd_multiplier *= p->talents.unload->effectN( 1 ).percent();
-
-      // TODO can't guarantee action exists here, find a better solution
-      auto kill_shot = p->find_action( "kill_shot" );
-      if ( kill_shot )
-        kill_shot->add_child( this );
-    }
-
-    void impact( action_state_t* s ) override
-    {
-      kill_shot_base_t::impact( s );
-
-      if ( debug_cast<state_t*>( s )->empowered_by_precise_shots )
-      {
-        // 2026-07-22: Only the second shot of Unload can trigger Eagle's Mark normally. Probably a scripting side effect
-        //             of Unload's first shot being able to instantly trigger a Mark without Precise Shots.
-        if ( !p()->bugs || sequence == 2 )
-        {
-          p()->trigger_eagles_mark( s->target, p()->talents.sentinel.ok(), false );
-        }
-      }
-    }
-  };
-
-  struct black_arrow_unload_t : public attacks::black_arrow_base_t
-  {
-    unsigned int sequence = 0;
-
-    black_arrow_unload_t( util::string_view n, hunter_t* p ) : black_arrow_base_t( n, p, p->talents.black_arrow_spell )
-    {
-      background = dual = true;
-      base_costs[ RESOURCE_FOCUS ] = 0;
-      base_dd_multiplier *= p->talents.unload->effectN( 1 ).percent();
-
-      // TODO can't guarantee action exists here, find a better solution
-      auto black_arrow = p->find_action( "black_arrow" );
-      if ( black_arrow )
-        black_arrow->add_child( this );
-    }
-
-    void impact( action_state_t* s ) override
-    {
-      black_arrow_base_t::impact( s );
-
-      if ( debug_cast<state_t*>( s )->empowered_by_precise_shots )
-      {
-        // 2026-07-22: Only the second shot of Unload can trigger Eagle's Mark normally. Probably a scripting side effect 
-        //             of Unload's first shot being able to instantly trigger a Mark without Precise Shots.
-        if ( !p()->bugs || sequence == 2 )
-        {
-          p()->trigger_eagles_mark( s->target, p()->talents.sentinel.ok(), false );
-        }
-      }
-    }
-  };
-
-  struct
-  {
-    arcane_shot_unload_t* arcane_shot = nullptr;
-    kill_shot_unload_t* kill_shot     = nullptr;
-    black_arrow_unload_t* black_arrow = nullptr;
-  } unload;
-
   rapid_fire_tick_t* damage;
   rapid_fire_tick_aspect_of_the_hydra_t* aspect_of_the_hydra = nullptr;
   int base_num_ticks;
@@ -5847,44 +5757,6 @@ struct rapid_fire_t: public hunter_ranged_attack_t
       aspect_of_the_hydra = p->get_background_action<rapid_fire_tick_aspect_of_the_hydra_t>( "rapid_fire_tick_aspect_of_the_hydra" );
       add_child( aspect_of_the_hydra );
     }
-
-    if ( p->talents.unload.ok() )
-    {
-      unload.arcane_shot = p->get_background_action<arcane_shot_unload_t>( "arcane_shot_unload" );
-
-      if ( p->talents.black_arrow.ok() )
-      {
-        unload.black_arrow = p->get_background_action<black_arrow_unload_t>( "black_arrow_unload" );
-      }
-      // Unload only fires Kill Shots with Kill Shot talented
-      else if ( p->talents.kill_shot.ok() )
-      {
-        unload.kill_shot = p->get_background_action<kill_shot_unload_t>( "kill_shot_unload" );
-      }
-    }
-  }
-
-  void execute_unload( unsigned int sequence )
-  {
-    if ( !p()->talents.unload.ok() )
-      return;
-
-    if ( unload.black_arrow && unload.black_arrow->target_ready( target ) )
-    {
-      unload.black_arrow->sequence = sequence;
-      unload.black_arrow->execute_on_target( target );
-      return;
-    }
-
-    if ( unload.kill_shot && unload.kill_shot->target_ready( target ) )
-    {
-      unload.kill_shot->sequence = sequence;
-      unload.kill_shot->execute_on_target( target );
-      return;
-    }
-
-    unload.arcane_shot->sequence = sequence;
-    unload.arcane_shot->execute_on_target( target );
   }
 
   void init() override
@@ -5905,18 +5777,6 @@ struct rapid_fire_t: public hunter_ranged_attack_t
   {
     hydra_target = p()->get_hydra_target( target );
     marked_targets.clear();
-
-    /* 2026-08-22: With Unload talented, No Scope talented and Precise Shots active, Rapid Fire casts roll a Spotter's Mark trigger. 
-                   This seems to be scripted to allow Rapid Fire to benefit from Spotter's Mark: Rapid Fire debuffs that it triggers. 
-                   As a result, Unload's first shot cannot trigger Spotter's Mark. 
-                   A side effect of this is that with Unload and without No Scope, casting Rapid Fire with Precise Shots up will
-                   consume the Precise Shots but NOT roll for a Spotter's Mark trigger. */
-    if ( p()->bugs && p()->talents.unload.ok() && p()->talents.no_scope.ok() )
-    {
-      p()->trigger_eagles_mark( target, p()->talents.sentinel.ok() );
-    }
-
-    execute_unload( 1 );
 
     if ( p()->talents.no_scope.ok() )
     {
@@ -5960,9 +5820,6 @@ struct rapid_fire_t: public hunter_ranged_attack_t
 
     p()->consume_trick_shots();
     p()->buffs.focus_fire->expire();
-
-    // 2026-08-22: Delay this to allow Precise Shots spenders that clip Rapid Fire to steal the buff.
-    make_event( sim, 10_ms, [ this ]() { execute_unload( 2 ); } );
   }
 
   timespan_t composite_dot_duration( const action_state_t* s ) const override
@@ -6071,7 +5928,7 @@ struct explosive_shot_t final : public explosive_shot_base_t
     }
   }
 
-  void queue_execute( execute_type et )
+  void queue_execute( execute_type et ) override
   {
     // Should always be foreground but just incase...
     if ( p()->buffs.unstable_trigger->check() && et == execute_type::FOREGROUND )
@@ -6444,7 +6301,7 @@ struct boomstick_t : public hunter_spell_t
       {
         if ( auto pet = p()->pets.main )
         {
-          p()->pets.main->actions.strike_as_one->execute_on_target( target );
+          pet->actions.strike_as_one->execute_on_target( target );
           p()->cooldowns.strike_as_one->start();
         }
       }
@@ -6835,11 +6692,13 @@ struct bestial_wrath_t: public hunter_ranged_attack_t
 
     for ( auto pet : pets::active<pets::hunter_main_pet_base_t>( p()->pets.main, p()->pets.animal_companion ) )
     {
-      trigger_buff( pet->buffs.bestial_wrath, precast_time );
-
       // Assume the pet is out of range / not engaged when precasting.
       if ( !is_precombat )
-        pet -> actions.bestial_wrath -> execute_on_target( target );
+        pet->actions.bestial_wrath->execute_on_target( target );
+
+      // 2026-09-07: Despite the buff being applied first in game, the damage does not benefit from it for the main pet and AC...
+      //             for simplicity of modelling, just trigger the buff straight afterwards.
+      trigger_buff( pet->buffs.bestial_wrath, precast_time );
     }
 
     // 2026-07-11: Apex pets have funky delays on Bestial Wrath's buff trigger and damage event
@@ -7421,6 +7280,8 @@ hunter_td_t::hunter_td_t( player_t* t, hunter_t* p ) : actor_target_data_t( t, p
 
   debuffs.sentinels_mark = make_buff( *this, "sentinels_mark", p->talents.sentinels_mark )
     ->set_default_value_from_effect( p->specialization() == HUNTER_MARKSMANSHIP ? 1 : 2 );
+  
+  debuffs.blood_fletching = make_buff( *this, "blood_fletching", p->talents.blood_fletching_debuff );
 
   dots.wildfire_bomb = t->get_dot( p->talents.shrapnel_bomb ? "wildfire_bomb_bleed" : "wildfire_bomb_dot", p );
   dots.sanctified_armaments = t->get_dot( "sanctified_armaments", p );
@@ -7808,7 +7669,9 @@ void hunter_t::init_spells()
     talents.windrunner_quiver                 = find_talent_spell( talent_tree::SPECIALIZATION, "Windrunner Quiver", HUNTER_MARKSMANSHIP );
     talents.accuracy_by_volume                = find_talent_spell( talent_tree::SPECIALIZATION, "Accuracy By Volume", HUNTER_MARKSMANSHIP );
     talents.salvo                             = find_talent_spell( talent_tree::SPECIALIZATION, "Salvo", HUNTER_MARKSMANSHIP );
-    talents.unload                            = find_talent_spell( talent_tree::SPECIALIZATION, "Unload", HUNTER_MARKSMANSHIP );
+    talents.blood_fletching                   = find_talent_spell( talent_tree::SPECIALIZATION, "Blood Fletching", HUNTER_MARKSMANSHIP );
+    talents.blood_fletching_damage            = talents.blood_fletching.ok() ? find_spell( 1319015 ) : spell_data_t::not_found();
+    talents.blood_fletching_debuff            = talents.blood_fletching.ok() ? find_spell( 1319016 ) : spell_data_t::not_found();
 
     talents.take_aim_1                        = find_talent_spell( talent_tree::SPECIALIZATION, "Take Aim", 1 );
     talents.take_aim_2                        = find_talent_spell( talent_tree::SPECIALIZATION, "Take Aim", 2 );
@@ -8700,32 +8563,78 @@ void hunter_t::init_special_effects()
   {
     struct master_marksman_cb_t : public dbc_proc_callback_t
     {
-      double bleed_amount;
+      hunter_t* owner;
       action_t* bleed;
 
-      master_marksman_cb_t( const special_effect_t& e, double amount, action_t* bleed ) : dbc_proc_callback_t( e.player, e ),
-        bleed_amount( amount ), bleed( bleed )
+      master_marksman_cb_t( const special_effect_t& e, hunter_t* p, action_t* bleed ) : dbc_proc_callback_t( e.player, e ),
+        owner( p ), bleed( bleed )
       {
       }
 
       void execute( const spell_data_t* spell, player_t* t, action_state_t* s ) override
       {
+        if ( !t || !s )
+          return;
+
+        const bool aimed_shot_crit = s->action && s->action->data().id() == owner->talents.aimed_shot->id();
+        double bleed_amount = 0;
+
+        if ( aimed_shot_crit && owner->talents.blood_fletching.ok() )
+        {
+          bleed_amount = owner->talents.blood_fletching->effectN( 1 ).percent();
+        }
+        else
+        {
+          bleed_amount = owner->talents.master_marksman->effectN( 1 ).percent();
+        }
+
         dbc_proc_callback_t::execute( spell, t, s );
 
-        double amount = s -> result_amount * bleed_amount;
+        double amount = s->result_amount * bleed_amount;
         if ( amount > 0 )
-          residual_action::trigger( bleed, s -> target, amount );
+          residual_action::trigger( bleed, t, amount );
       }
     };
 
     auto const effect = new special_effect_t( this );
     effect -> name_str = "master_marksman";
-    effect -> spell_id = talents.master_marksman -> id();
+    effect -> spell_id = talents.master_marksman->id();
     effect -> proc_flags2_ = PF2_CRIT;
     special_effects.push_back( effect );
 
-    auto cb = new master_marksman_cb_t( *effect, talents.master_marksman -> effectN( 1 ).percent(), new attacks::master_marksman_t( this ) );
+    auto cb = new master_marksman_cb_t( *effect, this, new attacks::master_marksman_t( this ) );
     cb -> initialize();
+  }
+
+  if ( talents.blood_fletching.ok() )
+  {
+    struct blood_fletching_damage_cb_t : public dbc_proc_callback_t
+    {
+      hunter_t* owner;
+      action_t* damage;
+
+      blood_fletching_damage_cb_t( const special_effect_t& e, hunter_t* p, action_t* a )
+        : dbc_proc_callback_t( e.player, e ), owner( p ), damage( a )
+      {
+      }
+
+      void execute( const spell_data_t* spell, player_t* t, action_state_t* s ) override
+      {
+        if ( !t || !s || !owner->get_target_data( t )->debuffs.blood_fletching->check() )
+          return;
+
+        dbc_proc_callback_t::execute( spell, t, s );
+        damage->execute_on_target( t );
+      }
+    };
+
+    auto const damage_effect = new special_effect_t( this );
+    damage_effect->name_str = "blood_fletching";
+    damage_effect->spell_id = talents.blood_fletching->id();
+    damage_effect->proc_flags2_ = PF2_ALL_HIT | PF2_PERIODIC_DAMAGE;
+    special_effects.push_back( damage_effect );
+    auto damage_cb = new blood_fletching_damage_cb_t( *damage_effect, this, new attacks::blood_fletching_damage_t( this ) );
+    damage_cb->initialize();
   }
 }
 
@@ -9091,6 +9000,10 @@ private:
   hunter_t& p;
 };
 
+namespace live_hunter {
+#include "class_modules/sc_hunter_live.inc"
+};
+
 // HUNTER MODULE INTERFACE ==================================================
 
 struct hunter_module_t: public module_t
@@ -9099,9 +9012,19 @@ struct hunter_module_t: public module_t
 
   player_t* create_player( sim_t* sim, util::string_view name, race_e r = RACE_NONE ) const override
   {
-    auto  p = new hunter_t( sim, name, r );
-    p -> report_extension = std::unique_ptr<player_report_extension_t>( new hunter_report_t( *p ) );
-    return p;
+    // TODO: Remove version check and the live hunter file
+    if ( sim->dbc->wowv() >= wowv_t{ 12, 1, 5 } )
+    {
+      auto  p = new hunter_t( sim, name, r );
+      p -> report_extension = std::unique_ptr<player_report_extension_t>( new hunter_report_t( *p ) );
+      return p;
+    }
+    else
+    {
+      auto  p = new live_hunter::hunter_t( sim, name, r );
+      p -> report_extension = std::unique_ptr<player_report_extension_t>( new live_hunter::hunter_report_t( *p ) );
+      return p;
+    }
   }
 
   bool valid() const override { return true; }

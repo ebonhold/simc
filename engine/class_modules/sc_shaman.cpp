@@ -3155,7 +3155,8 @@ public:
   void impact( action_state_t* s ) override
   {
     ab::impact( s );
-    if ( this->is_variant( spell_variant::NORMAL ) && !this->background && s->chain_target == 0 )
+    if ( ( this->is_variant( spell_variant::NORMAL ) && !this->background && s->chain_target == 0 )
+      || this->id == 188389)
     {
       if ( this->sim->debug )
       {
@@ -6644,7 +6645,10 @@ struct chain_lightning_t : public chained_base_t
 
   void execute() override
   {
-    p()->buff.mid2_ele_4pc_builder->decrement();
+    if ( is_variant( spell_variant::NORMAL ) )
+    {
+      p()->buff.mid2_ele_4pc_builder->decrement();
+    }
     chained_base_t::execute();
 
     if ( is_variant( spell_variant::NORMAL ) && p()->specialization() == SHAMAN_ELEMENTAL )
@@ -7279,8 +7283,10 @@ struct lava_burst_t : public shaman_spell_t
     {
       p()->generate_maelstrom_weapon( this, as<int>( p()->talent.supercharge->effectN( 3 ).base_value() ) );
     }
-
-    p()->buff.mid2_ele_4pc_builder->decrement();
+    if ( is_variant( spell_variant::NORMAL ) )
+    {
+      p()->buff.mid2_ele_4pc_builder->decrement();
+    }
   }
 
   timespan_t execute_time() const override
@@ -13391,8 +13397,8 @@ void shaman_t::init_action_list_enhancement()
   precombat->add_action( "windfury_weapon" );
   precombat->add_action( "flametongue_weapon" );
   precombat->add_action( "lightning_shield" );
-  precombat->add_action( "variable,name=trinket1_is_weird,value=trinket.1.is.algethar_puzzle_box|trinket.1.is.unyielding_netherprism" );
-  precombat->add_action( "variable,name=trinket2_is_weird,value=trinket.2.is.algethar_puzzle_box|trinket.2.is.unyielding_netherprism" );
+  precombat->add_action( "variable,name=trinket1_is_weird,value=trinket.1.is.algethar_puzzle_box|trinket.1.is.unyielding_netherprism|trinket.1.is.font_of_venomous_rage" );
+  precombat->add_action( "variable,name=trinket2_is_weird,value=trinket.2.is.algethar_puzzle_box|trinket.2.is.unyielding_netherprism|trinket.2.is.font_of_venomous_rage" );
   precombat->add_action( "snapshot_stats", "Snapshot raid buffed stats before combat begins and pre-potting is done." );
   precombat->add_action( "use_item,name=algethar_puzzle_box" );
   precombat->add_action( "potion,if=!potion.liquid_luster" );
@@ -13453,6 +13459,7 @@ void shaman_t::init_action_list_enhancement()
   cooldowns->add_action( "use_item,name=unyielding_netherprism,if=(talent.ascendance.enabled&(cooldown.ascendance.remains<2*gcd.max))|(talent.doom_winds.enabled&!talent.ascendance.enabled&(cooldown.doom_winds.remains<2*gcd.max))|fight_remains<=20" );
   cooldowns->add_action( "use_item,slot=trinket1,if=!variable.trinket1_is_weird&((buff.ascendance.up|buff.doom_winds.up|pet.surging_totem.active|(fight_remains<=20)|(!talent.ascendance.enabled&!talent.doom_winds.enabled&!talent.surging_totem.enabled))|!trinket.1.has_use_buff)" );
   cooldowns->add_action( "use_item,slot=trinket2,if=!variable.trinket2_is_weird&((buff.ascendance.up|buff.doom_winds.up|pet.surging_totem.active|(fight_remains<=20)|(!talent.ascendance.enabled&!talent.doom_winds.enabled&!talent.surging_totem.enabled))|!trinket.2.has_use_buff)" );
+  cooldowns->add_action( "use_item,name=font_of_venomous_rage,if=!buff.ascendance.up&((!trinket.1.has_use_buff&!trinket.2.has_use_buff)|time>=20)" );
   cooldowns->add_action( "potion,if=(buff.ascendance.up|buff.doom_winds.up|pet.surging_totem.active|(fight_remains%%300<=30)|(!talent.ascendance.enabled&!talent.doom_winds.enabled&!talent.surging_totem.enabled))" );
   cooldowns->add_action( "blood_fury,if=(buff.ascendance.up|buff.doom_winds.up|pet.surging_totem.active|(fight_remains%%action.blood_fury.cooldown<=action.blood_fury.duration)|(!talent.ascendance.enabled&!talent.doom_winds.enabled&!talent.surging_totem.enabled))" );
   cooldowns->add_action( "berserking,if=(buff.ascendance.up|buff.doom_winds.up|pet.surging_totem.active|(fight_remains%%action.berserking.cooldown<=action.berserking.duration)|(!talent.ascendance.enabled&!talent.doom_winds.enabled&!talent.surging_totem.enabled))" );
@@ -13466,14 +13473,14 @@ void shaman_t::init_action_list_enhancement()
   single_sb->add_action( "flame_shock,if=!ticking" );
   single_sb->add_action( "lava_lash,if=!debuff.lashing_flames.up&time<5" );
   single_sb->add_action( "stormstrike,if=time<1" );
-  single_sb->add_action( "call_action_list,name=cooldowns" );
-  single_sb->add_action( "sundering,if=talent.surging_elements.enabled|talent.feral_spirit.enabled" );
-  single_sb->add_action( "doom_winds" );
+  single_sb->add_action( "call_action_list,name=cooldowns,if=raid_event.adds.in>=60|fight_remains<=20" );
+  single_sb->add_action( "sundering,if=(talent.surging_elements.enabled|talent.feral_spirit.enabled)&(raid_event.adds.in>=30|fight_remains<=12)" );
+  single_sb->add_action( "doom_winds,if=raid_event.adds.in>=30|fight_remains<=10" );
   single_sb->add_action( "voltaic_blaze,if=set_bonus.midnight_season_2_2pc" );
   single_sb->add_action( "crash_lightning,if=!buff.crash_lightning.up|talent.storm_unleashed.enabled" );
   single_sb->add_action( "voltaic_blaze,if=(buff.doom_winds.up&buff.maelstrom_weapon.stack>=10-(1+2*talent.fire_nova.enabled)&!buff.maelstrom_weapon.stack=10)&talent.thorims_invocation.enabled" );
   single_sb->add_action( "windstrike,if=buff.maelstrom_weapon.stack>0&talent.thorims_invocation.enabled" );
-  single_sb->add_action( "ascendance" );
+  single_sb->add_action( "ascendance,if=raid_event.adds.in>=60|fight_remains<=20" );
   single_sb->add_action( "stormstrike,if=buff.doom_winds.up&talent.thorims_invocation.enabled" );
   single_sb->add_action( "crash_lightning,if=buff.doom_winds.up&talent.thorims_invocation.enabled" );
   single_sb->add_action( "tempest,if=buff.maelstrom_weapon.stack=10" );
@@ -13492,11 +13499,11 @@ void shaman_t::init_action_list_enhancement()
   // Totemic Single Target
   single_totemic->add_action( "voltaic_blaze,if=dot.flame_shock.remains=0" );
   single_totemic->add_action( "flame_shock,if=!ticking" );
-  single_totemic->add_action( "surging_totem" );
+  single_totemic->add_action( "surging_totem,if=raid_event.adds.in>=30|fight_remains<=30" );
   single_totemic->add_action( "call_action_list,name=cooldowns" );
-  single_totemic->add_action( "sundering,if=talent.surging_elements.enabled|buff.whirling_earth.up|talent.feral_spirit.enabled" );
+  single_totemic->add_action( "sundering,if=(talent.surging_elements.enabled|buff.whirling_earth.up|talent.feral_spirit.enabled)&(raid_event.adds.in>=30|fight_remains<=12)" );
   single_totemic->add_action( "lava_lash,if=buff.whirling_fire.up|buff.hot_hand.up" );
-  single_totemic->add_action( "doom_winds" );
+  single_totemic->add_action( "doom_winds,if=raid_event.adds.in>=30|fight_remains<=10" );
   single_totemic->add_action( "voltaic_blaze,if=set_bonus.midnight_season_2_2pc" );
   single_totemic->add_action( "crash_lightning,if=!buff.crash_lightning.up|talent.storm_unleashed.enabled" );
   single_totemic->add_action( "primordial_storm,if=(buff.maelstrom_weapon.stack>=10|buff.primordial_storm.remains<3.5&buff.maelstrom_weapon.stack>=5)" );
@@ -13568,6 +13575,11 @@ void shaman_t::init_blizzard_action_list()
   {
     cooldowns->add_action( "doom_winds" );
   }
+
+  action_priority_list_t* precombat = get_action_priority_list( "precombat" );
+
+  precombat->add_action( "flametongue_weapon,if=talent.flametongue_weapon" );
+
 }
 
 
@@ -13624,8 +13636,6 @@ parsed_assisted_combat_rule_t shaman_t::parse_assisted_combat_rule( const assist
     return { "0" };
   }
 
-  if ( step.spell_id == 318038 && rule.condition_type == AC_AURA_ON_PLAYER && rule.condition_value_1 == 382027 )
-    return { "talent.flametongue_weapon" };
   if ( rule.condition_type == AC_AURA_ON_PLAYER && rule.condition_value_1 == 384087 )
     return { "0" };
   if ( rule.condition_type == AC_AURA_MISSING_PLAYER && rule.condition_value_1 == 384087 )
@@ -13637,6 +13647,9 @@ void shaman_t::parse_assisted_combat_step( const assisted_combat_step_data_t& st
                                          action_priority_list_t* assisted_combat )
 {
   if ( step.spell_id == 462854 )
+    return;
+
+  if ( step.spell_id == 318038 )
     return;
 
   auto replace_spell = [ & ]( unsigned source_spell_id, unsigned target_spell_id ) {
@@ -13871,6 +13884,7 @@ void shaman_t::reset()
   }
 
   assert( mid2_enh_4pc_mul.empty() );
+  mid2_enh_4pc_mul.clear();
 }
 
 // shaman_t::merge ==========================================================

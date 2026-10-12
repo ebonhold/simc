@@ -1270,11 +1270,10 @@ struct charred_passions_t : base_action_t
 
 struct base_blackout_kick_t : monk_melee_attack_t
 {
-  cooldown_t *rising_sun_kick;
   proc_t *rising_sun_kick_reset;
 
   base_blackout_kick_t( monk_t *player, std::string_view name, const spell_data_t *spell_data )
-    : monk_melee_attack_t( player, name, spell_data ), rising_sun_kick( nullptr ), rising_sun_kick_reset( nullptr )
+    : monk_melee_attack_t( player, name, spell_data ), rising_sun_kick_reset( nullptr )
   {
     // TODO: check this
     ap_type = attack_power_type::WEAPON_BOTH;
@@ -1294,7 +1293,6 @@ struct base_blackout_kick_t : monk_melee_attack_t
     if ( !p()->talent.windwalker.teachings_of_the_monastery->ok() )
       return;
 
-    rising_sun_kick       = p()->get_cooldown( "rising_sun_kick" );
     rising_sun_kick_reset = p()->get_proc( "Teachings of the Monastery - Rising Sun Kick Reset" );
   }
 
@@ -1308,7 +1306,7 @@ struct base_blackout_kick_t : monk_melee_attack_t
     double chance = p()->talent.windwalker.teachings_of_the_monastery->effectN( 1 ).percent();
     if ( rng().roll( chance ) )
     {
-      rising_sun_kick->reset( true );
+      p()->cooldown.rising_sun_kick->reset( true );
       rising_sun_kick_reset->occur();
     }
   }
@@ -1411,7 +1409,10 @@ struct blackout_kick_t : overwhelming_force_t<charred_passions_t<teachings_of_th
     {
       double rwk_chance = p()->talent.windwalker.rushing_wind_kick->effectN( 1 ).percent();
       if ( p()->rng().roll( rwk_chance ) )
+      {
+        p()->cooldown.rising_sun_kick->reset( true );
         p()->buff.rushing_wind_kick->trigger();
+      }
 
       double eb_chance = p()->talent.windwalker.energy_burst->effectN( 1 ).percent();
       if ( p()->rng().roll( eb_chance ) )
@@ -3010,7 +3011,10 @@ struct chi_burst_t : monk_spell_t
         add_parse_entry( TBase::da_multiplier_effects )
             .set_buff( player->buff.balanced_stratagem_magic )
             .set_value( effect.percent() )
-            .set_eff( &effect );
+            .set_eff( &effect )
+            .add_parse_callback( this, PARSE_CALLBACK_POST_EXECUTE, [ & ]( action_state_t * ) {
+              TBase::p()->buff.balanced_stratagem_magic->consume( this );
+            } );
     }
   };
 
@@ -3284,14 +3288,6 @@ struct breath_of_fire_t : public monk_spell_t
     {
       dragonfire_brew = new dragonfire_brew_t( player );
       add_child( dragonfire_brew );
-
-      if ( const auto &effect = player->talent.brewmaster.dragonfire_brew->effectN( 2 ); effect.ok() && player->bugs )
-        add_parse_entry( da_multiplier_effects )
-            .set_value_func(
-                [ this ]( double value ) { return 1.0 + p()->find_stagger( "Stagger" )->level_index() / 3.0 * value; } )
-            .set_value( effect.percent() )
-            .set_eff( &effect )
-            .set_note( "Stagger Level Scaling" );
     }
   }
 
@@ -4764,6 +4760,8 @@ void aspect_of_harmony_t::construct_actions( monk_t *player )
     purified_spirit = new spender_t::purified_spirit_t<actions::monk_spell_t>(
         player, player->talent.master_of_harmony.purified_spirit_damage, this );
     damage->add_child( purified_spirit );
+
+    spender->set_expire_callback( [ & ]( buff_t *, int, timespan_t ) { purified_spirit->execute(); } );
   }
 }
 
@@ -4892,12 +4890,6 @@ aspect_of_harmony_t::spender_t::spender_t( monk_t *player, aspect_of_harmony_t *
     pool( 0.0 )
 {
   set_default_value( 0.0 );
-
-  if ( aspect_of_harmony->purified_spirit )
-    set_stack_change_callback( [ = ]( buff_t *, int, int new_ ) {
-      if ( !new_ )
-        aspect_of_harmony->purified_spirit->execute();
-    } );
 }
 
 void aspect_of_harmony_t::spender_t::reset()
@@ -5466,29 +5458,26 @@ bool monk_t::validate_actor()
     return false;
   }
 
-  if ( !sim->parent && !sim->profileset_enabled )
+  int expected = 13;
+  for ( const auto &hero_tree : player_sub_trees )
   {
-    int expected = 13;
-    for ( const auto &hero_tree : player_sub_trees )
-    {
-      int count = as<int>( range::count_if(
-          player_traits, [ is_ptr = is_ptr(), hero_tree ]( std::tuple<talent_tree, unsigned, unsigned> entry ) {
-            if ( std::get<talent_tree>( entry ) != talent_tree::HERO )
-              return false;
-            const trait_data_t *trait = trait_data_t::find( std::get<1>( entry ), is_ptr );
-            if ( !trait )
-              return false;
-            return static_cast<hero_tree_e>( trait->id_sub_tree ) == hero_tree;
-          } ) );
+    int count = as<int>( range::count_if(
+        player_traits, [ is_ptr = is_ptr(), hero_tree ]( std::tuple<talent_tree, unsigned, unsigned> entry ) {
+          if ( std::get<talent_tree>( entry ) != talent_tree::HERO )
+            return false;
+          const trait_data_t *trait = trait_data_t::find( std::get<1>( entry ), is_ptr );
+          if ( !trait )
+            return false;
+          return static_cast<hero_tree_e>( trait->id_sub_tree ) == hero_tree;
+        } ) );
 
-      // Report without counting the hidden talent that activates the subtree
-      count -= 1;
-      if ( count < expected && count != 0 )
-      {
-        sim->error( SEVERE, "Invalid Hero Talent tree, possibly low level. Found {} talents, expected {}.", count,
-                    expected );
-        return false;
-      }
+    // Report without counting the hidden talent that activates the subtree
+    count -= 1;
+    if ( count < expected && count != 0 )
+    {
+      sim->error( SEVERE, "Invalid Hero Talent tree, possibly low level. Found {} talents, expected {}.", count,
+                  expected );
+      return false;
     }
   }
 
@@ -6995,11 +6984,6 @@ void monk_t::init_finished()
 {
   base_t::init_finished();
   parse_player_effects();
-
-  profileset_controller_t::register_controller(
-      sim, "valid_talents", profileset_controller::create_fn_pair<profileset_control::valid_talents_t>() );
-  std::vector<std::string> rhs = { fmt::format( "player={},count=13", name() ) };
-  sim->profileset_controller_options.emplace( "valid_talents", rhs );
 }
 
 void monk_t::reset()
@@ -7354,7 +7338,7 @@ std::function<bool( std::tuple<talent_tree, unsigned, unsigned> )> matching_tale
 std::function<unsigned( unsigned )> has_expected_count( player_t *player, unsigned expected_count )
 {
   return [ = ]( unsigned hero_tree ) {
-    unsigned count = range::count_if( player->player_traits, matching_talent( player, hero_tree ) );
+    unsigned count = as<unsigned>( range::count_if( player->player_traits, matching_talent( player, hero_tree ) ) );
     return count > expected_count;
   };
 }
@@ -7451,7 +7435,6 @@ public:
     ReportIssue( "The ETL cache for both tigers resets to 0 when either spawn", "2023-08-03", true );
     ReportIssue( "Chi Burst consumes both stacks of the buff on use", "2024-08-09", true );
     ReportIssue( "Press the Advantage Tiger Palm does not trigger Overwhelming Force", "2026-02-09", true );
-    ReportIssue( "Dragonfire Brew causes Breath of Fire damage to scale with Stagger level", "2026-04-14", true );
     ReportIssue(
         "Zenith Stomp erroneously references effect 1 for sqrt scaling in tooltip, which is instead used to modify the "
         "Zenith Stomp charge buff.",

@@ -68,7 +68,7 @@ struct decorator_data_t
 template <typename T>
 std::string decorate( const T& data )
 {
-  static_assert( std::is_base_of<decorator_data_t, T>::value );
+  static_assert( std::is_base_of_v<decorator_data_t, T> );
 
   if ( !data.can_decorate() )
   {
@@ -427,7 +427,7 @@ std::string decoration_domain( const sim_t& sim )
 #if SC_BETA == 0
   if ( maybe_ptr( sim.dbc->ptr ) )
   {
-    return "ptr";
+    return "ptr2";
   }
   else
   {
